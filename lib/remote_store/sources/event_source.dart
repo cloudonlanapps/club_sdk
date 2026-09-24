@@ -165,11 +165,13 @@ class RemoteEventSource implements EventSource {
     String? Function()? stamp,
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
+    List<EventSession>? Function()? sessions,
   }) async {
-    // Metadata-only (#232, #248): the server's EventUpdate is `extra="forbid"`,
-    // so schedule/identity fields (startTimeUtc/endTimeUtc/rrule/venueId/type)
-    // and `sessions` must never appear here — they go through rescheduleEvent /
-    // the /future split. Sending any of them returns 422.
+    // The server's EventUpdate is `extra="forbid"` (#232, #248), so schedule
+    // and identity fields (startTimeUtc/endTimeUtc/rrule/venueId/type) must
+    // never appear here — they go through rescheduleEvent / the /future
+    // split. `sessions` is the exception: a camp's or one-off's timetable is
+    // corrected here in place (club_server#423, #3).
     final body = <String, dynamic>{
       'version': version,
       'title': ?title,
@@ -188,6 +190,8 @@ class RemoteEventSource implements EventSource {
       if (stamp != null) 'stamp': stamp(),
       if (highlights != null) 'highlights': highlights(),
       if (includes != null) 'includes': includes(),
+      if (sessions != null)
+        'sessions': sessions()?.map((s) => s.toMap()).toList(),
     };
     final response = await _store.patch(
       endpoints.events.event(eventId),
@@ -245,6 +249,8 @@ class RemoteEventSource implements EventSource {
     String? Function()? stamp,
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
+    List<EventSession>? Function()? sessions,
+    int? scheduleId,
   }) async {
     final body = <String, dynamic>{
       'version': version,
@@ -262,6 +268,9 @@ class RemoteEventSource implements EventSource {
       if (stamp != null) 'stamp': stamp(),
       if (highlights != null) 'highlights': highlights(),
       if (includes != null) 'includes': includes(),
+      if (sessions != null)
+        'sessions': sessions()?.map((s) => s.toMap()).toList(),
+      'scheduleId': ?scheduleId,
     };
     final response = await _store.patch(
       endpoints.events.correction(eventId),
@@ -367,17 +376,24 @@ class RemoteEventSource implements EventSource {
   }
 
   @override
-  Future<Event> drop(int eventId, {required String reason}) async {
+  Future<Event> drop(
+    int eventId, {
+    required int version,
+    required String reason,
+  }) async {
     final response = await _store.post(
       endpoints.events.drop(eventId),
-      body: {'reason': reason},
+      body: {'version': version, 'reason': reason},
     );
     return Event.fromMap(response);
   }
 
   @override
-  Future<Event> reinstate(int eventId) async {
-    final response = await _store.post(endpoints.events.reinstate(eventId));
+  Future<Event> reinstate(int eventId, {required int version}) async {
+    final response = await _store.post(
+      endpoints.events.reinstate(eventId),
+      body: {'version': version},
+    );
     return Event.fromMap(response);
   }
 

@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/identity_document.dart';
+import '../utils/module_gate.dart';
 import '../utils/test_client.dart';
 
 /// Issue #377 — `UserPrivate.adminReviewNote`.
@@ -17,6 +18,10 @@ import '../utils/test_client.dart';
 void main() {
   group('Issue 377: UserPrivate.adminReviewNote', () {
     late SecureClient adminClient;
+    // The review lifecycle below exists only while identity verification is
+    // on (#2); with it off, register lands users at pending and
+    // issue_2_identity_verification_test covers that flow instead.
+    late bool verificationOn;
     late String adminAccessToken;
     const password = 'password123';
 
@@ -71,6 +76,9 @@ void main() {
         password: sudoPassword,
       );
       final token = await adminClient.auth.login(sudoUsername, sudoPassword);
+      verificationOn = (await stackCapabilities(
+        adminClient,
+      )).identityVerification;
       adminAccessToken = token.accessToken;
     });
 
@@ -86,6 +94,12 @@ void main() {
       'Issue 377: fresh registered user with no active review row has '
       'adminReviewNote == null',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('fresh');
         final userClient = await loginAs(username);
 
@@ -103,6 +117,12 @@ void main() {
       'Issue 377: after reconsiderUser, adminReviewNote == reason (status '
       'stays registered)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reconsider');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -124,6 +144,12 @@ void main() {
       'Issue 377: after reapply closes the row, adminReviewNote == null '
       '(status still registered)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reapply');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -149,6 +175,12 @@ void main() {
       'Issue 377: user with status == active has adminReviewNote == null '
       '(server short-circuits regardless of any historical review rows)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('active');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -175,6 +207,12 @@ void main() {
       'does not surface adminReviewNote, even for users with an active '
       'review row',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('listprivacy');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);

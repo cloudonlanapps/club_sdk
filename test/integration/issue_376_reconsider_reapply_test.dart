@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/identity_document.dart';
+import '../utils/module_gate.dart';
 import '../utils/test_client.dart';
 
 /// Issue #376 — `reconsiderUser`, `reapply`, and `resolutionReason` on
@@ -17,6 +18,10 @@ import '../utils/test_client.dart';
 void main() {
   group('Issue 376: reconsider / reapply / resolutionReason', () {
     late SecureClient adminClient;
+    // The review lifecycle below exists only while identity verification is
+    // on (#2); with it off, register lands users at pending and
+    // issue_2_identity_verification_test covers that flow instead.
+    late bool verificationOn;
     const password = 'password123';
 
     var userCounter = 0;
@@ -79,6 +84,9 @@ void main() {
         password: sudoPassword,
       );
       await adminClient.auth.login(sudoUsername, sudoPassword);
+      verificationOn = (await stackCapabilities(
+        adminClient,
+      )).identityVerification;
     });
 
     tearDownAll(() async {
@@ -95,6 +103,12 @@ void main() {
       'Issue 376: reconsiderUser flips pending -> registered and clears '
       'the prior user_approval notification',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reconsider');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -124,6 +138,12 @@ void main() {
       'Issue 376: reconsiderUser supersedes a prior active row (repeat call '
       'succeeds; status stays registered)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('supersede');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -147,6 +167,12 @@ void main() {
       'Issue 376: reconsiderUser returns 409 when target is not pending '
       '(registered)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('notpending');
         await expectLater(
           adminClient.users.reconsiderUser(username, 'nope'),
@@ -165,6 +191,12 @@ void main() {
       'Issue 376: reconsiderUser returns 400 CANNOT_RECONSIDER_SELF when '
       'admin targets themselves',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         await expectLater(
           adminClient.users.reconsiderUser(sudoUsername, 'self'),
           throwsA(
@@ -181,6 +213,12 @@ void main() {
     test(
       'Issue 376: reconsiderUser returns 404 when target does not exist',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         await expectLater(
           adminClient.users.reconsiderUser(
             'test_376_doesnotexist_$userCounter',
@@ -204,6 +242,12 @@ void main() {
       'active review row exists; updated fields persist; '
       'status stays registered',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reapplyself');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -240,6 +284,12 @@ void main() {
     test(
       'Issue 376: reapply returns 403 when caller targets another user',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final ownerUsername = await registerFresh('reapplyowner');
         final otherUsername = await registerFresh('reapplyother');
         final ownerClient = await loginAs(ownerUsername);
@@ -264,6 +314,12 @@ void main() {
       'Issue 376: reapply returns 409 NO_ACTIVE_REVIEW_REQUEST when the '
       'caller is registered but no active review row exists',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reapplynoreview');
         final userClient = await loginAs(username);
 
@@ -284,6 +340,12 @@ void main() {
       'Issue 376: reapply returns 409 when caller status is not registered '
       '(pending)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('reapplypending');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -308,6 +370,12 @@ void main() {
       'Issue 376: approveUser accepts resolutionReason and approves the '
       'pending target',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('approvereason');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -324,6 +392,12 @@ void main() {
     test(
       'Issue 376: blockUser accepts resolutionReason and blocks the target',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('blockreason');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -341,6 +415,12 @@ void main() {
       'Issue 376: approveUser without resolutionReason still behaves like the '
       'pre-#376 contract (regression)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('approvenoreason');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -355,6 +435,12 @@ void main() {
       'Issue 376: blockUser without resolutionReason still behaves like the '
       'pre-#376 contract (regression)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('blocknoreason');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -371,6 +457,12 @@ void main() {
       'Issue 376: register -> submit -> reconsider -> reapply -> submit yields '
       'exactly 1 user_approval at the end (not 2)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final beforeMaxId = await currentMaxNotificationId();
         final username = await registerFresh('roundtrip');
         final userClient = await loginAs(username);

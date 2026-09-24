@@ -230,7 +230,12 @@ void main() {
         // The occurrence /reschedule schema allows an all-null body; the
         // service rejects it with the coded NOTHING_TO_RESCHEDULE (#113).
         expect(
-          () => client.occurrences.rescheduleOccurrence(camp.id, start),
+          // Untouched occurrence, so version 1.
+          () => client.occurrences.rescheduleOccurrence(
+            camp.id,
+            start,
+            version: 1,
+          ),
           throwsA(
             isA<ServerException>().having(
               (e) => e.code,

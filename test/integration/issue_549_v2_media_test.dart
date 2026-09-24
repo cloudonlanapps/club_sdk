@@ -266,5 +266,84 @@ void main() {
         }
       },
     );
+
+    group('club_server#426: named download and HEAD', () {
+      test('a download with a filename returns the same bytes', () async {
+        final media = await uploadImage(filename: 'issue_426_named.png');
+        try {
+          final plain = await adminClient.media.download(media.uuid);
+          final named = await adminClient.media.download(
+            media.uuid,
+            filename: media.filename,
+          );
+          expect(named, plain);
+          expect(named.length, testPngBytes.length);
+        } finally {
+          await adminClient.media.softDelete(media.id);
+          await adminClient.media.hardDelete(media.id);
+        }
+      });
+
+      test(
+        "probeVariant reports the original's stored type and size",
+        () async {
+          final media = await uploadImage(filename: 'issue_426_probe.png');
+          try {
+            final info = await adminClient.media.probeVariant(media.uuid);
+            expect(info, isNotNull);
+            expect(info!.contentType, startsWith(media.mimeType));
+            expect(info.contentLength, testPngBytes.length);
+          } finally {
+            await adminClient.media.softDelete(media.id);
+            await adminClient.media.hardDelete(media.id);
+          }
+        },
+      );
+
+      test('probeVariant is null for a variant the item never got', () async {
+        // A PDF kept as uploaded gets no page render, so it has no poster.
+        final pdf = await adminClient.media.upload(
+          fileBytes: minimalPdf.codeUnits,
+          filename: 'issue_426_doc.pdf',
+          contentType: 'application/pdf',
+          preserveOriginal: true,
+        );
+        try {
+          expect(await adminClient.media.probeVariant(pdf.uuid), isNotNull);
+          expect(
+            await adminClient.media.probeVariant(pdf.uuid, variant: 'poster'),
+            isNull,
+          );
+        } finally {
+          await adminClient.media.softDelete(pdf.id);
+          await adminClient.media.hardDelete(pdf.id);
+        }
+      });
+
+      test('probeVariant refuses a variant the media type never has with '
+          '400', () async {
+        final media = await uploadImage(filename: 'issue_426_badvariant.png');
+        try {
+          await expectLater(
+            adminClient.media.probeVariant(media.uuid, variant: 'poster'),
+            throwsA(
+              isA<ServerException>().having((e) => e.statusCode, 'status', 400),
+            ),
+          );
+        } finally {
+          await adminClient.media.softDelete(media.id);
+          await adminClient.media.hardDelete(media.id);
+        }
+      });
+    });
   });
 }
+
+/// The smallest PDF a parser accepts: one empty page.
+const minimalPdf =
+    '%PDF-1.4\n'
+    '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 72 72]>>endobj\n'
+    'trailer<</Root 1 0 R>>\n'
+    '%%EOF\n';

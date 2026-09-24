@@ -100,11 +100,20 @@ abstract interface class EventSource {
   /// current, and 422 when it is missing.
   ///
   /// Applies to every event type. Schedule and identity fields
-  /// (`startTimeUtc`, `endTimeUtc`, `rrule`, `venueId`, `type`, `sessions`) are
-  /// not accepted here — the server rejects them (and any unknown field) with
-  /// 422. `sessions` is part of the schedule (#248); change it via
-  /// [rescheduleEvent] (camp / one-off) or [updateEventForAllFuture]
-  /// (programme), and set the type via [createEvent].
+  /// (`startTimeUtc`, `endTimeUtc`, `rrule`, `venueId`, `type`) are not
+  /// accepted here — the server rejects them (and any unknown field) with
+  /// 422. Move the schedule via [rescheduleEvent] (camp / one-off) or
+  /// [updateEventForAllFuture] (programme), and set the type via
+  /// [createEvent].
+  ///
+  /// [sessions] **corrects** a camp's or one-off's timetable in place, at any
+  /// time — including after it has started — since a correction moves
+  /// nothing (club_server#423, #3). The periods must sum to the occurrence
+  /// length (422 `INVALID_SESSIONS_TOTAL`). A getter returning `null` clears
+  /// the timetable; an omitted getter leaves it alone. To *change* the
+  /// timetable along with the window, use [rescheduleEvent] before the event
+  /// starts. A programme's timetable is corrected through
+  /// [correctionOnEvent].
   ///
   /// The basic marketing block ([shortDescription], [stamp], [highlights],
   /// [includes]) takes getters: one returning `null` clears the field, an
@@ -126,6 +135,7 @@ abstract interface class EventSource {
     String? Function()? stamp,
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
+    List<EventSession>? Function()? sessions,
   });
 
   /// Moves a camp or one-off event's schedule in place via
@@ -167,6 +177,16 @@ abstract interface class EventSource {
   /// Staffing (`coachNames`, `organizerName`) lives on the schedule and
   /// moves through [updateEventForAllFuture].
   ///
+  /// [sessions] **corrects** one schedule's timetable in place, at any time,
+  /// with no split and no cutoff (club_server#423, #3): the schedule
+  /// [scheduleId] names (from [listSchedules]), or the latest one when it is
+  /// omitted. The periods must sum to that schedule's occurrence length (422
+  /// `INVALID_SESSIONS_TOTAL`); a getter returning `null` clears the
+  /// timetable; an omitted getter leaves it alone. A [scheduleId] that is
+  /// not one of this event's schedules is 404 `SCHEDULE_NOT_FOUND`, and
+  /// [scheduleId] without [sessions] is 422. To *change* the timetable from
+  /// a date onward, split with [updateEventForAllFuture].
+  ///
   /// [version] is the event version the caller last loaded (#25); a stale
   /// one is refused with `StaleVersionException`.
   ///
@@ -187,6 +207,8 @@ abstract interface class EventSource {
     String? Function()? stamp,
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
+    List<EventSession>? Function()? sessions,
+    int? scheduleId,
   });
 
   /// Splits a programme's timetable at [effectiveDateTimeUtc]
@@ -277,11 +299,22 @@ abstract interface class EventSource {
   /// event's `untilTimeUtc` stays null), subject to the 30-minute lead
   /// (400 `CANCELLATION_LEAD_TIME_VIOLATED`). 400 `INVALID_EVENT_TYPE` for
   /// a programme or camp; 422 `CANCELLED_OCCURRENCE` when already dropped.
-  Future<Event> drop(int eventId, {required String reason});
+  ///
+  /// [version] is the version of the one-off's single **occurrence**
+  /// (`OccurrenceSource.getOccurrence`), not the event's, since the drop
+  /// changes the occurrence (club_server#430). A stale one is refused with
+  /// `StaleVersionException`.
+  Future<Event> drop(
+    int eventId, {
+    required int version,
+    required String reason,
+  });
 
   /// Reinstates a dropped **one-off** (`POST …/reinstate`), restoring its
   /// occurrence. 422 `INVALID_STATE` once the occasion has started.
-  Future<Event> reinstate(int eventId);
+  ///
+  /// [version] is the occurrence's version, as for [drop].
+  Future<Event> reinstate(int eventId, {required int version});
 
   /// The event's timetable as a sequence of schedules, oldest first (#16).
   /// A camp or one-off has exactly one; a programme one per split.

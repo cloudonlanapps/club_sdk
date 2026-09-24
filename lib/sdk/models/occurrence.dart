@@ -23,6 +23,9 @@ class Occurrence {
     this.attendanceStatus,
     this.attendanceCount,
     this.cancelReason,
+    this.version = 1,
+    this.updatedAtUtc,
+    this.updatedBy,
   });
 
   factory Occurrence.fromMap(Map<String, dynamic> map) {
@@ -63,6 +66,14 @@ class Occurrence {
           : null,
       attendanceCount: map['attendanceCount'] as int?,
       cancelReason: map['cancelReason'] as String?,
+      version: (map['version'] as int?) ?? 1,
+      updatedAtUtc: map['updatedAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['updatedAt'] as int,
+              isUtc: true,
+            )
+          : null,
+      updatedBy: map['updatedBy'] as String?,
     );
   }
 
@@ -96,6 +107,20 @@ class Occurrence {
   /// cancelled. `null` for non-cancelled occurrences.
   final String? cancelReason;
 
+  /// The occurrence's own optimistic-locking version (club_server#430, #1),
+  /// separate from the event's. 1 until the occurrence is first changed.
+  ///
+  /// Every change to the occurrence — reschedule, cancel, undo-cancel, and a
+  /// one-off's drop and reinstate — must send the version the caller last
+  /// loaded; a mismatch is a 409 surfaced as `StaleVersionException`.
+  final int version;
+
+  /// When the occurrence was last changed; null until it first is.
+  final DateTime? updatedAtUtc;
+
+  /// Who last changed the occurrence; null until it first is.
+  final String? updatedBy;
+
   Occurrence copyWith({
     int? eventId,
     DateTime? originalStartTimeUtc,
@@ -109,6 +134,9 @@ class Occurrence {
     AttendanceStatus? Function()? attendanceStatus,
     int? Function()? attendanceCount,
     String? Function()? cancelReason,
+    int? version,
+    DateTime? Function()? updatedAtUtc,
+    String? Function()? updatedBy,
   }) {
     return Occurrence(
       eventId: eventId ?? this.eventId,
@@ -131,6 +159,9 @@ class Occurrence {
           ? attendanceCount()
           : this.attendanceCount,
       cancelReason: cancelReason != null ? cancelReason() : this.cancelReason,
+      version: version ?? this.version,
+      updatedAtUtc: updatedAtUtc != null ? updatedAtUtc() : this.updatedAtUtc,
+      updatedBy: updatedBy != null ? updatedBy() : this.updatedBy,
     );
   }
 
@@ -148,6 +179,9 @@ class Occurrence {
       'attendanceStatus': attendanceStatus?.name,
       'attendanceCount': attendanceCount,
       'cancelReason': cancelReason,
+      'version': version,
+      'updatedAt': updatedAtUtc?.millisecondsSinceEpoch,
+      'updatedBy': updatedBy,
     };
   }
 
@@ -156,7 +190,7 @@ class Occurrence {
   @override
   String toString() {
     return 'Occurrence(eventId: $eventId, status: $status, '
-        'actualStartTime: $actualStartTimeUtc)';
+        'actualStartTime: $actualStartTimeUtc, version: $version)';
   }
 
   @override
@@ -175,7 +209,10 @@ class Occurrence {
         other.enrollmentStatus == enrollmentStatus &&
         other.attendanceStatus == attendanceStatus &&
         other.attendanceCount == attendanceCount &&
-        other.cancelReason == cancelReason;
+        other.cancelReason == cancelReason &&
+        other.version == version &&
+        other.updatedAtUtc == updatedAtUtc &&
+        other.updatedBy == updatedBy;
   }
 
   @override
@@ -191,6 +228,9 @@ class Occurrence {
         enrollmentStatus.hashCode ^
         attendanceStatus.hashCode ^
         attendanceCount.hashCode ^
-        cancelReason.hashCode;
+        cancelReason.hashCode ^
+        version.hashCode ^
+        updatedAtUtc.hashCode ^
+        updatedBy.hashCode;
   }
 }

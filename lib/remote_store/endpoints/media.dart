@@ -9,6 +9,11 @@ class MediaEndpoints {
   String get upload => '/media';
   String byId(int id) => '/media/by_id/$id';
   String download(String uuid) => '/media/by_id/$uuid/download';
+
+  /// The download route with a trailing [filename] (club_server#424, #426):
+  /// ignored for the lookup, it makes the URL end in a real extension.
+  String downloadNamed(String uuid, String filename) =>
+      '/media/by_id/$uuid/download/${Uri.encodeComponent(filename)}';
   String linksByUuid(String uuid) => '/media/by_id/$uuid/links';
   String get crossOwnerLinks => '/media/links';
   String restore(int id) => '/media/by_id/$id/restore';

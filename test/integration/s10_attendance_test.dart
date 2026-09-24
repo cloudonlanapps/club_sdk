@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/credit_seed.dart';
 import '../utils/event_time.dart';
+import '../utils/occurrence_version.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -1171,6 +1172,7 @@ void main() {
           await client.occurrences.rescheduleOccurrence(
             event.id,
             slotKey,
+            version: await occurrenceVersion(client, event.id, slotKey),
             newStartTimeUtc: newStart,
             newDurationMinutes: 60,
           );
@@ -1234,6 +1236,7 @@ void main() {
           await client.occurrences.rescheduleOccurrence(
             event.id,
             slotKey,
+            version: await occurrenceVersion(client, event.id, slotKey),
             newStartTimeUtc: newStart,
             newDurationMinutes: 60,
           );

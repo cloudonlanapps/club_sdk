@@ -52,6 +52,7 @@ class RemoteOccurrenceSource implements OccurrenceSource {
   Future<void> rescheduleOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
+    required int version,
     DateTime? newStartTimeUtc,
     int? newDurationMinutes,
     int? newVenueId,
@@ -60,6 +61,7 @@ class RemoteOccurrenceSource implements OccurrenceSource {
     await _store.postVoid(
       endpoints.occurrences.reschedule(eventId, timeStr),
       body: {
+        'version': version,
         if (newStartTimeUtc != null)
           'newStartTimeUtc': newStartTimeUtc.millisecondsSinceEpoch,
         'newDurationMinutes': ?newDurationMinutes,
@@ -72,12 +74,14 @@ class RemoteOccurrenceSource implements OccurrenceSource {
   Future<void> cancelOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
+    required int version,
     required String reason,
   }) async {
     final timeStr = occurrenceTimeUtc.millisecondsSinceEpoch.toString();
     await _store.postVoid(
       endpoints.occurrences.cancel(eventId, timeStr),
       body: {
+        'version': version,
         'reason': reason,
       },
     );
@@ -86,12 +90,13 @@ class RemoteOccurrenceSource implements OccurrenceSource {
   @override
   Future<void> undoCancelOccurrence(
     int eventId,
-    DateTime occurrenceTimeUtc,
-  ) async {
+    DateTime occurrenceTimeUtc, {
+    required int version,
+  }) async {
     final timeStr = occurrenceTimeUtc.millisecondsSinceEpoch.toString();
     await _store.postVoid(
       endpoints.occurrences.undoCancel(eventId, timeStr),
-      body: {},
+      body: {'version': version},
     );
   }
 }

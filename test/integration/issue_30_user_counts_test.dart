@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/module_gate.dart';
 import '../utils/test_client.dart';
 
 /// Issue 30: `GET /users/count` (club_server#308, #362).
@@ -29,8 +30,11 @@ void main() {
     });
 
     test(
-      'Issue 30: a registered sign-up joins the registered bucket',
+      // A sign-up lands in registered, or in pending when the stack has
+      // identity verification off (#2).
+      'Issue 30: a sign-up joins its status bucket',
       () async {
+        final bucket = signUpStatus(await stackCapabilities(client));
         final before = await client.users.getUserCounts();
         final other = await createRemoteSecureClient(baseUrl: baseUrl);
         await other.auth.register(
@@ -44,10 +48,7 @@ void main() {
           lastName: 'Issue',
         );
         final after = await client.users.getUserCounts();
-        expect(
-          after.of(UserStatus.registered),
-          before.of(UserStatus.registered) + 1,
-        );
+        expect(after.of(bucket), before.of(bucket) + 1);
         expect(after.total, before.total + 1);
       },
     );

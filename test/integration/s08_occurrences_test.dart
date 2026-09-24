@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/event_time.dart';
+import '../utils/occurrence_version.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -138,6 +139,7 @@ void main() {
         await client.occurrences.rescheduleOccurrence(
           event.id,
           eventStart,
+          version: await occurrenceVersion(client, event.id, eventStart),
           newStartTimeUtc: newStart,
           newDurationMinutes: 60,
         );
@@ -170,6 +172,7 @@ void main() {
         await client.occurrences.cancelOccurrence(
           event.id,
           eventStart,
+          version: await occurrenceVersion(client, event.id, eventStart),
           reason: 'Weather conditions',
         );
 
@@ -199,10 +202,15 @@ void main() {
         await client.occurrences.cancelOccurrence(
           event.id,
           occTime,
+          version: await occurrenceVersion(client, event.id, occTime),
           reason: 'Temporary cancellation',
         );
 
-        await client.occurrences.undoCancelOccurrence(event.id, occTime);
+        await client.occurrences.undoCancelOccurrence(
+          event.id,
+          occTime,
+          version: await occurrenceVersion(client, event.id, occTime),
+        );
 
         final occurrence = await client.occurrences.getOccurrence(
           event.id,
@@ -283,6 +291,7 @@ void main() {
         await client.occurrences.rescheduleOccurrence(
           event.id,
           occTime,
+          version: await occurrenceVersion(client, event.id, occTime),
           newVenueId: venue2Id,
         );
 

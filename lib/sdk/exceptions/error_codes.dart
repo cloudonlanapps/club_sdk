@@ -58,6 +58,9 @@ abstract final class SdkErrorCode {
   static const groupNotFound = 'GROUP_NOT_FOUND';
   static const enrollmentNotFound = 'ENROLLMENT_NOT_FOUND';
   static const occurrenceNotFound = 'OCCURRENCE_NOT_FOUND';
+  // `PATCH …/correction` named a `scheduleId` that is not one of this
+  // event's schedules (club_server#423, #3).
+  static const scheduleNotFound = 'SCHEDULE_NOT_FOUND';
   static const notificationNotFound = 'NOTIFICATION_NOT_FOUND';
   static const linkNotFound = 'LINK_NOT_FOUND';
   static const attendanceNotFound = 'ATTENDANCE_NOT_FOUND';
@@ -92,9 +95,11 @@ abstract final class SdkErrorCode {
   // with no code: a blocking programme clash (#16). The report is in
   // `ServerException.details`.
   static const timeConflict = 'TIME_CONFLICT';
-  // Event optimistic locking (club_server#292, #25): the `version` sent with
-  // an update, correction or split is not the event's current one. Mapped to
-  // `StaleVersionException`, which carries the current version and writer.
+  // Optimistic locking: the `version` sent is not the current one — of the
+  // event for an update, correction or split (club_server#292, #25), or of
+  // the occurrence for an occurrence change, drop or reinstate
+  // (club_server#430, #1). Mapped to `StaleVersionException`, which carries
+  // the current version and writer.
   static const staleVersion = 'STALE_VERSION';
   // Event reschedule refused: per-occurrence overrides exist. The offending
   // slots are in `ServerException.details['occurrenceTimeUtcs']`. Retry with

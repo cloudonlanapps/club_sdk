@@ -117,7 +117,7 @@ Future<void> _seedUser(
   final phone = data['phone'] as String? ?? '0000000000';
 
   // Register via public endpoint
-  await client.auth.register(
+  final registered = await client.auth.register(
     username: seedUsername,
     email: email,
     password: password,
@@ -129,13 +129,17 @@ Future<void> _seedUser(
   _log('Registered: $seedUsername');
 
   // registered -> pending: as the new user, attach the identity document
-  // the server requires and submit for review, then return to the admin
-  // session. login() replaces the session in place.
-  await client.auth.login(seedUsername, password);
-  await attachIdentityDocument(client, seedUsername);
-  await client.users.submitForReview();
-  await client.auth.login(adminUsername, adminPassword);
-  _log('Submitted for review: $seedUsername');
+  // the server requires and submit for review — unless the deployment has
+  // identity verification off (#2), where register already returned the
+  // user pending. Either way the session returns to the admin.
+  await submitForReviewIfRequired(
+    client: client,
+    registered: registered,
+    password: password,
+    adminUsername: adminUsername,
+    adminPassword: adminPassword,
+  );
+  _log('Pending review: $seedUsername');
 
   // Approve (skip for pending)
   if (status != 'pending') {

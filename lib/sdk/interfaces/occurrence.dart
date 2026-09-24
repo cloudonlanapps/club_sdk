@@ -5,6 +5,13 @@ import '../models/occurrence.dart';
 ///
 /// Handles individual occurrences within event series, including
 /// reschedules, cancellations, and queries.
+///
+/// Every change takes the occurrence's `version` (`Occurrence.version`, the
+/// value the caller last loaded; club_server#430). An occurrence has its own
+/// version, separate from the event's, and changing it does not bump the
+/// event's. A version the occurrence has moved past is refused with
+/// `StaleVersionException`, carrying who changed it and when; nothing is
+/// written.
 abstract interface class OccurrenceSource {
   /// Gets a specific occurrence.
   ///
@@ -42,6 +49,7 @@ abstract interface class OccurrenceSource {
   Future<void> rescheduleOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
+    required int version,
     DateTime? newStartTimeUtc,
     int? newDurationMinutes,
     int? newVenueId,
@@ -51,9 +59,14 @@ abstract interface class OccurrenceSource {
   Future<void> cancelOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
+    required int version,
     required String reason,
   });
 
   /// Restores a cancelled occurrence (undo cancel).
-  Future<void> undoCancelOccurrence(int eventId, DateTime occurrenceTimeUtc);
+  Future<void> undoCancelOccurrence(
+    int eventId,
+    DateTime occurrenceTimeUtc, {
+    required int version,
+  });
 }

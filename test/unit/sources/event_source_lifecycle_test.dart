@@ -90,14 +90,16 @@ void main() {
       expect(bodyOf(h.requests.single), {'reason': 'back on'});
     });
 
-    test('Issue 16: drop posts a reason, reinstate posts nothing', () async {
+    test('Issue 16: drop posts a reason, reinstate only the version '
+        '(Issue 1)', () async {
       final h = harness();
-      await h.source.drop(42, reason: 'rain');
-      await h.source.reinstate(42);
+      await h.source.drop(42, version: 1, reason: 'rain');
+      await h.source.reinstate(42, version: 2);
       expect(h.requests[0].url.path, endsWith('/events/by_id/42/drop'));
-      expect(bodyOf(h.requests[0]), {'reason': 'rain'});
+      expect(bodyOf(h.requests[0]), {'version': 1, 'reason': 'rain'});
       expect(h.requests[1].url.path, endsWith('/events/by_id/42/reinstate'));
       expect(h.requests[1].method, 'POST');
+      expect(bodyOf(h.requests[1]), {'version': 2});
     });
 
     test('Issue 16: listSchedules reads the timetable', () async {

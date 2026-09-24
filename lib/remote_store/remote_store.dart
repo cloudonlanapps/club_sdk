@@ -297,6 +297,32 @@ class RemoteStore {
     });
   }
 
+  /// Performs a HEAD request and returns the response headers (lower-cased
+  /// names). A non-2xx answer throws like any other call; a HEAD response has
+  /// no body, so the error carries its status alone.
+  Future<Map<String, String>> head(
+    String path, {
+    Map<String, String>? queryParams,
+  }) async {
+    return _executeWithRetry(() async {
+      final uri = _buildUri(path, queryParams);
+      final response = await _httpClient
+          .head(
+            uri,
+            headers: {
+              'Accept': '*/*',
+              if (authToken != null) 'Authorization': 'Bearer $authToken',
+            },
+          )
+          .timeout(timeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.headers;
+      }
+      _throwApiException(response);
+    });
+  }
+
   /// Performs a DELETE request.
   ///
   /// Returns the parsed JSON body on 200 responses (some endpoints respond
@@ -332,18 +358,28 @@ class RemoteStore {
   }
 
   /// Executes a request with retry logic for 5xx errors.
+  ///
+  /// Signals [onServerReachable] once per call, on the first response, however
+  /// many retries or token refreshes follow (#729).
   Future<T> _executeWithRetry<T>(Future<T> Function() request) async {
     var attempt = 0;
     var refreshed = false;
+    var signalledReachable = false;
+    void markReachable() {
+      if (signalledReachable) return;
+      signalledReachable = true;
+      onServerReachable?.call();
+    }
+
     while (true) {
       try {
         final result = await request();
         // A response came back → the server is reachable.
-        onServerReachable?.call();
+        markReachable();
         return result;
       } on ServerException catch (e) {
         // A mapped HTTP error still means the server answered → reachable.
-        onServerReachable?.call();
+        markReachable();
 
         // Handle 401 - try token refresh, but only for an expired token.
         // The server also returns 401 for INVALID_CREDENTIALS and

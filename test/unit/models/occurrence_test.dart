@@ -195,4 +195,95 @@ void main() {
       expect(Occurrence.fromMap(overridden.toMap()).isRescheduled, isTrue);
     });
   });
+
+  group('Issue 1: Occurrence version', () {
+    final now = DateTime.utc(2027, 6, 1, 9);
+    final changedAt = DateTime.utc(2027, 5, 20, 8, 15);
+    // The shape club_server's OccurrenceResponse sends (#430).
+    Map<String, dynamic> serverPayload({
+      int version = 1,
+      int? updatedAt,
+      String? updatedBy,
+    }) => {
+      'eventId': 7,
+      'eventTitle': 'Camp',
+      'eventType': 'camp',
+      'occurrenceTimeUtc': now.millisecondsSinceEpoch,
+      'startTimeUtc': now.millisecondsSinceEpoch,
+      'endTimeUtc': now.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      'venueId': 1,
+      'venueName': 'Rink',
+      'organizerName': 'org',
+      'organizerDisplayName': 'Org',
+      'status': 'scheduled',
+      'isRescheduled': false,
+      'cancelReason': null,
+      'version': version,
+      'updatedAt': updatedAt,
+      'updatedBy': updatedBy,
+    };
+
+    test('fromMap reads an unchanged occurrence as version 1 with no '
+        'author', () {
+      final occ = Occurrence.fromMap(serverPayload());
+      expect(occ.version, 1);
+      expect(occ.updatedAtUtc, isNull);
+      expect(occ.updatedBy, isNull);
+    });
+
+    test('fromMap reads version, updatedAt and updatedBy once changed', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 3,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'coach_1',
+        ),
+      );
+      expect(occ.version, 3);
+      expect(occ.updatedAtUtc, changedAt);
+      expect(occ.updatedAtUtc!.isUtc, isTrue);
+      expect(occ.updatedBy, 'coach_1');
+    });
+
+    test('toMap/fromMap round-trip preserves the version fields', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 4,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'admin',
+        ),
+      );
+      final back = Occurrence.fromMap(occ.toMap());
+      expect(back, occ);
+      expect(back.version, 4);
+      expect(back.updatedAtUtc, changedAt);
+      expect(back.updatedBy, 'admin');
+    });
+
+    test('occurrences differing only in version are not equal', () {
+      final a = Occurrence.fromMap(serverPayload(version: 2));
+      final b = Occurrence.fromMap(serverPayload(version: 3));
+      expect(a, isNot(b));
+    });
+
+    test('copyWith sets the version and clears the author via '
+        'ValueGetter', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 2,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'coach_1',
+        ),
+      );
+      final copy = occ.copyWith(
+        version: 5,
+        updatedAtUtc: () => null,
+        updatedBy: () => null,
+      );
+      expect(copy.version, 5);
+      expect(copy.updatedAtUtc, isNull);
+      expect(copy.updatedBy, isNull);
+      expect(occ.copyWith().version, 2);
+    });
+  });
 }

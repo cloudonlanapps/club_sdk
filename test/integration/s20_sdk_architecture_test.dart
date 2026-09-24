@@ -404,6 +404,8 @@ void main() {
           () => client.occurrences.cancelOccurrence(
             event.id,
             invalidTime,
+            // No such occurrence, so nothing has changed it: version 1.
+            version: 1,
             reason: 'Test',
           ),
           throwsA(

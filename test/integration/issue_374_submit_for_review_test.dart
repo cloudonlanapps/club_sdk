@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/identity_document.dart';
+import '../utils/module_gate.dart';
 import '../utils/test_client.dart';
 
 /// Issue #374 — `UserStatus.registered` + `UserSource.submitForReview()`.
@@ -15,6 +16,10 @@ import '../utils/test_client.dart';
 void main() {
   group('Issue 374: submitForReview lifecycle', () {
     late SecureClient adminClient;
+    // The review lifecycle below exists only while identity verification is
+    // on (#2); with it off, register lands users at pending and
+    // issue_2_identity_verification_test covers that flow instead.
+    late bool verificationOn;
     const password = 'password123';
 
     /// Counter to mint unique usernames per test, since the suite must remain
@@ -53,6 +58,9 @@ void main() {
         password: sudoPassword,
       );
       await adminClient.auth.login(sudoUsername, sudoPassword);
+      verificationOn = (await stackCapabilities(
+        adminClient,
+      )).identityVerification;
     });
 
     tearDownAll(() async {
@@ -66,6 +74,12 @@ void main() {
     test(
       'Issue 374: register lands new user at status == registered',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('regstatus');
 
         final user = await adminClient.users.getUserPrivate(username);
@@ -77,6 +91,12 @@ void main() {
       'Issue 374: registration does NOT emit user_approval to admin '
       '(deferred until submit-for-review)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         // Snapshot admin inbox prior to a fresh registration so we measure the
         // delta, not absolute count (other test files may share the inbox).
         final before = await adminClient.notifications.getNotifications(
@@ -112,6 +132,12 @@ void main() {
       'Issue 374: submitForReview flips registered -> pending and emits '
       'exactly one user_approval to admin',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('submit');
         final userClient = await loginAs(username);
 
@@ -158,6 +184,12 @@ void main() {
     test(
       'Issue 374: submitForReview returns 409 when caller status is pending',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('pending');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -182,6 +214,12 @@ void main() {
     test(
       'Issue 374: submitForReview returns 409 when caller status is active',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('active');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -206,6 +244,12 @@ void main() {
     test(
       'Issue 374: submitForReview returns 409 when caller status is blocked',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('blocked');
         final userClient = await loginAs(username);
         // Block from registered (server #120 §4 allows this).
@@ -224,6 +268,12 @@ void main() {
     test(
       'Issue 374: submitForReview returns 409 when caller status is left',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('left');
         final userClient = await loginAs(username);
         await attachIdentityDocument(userClient, username);
@@ -239,6 +289,12 @@ void main() {
     );
 
     test('Issue 374: blockUser succeeds when target is registered', () async {
+      if (skipUnless(
+        enabled: verificationOn,
+        module: 'identity verification',
+      )) {
+        return;
+      }
       final username = await registerFresh('blockreg');
 
       final blocked = await adminClient.users.blockUser(username);
@@ -246,6 +302,12 @@ void main() {
     });
 
     test('Issue 374: blockUser succeeds when target is pending', () async {
+      if (skipUnless(
+        enabled: verificationOn,
+        module: 'identity verification',
+      )) {
+        return;
+      }
       final username = await registerFresh('blockpend');
       final userClient = await loginAs(username);
       await attachIdentityDocument(userClient, username);
@@ -260,6 +322,12 @@ void main() {
       'Issue 374: approveUser returns INVALID_STATE when target is registered '
       '(must submitForReview first)',
       () async {
+        if (skipUnless(
+          enabled: verificationOn,
+          module: 'identity verification',
+        )) {
+          return;
+        }
         final username = await registerFresh('approvereg');
 
         // Server rejects approve-from-registered with 422 INVALID_STATE
