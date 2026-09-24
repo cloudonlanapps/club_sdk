@@ -18,6 +18,8 @@ class Occurrence {
     required this.status,
     required this.venueId,
     this.organizerName,
+    this.venueName,
+    this.organizerDisplayName,
     this.isRescheduled = false,
     this.enrollmentStatus,
     this.attendanceStatus,
@@ -57,6 +59,8 @@ class Occurrence {
       status: OccurrenceStatus.values.byName(map['status'] as String),
       venueId: (map['venueId'] as int?) ?? 0,
       organizerName: map['organizerName'] as String?,
+      venueName: map['venueName'] as String?,
+      organizerDisplayName: map['organizerDisplayName'] as String?,
       isRescheduled: (map['isRescheduled'] as bool?) ?? false,
       enrollmentStatus: map['enrollmentStatus'] != null
           ? EnrollmentStatus.values.byName(map['enrollmentStatus'] as String)
@@ -86,6 +90,16 @@ class Occurrence {
   final OccurrenceStatus status;
   final int venueId;
   final String? organizerName;
+
+  /// The venue's name, sent with the occurrence so a caller need not look
+  /// the venue up (#6). Null when the occurrence has no venue.
+  final String? venueName;
+
+  /// The organizer's **public** display name (#6): their real name only
+  /// when they have chosen to show it publicly, else their nickname or
+  /// "Name not provided" — the same rule as `computePublicDisplayName`,
+  /// not the staff view's full name. Null when there is no organizer.
+  final String? organizerDisplayName;
 
   /// Whether this occurrence carries a per-occurrence override that changed its
   /// start/end, venue, or organizer. The server sets this for **any** field
@@ -129,6 +143,8 @@ class Occurrence {
     OccurrenceStatus? status,
     int? venueId,
     String? Function()? organizerName,
+    String? Function()? venueName,
+    String? Function()? organizerDisplayName,
     bool? isRescheduled,
     EnrollmentStatus? Function()? enrollmentStatus,
     AttendanceStatus? Function()? attendanceStatus,
@@ -148,6 +164,10 @@ class Occurrence {
       organizerName: organizerName != null
           ? organizerName()
           : this.organizerName,
+      venueName: venueName != null ? venueName() : this.venueName,
+      organizerDisplayName: organizerDisplayName != null
+          ? organizerDisplayName()
+          : this.organizerDisplayName,
       isRescheduled: isRescheduled ?? this.isRescheduled,
       enrollmentStatus: enrollmentStatus != null
           ? enrollmentStatus()
@@ -174,6 +194,8 @@ class Occurrence {
       'status': status.name,
       'venueId': venueId,
       'organizerName': organizerName,
+      'venueName': venueName,
+      'organizerDisplayName': organizerDisplayName,
       'isRescheduled': isRescheduled,
       'enrollmentStatus': enrollmentStatus?.name,
       'attendanceStatus': attendanceStatus?.name,
@@ -205,6 +227,8 @@ class Occurrence {
         other.status == status &&
         other.venueId == venueId &&
         other.organizerName == organizerName &&
+        other.venueName == venueName &&
+        other.organizerDisplayName == organizerDisplayName &&
         other.isRescheduled == isRescheduled &&
         other.enrollmentStatus == enrollmentStatus &&
         other.attendanceStatus == attendanceStatus &&
@@ -224,6 +248,8 @@ class Occurrence {
         status.hashCode ^
         venueId.hashCode ^
         organizerName.hashCode ^
+        venueName.hashCode ^
+        organizerDisplayName.hashCode ^
         isRescheduled.hashCode ^
         enrollmentStatus.hashCode ^
         attendanceStatus.hashCode ^
