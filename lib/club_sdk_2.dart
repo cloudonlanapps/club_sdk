@@ -19,17 +19,26 @@ export 'sdk/exceptions/exceptions.dart'
 // INTERFACES
 // ═════════════════════════════════════════════════════════════════════════════
 
+export 'sdk/interfaces/admin.dart' show AdminSource;
+export 'sdk/interfaces/attendance.dart' show AttendanceSource;
 export 'sdk/interfaces/audit_log.dart' show AuditLogSource;
+export 'sdk/interfaces/auth.dart' show AuthSource;
+export 'sdk/interfaces/broadcast.dart' show BroadcastSource;
 export 'sdk/interfaces/capabilities.dart' show CapabilitiesSource;
 export 'sdk/interfaces/credit.dart' show CreditSource;
+export 'sdk/interfaces/enrollment.dart' show EnrollmentSource;
 export 'sdk/interfaces/evaluation.dart' show EvaluationSource;
+export 'sdk/interfaces/event.dart' show EventSource;
 export 'sdk/interfaces/event_marketing.dart' show EventMarketingSource;
+export 'sdk/interfaces/group.dart' show GroupSource;
 export 'sdk/interfaces/inquiry.dart' show InquirySource;
 export 'sdk/interfaces/media.dart' show MediaSource;
 export 'sdk/interfaces/my_credits.dart' show MyCreditsSource;
 export 'sdk/interfaces/my_evaluations.dart' show MyEvaluationsSource;
 export 'sdk/interfaces/my_events.dart' show MyEventsSource;
 export 'sdk/interfaces/my_groups.dart' show MyGroupsSource;
+export 'sdk/interfaces/notification.dart' show NotificationSource;
+export 'sdk/interfaces/occurrence.dart' show OccurrenceSource;
 export 'sdk/interfaces/owner_media.dart'
     show
         EvaluationMediaSource,
@@ -39,6 +48,8 @@ export 'sdk/interfaces/owner_media.dart'
         UserMediaSource,
         VenueMediaSource;
 export 'sdk/interfaces/public.dart' show PublicSource;
+export 'sdk/interfaces/user.dart' show UserSource;
+export 'sdk/interfaces/venue.dart' show VenueSource;
 // ═════════════════════════════════════════════════════════════════════════════
 // MODELS
 // ═════════════════════════════════════════════════════════════════════════════
