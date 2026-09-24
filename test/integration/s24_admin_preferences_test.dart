@@ -47,18 +47,20 @@ void main() {
       expect(read.updatedAtUtc.isUtc, isTrue);
     });
 
-    test('24.03: attendance report accepts a window and returns records',
-        () async {
-      final from = DateTime.utc(2020);
-      final to = DateTime.utc(2020, 1, 2);
-      final records = await client.attendance.listAttendanceInRange(
-        fromTimeUtc: from,
-        toTimeUtc: to,
-      );
-      // A window with no events is legitimately empty; the assertion is that
-      // the call resolves and parses, which the removed /attendance/summary
-      // endpoint never did.
-      expect(records, isA<List<AttendanceRecord>>());
-    });
+    test(
+      '24.03: attendance report accepts a window and returns records',
+      () async {
+        final from = DateTime.utc(2020);
+        final to = DateTime.utc(2020, 1, 2);
+        final records = await client.attendance.listAttendanceInRange(
+          fromTimeUtc: from,
+          toTimeUtc: to,
+        );
+        // A window with no events is legitimately empty; the assertion is that
+        // the call resolves and parses, which the removed /attendance/summary
+        // endpoint never did.
+        expect(records, isA<List<AttendanceRecord>>());
+      },
+    );
   });
 }

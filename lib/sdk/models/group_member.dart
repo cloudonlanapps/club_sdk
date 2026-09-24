@@ -40,8 +40,8 @@ class GroupMember {
   String get displayName {
     if (nickname != null && nickname!.isNotEmpty) return nickname!;
     final parts = [firstName, lastName].whereType<String>().where(
-          (p) => p.isNotEmpty,
-        );
+      (p) => p.isNotEmpty,
+    );
     return parts.isEmpty ? membername : parts.join(' ');
   }
 

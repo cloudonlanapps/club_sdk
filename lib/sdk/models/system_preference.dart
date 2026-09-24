@@ -84,6 +84,5 @@ class SystemPreference {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(key, value, updatedAtUtc, updatedBy);
+  int get hashCode => Object.hash(key, value, updatedAtUtc, updatedBy);
 }

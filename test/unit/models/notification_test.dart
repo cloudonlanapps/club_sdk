@@ -105,7 +105,6 @@ void main() {
       expect(PendingActionType.fromWire('user_reconsider_request'), isNull);
     });
 
-
     test('Issue 358: fromWire round-trips every variant', () {
       for (final v in PendingActionType.values) {
         expect(PendingActionType.fromWire(v.wireName), v);

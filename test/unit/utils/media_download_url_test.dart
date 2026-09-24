@@ -86,7 +86,7 @@ void main() {
       expect(
         mediaDownloadUrl(base, video),
         'https://api.example.com/v1/media/by_id/vid-1/download/'
-            'vid-1-club_christmas_camp.mp4',
+        'vid-1-club_christmas_camp.mp4',
       );
     });
 
