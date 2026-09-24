@@ -14,7 +14,11 @@ abstract interface class GroupSource {
     int limit = 20,
   });
 
-  /// Get a group by ID.
+  /// Get a group by ID, with its members inline (`Group.members`, #6).
+  ///
+  /// The only group read that carries the members; every other read leaves
+  /// `members` null and sends `memberCount` instead. For a sorted list, use
+  /// [getMembers].
   Future<Group> getGroup(int id);
 
   /// Create a new group.

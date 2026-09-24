@@ -356,4 +356,78 @@ void main() {
       });
     });
   });
+
+  group('Issue 6: memberCount and members', () {
+    final created = DateTime.utc(2026, 3, 1);
+    // GroupResponse: every read except getGroup.
+    Map<String, dynamic> listPayload({int memberCount = 3}) => {
+      'id': 5,
+      'name': 'test_U16',
+      'description': null,
+      'kind': 'manual',
+      'memberCount': memberCount,
+      'createdAtUtc': created.millisecondsSinceEpoch,
+      'requested': false,
+    };
+    // GroupDetailResponse: getGroup, with the members inline and no count.
+    Map<String, dynamic> detailPayload() => {
+      'id': 5,
+      'name': 'test_U16',
+      'description': null,
+      'kind': 'manual',
+      'createdAtUtc': created.millisecondsSinceEpoch,
+      'members': [
+        {'membername': 'amy', 'firstName': 'Amy', 'lastName': null},
+        {'membername': 'bo', 'nickname': 'Bo'},
+      ],
+    };
+
+    test('fromMap reads memberCount from a listing, with no members', () {
+      final g = Group.fromMap(listPayload(memberCount: 7));
+      expect(g.memberCount, 7);
+      expect(g.members, isNull);
+    });
+
+    test('fromMap reads the inline members of a detail read, and counts '
+        'them', () {
+      final g = Group.fromMap(detailPayload());
+      expect(g.members, hasLength(2));
+      expect(g.members!.first.membername, 'amy');
+      expect(g.members!.first.firstName, 'Amy');
+      expect(g.members!.last.nickname, 'Bo');
+      expect(g.memberCount, 2);
+    });
+
+    test('toMap/fromMap round-trip preserves memberCount and members', () {
+      final detail = Group.fromMap(detailPayload());
+      expect(Group.fromMap(detail.toMap()), detail);
+      final listed = Group.fromMap(listPayload());
+      final back = Group.fromMap(listed.toMap());
+      expect(back, listed);
+      expect(back.members, isNull);
+    });
+
+    test('memberCount and members take part in equality', () {
+      final a = Group.fromMap(listPayload(memberCount: 3));
+      expect(a, isNot(Group.fromMap(listPayload(memberCount: 4))));
+      final withMembers = a.copyWith(
+        members: () => const [GroupMember(membername: 'amy')],
+      );
+      expect(a, isNot(withMembers));
+      expect(
+        withMembers.hashCode,
+        a
+            .copyWith(members: () => const [GroupMember(membername: 'amy')])
+            .hashCode,
+      );
+    });
+
+    test('copyWith sets memberCount and clears members via ValueGetter', () {
+      final g = Group.fromMap(detailPayload());
+      final copy = g.copyWith(memberCount: 9, members: () => null);
+      expect(copy.memberCount, 9);
+      expect(copy.members, isNull);
+      expect(g.copyWith().members, hasLength(2));
+    });
+  });
 }

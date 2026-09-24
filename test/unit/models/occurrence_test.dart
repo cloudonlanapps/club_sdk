@@ -286,4 +286,66 @@ void main() {
       expect(occ.copyWith().version, 2);
     });
   });
+
+  group('Issue 6: venueName and organizerDisplayName', () {
+    final t = DateTime.utc(2027, 6, 1, 9);
+    Map<String, dynamic> payload({
+      String? venueName = 'Main Rink',
+      String? organizerDisplayName = 'Coach Kim',
+    }) => {
+      'eventId': 7,
+      'occurrenceTimeUtc': t.millisecondsSinceEpoch,
+      'startTimeUtc': t.millisecondsSinceEpoch,
+      'endTimeUtc': t.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      'venueId': 1,
+      'venueName': venueName,
+      'organizerName': 'kim',
+      'organizerDisplayName': organizerDisplayName,
+      'status': 'scheduled',
+      'version': 1,
+    };
+
+    test('fromMap reads both names', () {
+      final occ = Occurrence.fromMap(payload());
+      expect(occ.venueName, 'Main Rink');
+      expect(occ.organizerDisplayName, 'Coach Kim');
+    });
+
+    test('fromMap reads null names as null', () {
+      final occ = Occurrence.fromMap(
+        payload(venueName: null, organizerDisplayName: null),
+      );
+      expect(occ.venueName, isNull);
+      expect(occ.organizerDisplayName, isNull);
+    });
+
+    test('toMap/fromMap round-trip preserves both names', () {
+      final occ = Occurrence.fromMap(payload());
+      final back = Occurrence.fromMap(occ.toMap());
+      expect(back, occ);
+      expect(back.venueName, 'Main Rink');
+      expect(back.organizerDisplayName, 'Coach Kim');
+    });
+
+    test('the names take part in equality', () {
+      final a = Occurrence.fromMap(payload());
+      expect(a, isNot(Occurrence.fromMap(payload(venueName: 'Annex'))));
+      expect(
+        a,
+        isNot(Occurrence.fromMap(payload(organizerDisplayName: 'Kim'))),
+      );
+    });
+
+    test('copyWith sets and clears the names via ValueGetter', () {
+      final a = Occurrence.fromMap(payload());
+      final cleared = a.copyWith(
+        venueName: () => null,
+        organizerDisplayName: () => null,
+      );
+      expect(cleared.venueName, isNull);
+      expect(cleared.organizerDisplayName, isNull);
+      expect(a.copyWith(venueName: () => 'Annex').venueName, 'Annex');
+      expect(a.copyWith().venueName, 'Main Rink');
+    });
+  });
 }

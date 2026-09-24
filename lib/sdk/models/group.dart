@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import 'gender.dart';
 import 'group_kind.dart';
+import 'group_member.dart';
 
 @immutable
 class Group {
@@ -18,9 +20,14 @@ class Group {
     this.gender,
     this.deletedAtUtc,
     this.requested = false,
+    this.memberCount = 0,
+    this.members,
   });
 
   factory Group.fromMap(Map<String, dynamic> map) {
+    final members = (map['members'] as List<dynamic>?)
+        ?.map((m) => GroupMember.fromMap(m as Map<String, dynamic>))
+        .toList();
     return Group(
       id: map['id'] as int,
       name: map['name'] as String,
@@ -52,6 +59,8 @@ class Group {
             )
           : null,
       requested: map['requested'] as bool? ?? false,
+      memberCount: (map['memberCount'] as int?) ?? members?.length ?? 0,
+      members: members,
     );
   }
 
@@ -82,6 +91,16 @@ class Group {
 
   /// True when members can be added/removed by hand
   /// (i.e. manual or semi-auto groups).
+  /// How many members the group has (#6). Every read sends it except
+  /// `GroupSource.getGroup`, which sends the [members] instead; there it is
+  /// their count.
+  final int memberCount;
+
+  /// The members, inline. Only `GroupSource.getGroup` sends them (#6); null
+  /// from every other read — use `GroupSource.getMembers` for a sorted
+  /// list.
+  final List<GroupMember>? members;
+
   bool get allowsManualMembership => kind != GroupKind.auto;
   bool get isActive => deletedAtUtc == null;
 
@@ -96,6 +115,8 @@ class Group {
     Gender? Function()? gender,
     DateTime? Function()? deletedAtUtc,
     bool? requested,
+    int? memberCount,
+    List<GroupMember>? Function()? members,
   }) {
     return Group(
       id: id ?? this.id,
@@ -112,6 +133,8 @@ class Group {
       gender: gender != null ? gender() : this.gender,
       deletedAtUtc: deletedAtUtc != null ? deletedAtUtc() : this.deletedAtUtc,
       requested: requested ?? this.requested,
+      memberCount: memberCount ?? this.memberCount,
+      members: members != null ? members() : this.members,
     );
   }
 
@@ -127,6 +150,8 @@ class Group {
       'gender': gender?.serverValue,
       'deletedAtUtc': deletedAtUtc?.millisecondsSinceEpoch,
       'requested': requested,
+      'memberCount': memberCount,
+      'members': members?.map((m) => m.toMap()).toList(),
     };
   }
 
@@ -140,7 +165,7 @@ class Group {
         'dobOnOrBeforeUtc: $dobOnOrBeforeUtc, '
         'gender: $gender, '
         'deletedAtUtc: $deletedAtUtc, '
-        'requested: $requested)';
+        'requested: $requested, memberCount: $memberCount)';
   }
 
   @override
@@ -157,7 +182,9 @@ class Group {
         other.createdAtUtc == createdAtUtc &&
         other.gender == gender &&
         other.deletedAtUtc == deletedAtUtc &&
-        other.requested == requested;
+        other.requested == requested &&
+        other.memberCount == memberCount &&
+        const ListEquality<GroupMember>().equals(other.members, members);
   }
 
   @override
@@ -171,5 +198,7 @@ class Group {
       createdAtUtc.hashCode ^
       gender.hashCode ^
       deletedAtUtc.hashCode ^
-      requested.hashCode;
+      requested.hashCode ^
+      memberCount.hashCode ^
+      const ListEquality<GroupMember>().hash(members);
 }
