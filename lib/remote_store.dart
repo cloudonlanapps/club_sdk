@@ -21,8 +21,17 @@
 ///   filter: EventFilter.myEvents,
 /// );
 /// ```
+///
+/// For the token-free `/public` routes alone, with no login:
+///
+/// ```dart
+/// final public = createRemotePublicSource(
+///   baseUrl: 'https://api.myexampleclub.com/v1',
+/// );
+/// ```
 library;
 
 export 'remote_store/http/api_exception.dart' show mapHttpError;
-export 'remote_store/remote_client.dart' show createRemoteSecureClient;
+export 'remote_store/remote_client.dart'
+    show createRemotePublicSource, createRemoteSecureClient;
 export 'remote_store/remote_store.dart' show RemoteStore, UrlTransformer;

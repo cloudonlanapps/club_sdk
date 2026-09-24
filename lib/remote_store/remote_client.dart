@@ -1,4 +1,5 @@
 import '../client.dart';
+import '../sdk/interfaces/public.dart';
 import 'remote_store.dart';
 import 'sources/admin_source.dart';
 import 'sources/attendance_source.dart';
@@ -89,3 +90,22 @@ Future<SecureClient> createRemoteSecureClient({
     public: RemotePublicSource(effectiveStore),
   );
 }
+
+/// Creates a [PublicSource] for the token-free `/public` routes, with no
+/// [SecureClient] and no login (#9) — for a caller such as a public website
+/// that holds no authenticated session.
+///
+/// [baseUrl] and [store] are as for [createRemoteSecureClient]. The store
+/// carries no token unless the caller set one on a [store] they passed in;
+/// nothing on `/public` needs one.
+///
+/// ```dart
+/// final public = createRemotePublicSource(
+///   baseUrl: 'https://api.myexampleclub.com/v1',
+/// );
+/// final info = await public.getPublicClubInfo();
+/// ```
+PublicSource createRemotePublicSource({
+  required String baseUrl,
+  RemoteStore? store,
+}) => RemotePublicSource(store ?? RemoteStore(baseUrl: baseUrl));
