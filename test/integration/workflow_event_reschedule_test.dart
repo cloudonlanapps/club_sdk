@@ -82,6 +82,7 @@ void main() {
       final newStart = DateTime.utc(2027, 3, 16, 10);
       final moved = await client.events.rescheduleEvent(
         camp.id,
+        version: camp.version,
         startTimeUtc: newStart,
       );
 
@@ -115,6 +116,7 @@ void main() {
         final newEnd = start.add(const Duration(minutes: 90));
         final updated = await client.events.rescheduleEvent(
           camp.id,
+          version: camp.version,
           endTimeUtc: newEnd,
           sessions: () => const [
             EventSession(name: 'On-Ice', periodMinutes: 45),
@@ -151,6 +153,7 @@ void main() {
 
         final cleared = await client.events.rescheduleEvent(
           camp.id,
+          version: camp.version,
           startTimeUtc: start.add(const Duration(days: 1)),
           sessions: () => null,
         );
@@ -182,6 +185,7 @@ void main() {
         expect(
           () => client.events.rescheduleEvent(
             camp.id,
+            version: camp.version,
             endTimeUtc: start.add(const Duration(minutes: 90)),
             sessions: () => const [
               EventSession(name: 'On-Ice', periodMinutes: 60),
@@ -209,7 +213,7 @@ void main() {
         // business-logic check. (NOTHING_TO_RESCHEDULE is the occurrence-level
         // empty-body code — see the occurrence test below.)
         expect(
-          () => client.events.rescheduleEvent(camp.id),
+          () => client.events.rescheduleEvent(camp.id, version: camp.version),
           throwsA(
             isA<ServerException>().having(
               (e) => e.code,
