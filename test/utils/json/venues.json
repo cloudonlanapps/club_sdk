@@ -1,0 +1,63 @@
+[
+  {
+    "name": "test_Main Stadium",
+    "address": "123 Sport Rd",
+    "isDefault": false
+  },
+  {
+    "name": "test_Training Ground 2",
+    "address": "456 Side St"
+  },
+  {
+    "name": "test_Venue 1",
+    "address": "Address 1"
+  },
+  {
+    "name": "test_Venue 2",
+    "address": "Address 2"
+  },
+  {
+    "name": "test_Venue 3",
+    "address": "Address 3"
+  },
+  {
+    "name": "test_Venue 4",
+    "address": "Address 4"
+  },
+  {
+    "name": "test_Venue 5",
+    "address": "Address 5"
+  },
+  {
+    "name": "test_Special Venue",
+    "address": "Special Address"
+  },
+  {
+    "name": "test_Conflict Venue",
+    "address": "Conflict Address"
+  },
+  {
+    "name": "test_Conflict Update Venue",
+    "address": "Update Address"
+  },
+  {
+    "name": "test_Safe Venue",
+    "address": "Safe Address"
+  },
+  {
+    "name": "test_Venue One",
+    "address": "One Address"
+  },
+  {
+    "name": "test_Venue Two",
+    "address": "Two Address"
+  },
+  {
+    "name": "test_Forest Camp",
+    "address": "Forest Address"
+  },
+  {
+    "name": "test_Other Venue",
+    "address": "Other Address"
+  }
+]

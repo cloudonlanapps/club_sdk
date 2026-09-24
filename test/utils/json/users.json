@@ -1,0 +1,407 @@
+[
+  {
+    "username": "test_super_admin",
+    "email": "test_super_admin@test.com",
+    "password": "password123",
+    "name": "Super Admin",
+    "status": "active",
+    "roles": ["super_admin"],
+    "profile": { "firstName": "Super", "lastName": "Admin" }
+  },
+  {
+    "username": "test_admin_1",
+    "email": "test_admin_1@test.com",
+    "password": "password123",
+    "name": "Admin One",
+    "status": "active",
+    "roles": ["admin"],
+    "profile": { "firstName": "Admin", "lastName": "One" }
+  },
+  {
+    "username": "test_coach_1",
+    "email": "test_coach_1@test.com",
+    "password": "password123",
+    "name": "Coach One",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "One" }
+  },
+  {
+    "username": "test_coach_2",
+    "email": "test_coach_2@test.com",
+    "password": "password123",
+    "name": "Coach Two",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "Two" }
+  },
+  {
+    "username": "test_alice",
+    "email": "test_alice@test.com",
+    "password": "password123",
+    "name": "Alice Smith",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Alice", "lastName": "Smith" }
+  },
+  {
+    "username": "test_bob",
+    "email": "test_bob@test.com",
+    "password": "password123",
+    "name": "Bob Jones",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Bob", "lastName": "Jones" }
+  },
+  {
+    "username": "test_charlie",
+    "email": "test_charlie@test.com",
+    "password": "password123",
+    "name": "Charlie Brown",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Charlie", "lastName": "Brown" }
+  },
+  {
+    "username": "test_diana",
+    "email": "test_diana@test.com",
+    "password": "password123",
+    "name": "Diana Prince",
+    "status": "pending",
+    "roles": [],
+    "profile": { "firstName": "Diana", "lastName": "Prince" }
+  },
+  {
+    "username": "test_user_a",
+    "email": "test_user_a@test.com",
+    "password": "password123",
+    "name": "User A",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "A" }
+  },
+  {
+    "username": "test_user_b",
+    "email": "test_user_b@test.com",
+    "password": "password123",
+    "name": "User B",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "B" }
+  },
+  {
+    "username": "test_user_c",
+    "email": "test_user_c@test.com",
+    "password": "password123",
+    "name": "User C",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "C" }
+  },
+  {
+    "username": "test_user_d",
+    "email": "test_user_d@test.com",
+    "password": "password123",
+    "name": "User D",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "D" }
+  },
+  {
+    "username": "test_att-1",
+    "email": "test_att-1@test.com",
+    "password": "password123",
+    "name": "Attendee One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Attendee", "lastName": "One" }
+  },
+  {
+    "username": "test_u-target",
+    "email": "test_u-target@test.com",
+    "password": "password123",
+    "name": "Target User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Target", "lastName": "User" }
+  },
+  {
+    "username": "test_coach-as-member",
+    "email": "test_coach-as-member@test.com",
+    "password": "password123",
+    "name": "Coach AsMember",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "AsMember" }
+  },
+  {
+    "username": "test_coach_alice",
+    "email": "test_coach_alice@test.com",
+    "password": "password123",
+    "name": "Alice Coach",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Alice", "lastName": "Coach" }
+  },
+  {
+    "username": "test_member_bob",
+    "email": "test_member_bob@test.com",
+    "password": "password123",
+    "name": "Bob Member",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Bob", "lastName": "Member" }
+  },
+  {
+    "username": "test_member_carol",
+    "email": "test_member_carol@test.com",
+    "password": "password123",
+    "name": "Carol Member",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Carol", "lastName": "Member" }
+  },
+  {
+    "username": "test_member_dave",
+    "email": "test_member_dave@test.com",
+    "password": "password123",
+    "name": "Dave Member",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Dave", "lastName": "Member" }
+  },
+  {
+    "username": "test_test-user",
+    "email": "test_test-user@test.com",
+    "password": "password123",
+    "name": "Test User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Test", "lastName": "User" }
+  },
+  {
+    "username": "test_attendee1",
+    "email": "test_attendee1@test.com",
+    "password": "password123",
+    "name": "Attendee One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Attendee", "lastName": "One" }
+  },
+  {
+    "username": "test_user1",
+    "email": "test_user1@test.com",
+    "password": "password123",
+    "name": "User One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "One" }
+  },
+  {
+    "username": "test_u1",
+    "email": "test_u1@test.com",
+    "password": "password123",
+    "name": "U One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "U", "lastName": "One" }
+  },
+  {
+    "username": "test_enrolled-1",
+    "email": "test_enrolled-1@test.com",
+    "password": "password123",
+    "name": "Enrolled One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Enrolled", "lastName": "One" }
+  },
+  {
+    "username": "test_enrolled-2",
+    "email": "test_enrolled-2@test.com",
+    "password": "password123",
+    "name": "Enrolled Two",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Enrolled", "lastName": "Two" }
+  },
+  {
+    "username": "test_invited-user",
+    "email": "test_invited-user@test.com",
+    "password": "password123",
+    "name": "Invited User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Invited", "lastName": "User" }
+  },
+  {
+    "username": "test_user-a",
+    "email": "test_user-a@test.com",
+    "password": "password123",
+    "name": "UserA Test",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "UserA", "lastName": "Test" }
+  },
+  {
+    "username": "test_user-b",
+    "email": "test_user-b@test.com",
+    "password": "password123",
+    "name": "UserB Test",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "UserB", "lastName": "Test" }
+  },
+  {
+    "username": "test_c1",
+    "email": "test_c1@test.com",
+    "password": "password123",
+    "name": "Coach C1",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "C1" }
+  },
+  {
+    "username": "test_c2",
+    "email": "test_c2@test.com",
+    "password": "password123",
+    "name": "Coach C2",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "C2" }
+  },
+  {
+    "username": "test_coach1",
+    "email": "test_coach1@test.com",
+    "password": "password123",
+    "name": "Coach First",
+    "status": "active",
+    "roles": ["coach"],
+    "profile": { "firstName": "Coach", "lastName": "First" }
+  },
+  {
+    "username": "test_user2",
+    "email": "test_user2@test.com",
+    "password": "password123",
+    "name": "User Two",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "Two" }
+  },
+  {
+    "username": "test_attendee2",
+    "email": "test_attendee2@test.com",
+    "password": "password123",
+    "name": "Attendee Two",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Attendee", "lastName": "Two" }
+  },
+  {
+    "username": "test_user3",
+    "email": "test_user3@test.com",
+    "password": "password123",
+    "name": "User Three",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "User", "lastName": "Three" }
+  },
+  {
+    "username": "test_s1",
+    "email": "test_s1@test.com",
+    "password": "password123",
+    "name": "Student One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Student", "lastName": "One" }
+  },
+  {
+    "username": "test_s2",
+    "email": "test_s2@test.com",
+    "password": "password123",
+    "name": "Student Two",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Student", "lastName": "Two" }
+  },
+  {
+    "username": "test_p1",
+    "email": "test_p1@test.com",
+    "password": "password123",
+    "name": "Player One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Player", "lastName": "One" }
+  },
+  {
+    "username": "test_p2",
+    "email": "test_p2@test.com",
+    "password": "password123",
+    "name": "Player Two",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Player", "lastName": "Two" }
+  },
+  {
+    "username": "test_t1",
+    "email": "test_t1@test.com",
+    "password": "password123",
+    "name": "Trial One",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Trial", "lastName": "One" }
+  },
+  {
+    "username": "test_requestUser",
+    "email": "test_requestUser@test.com",
+    "password": "password123",
+    "name": "Request User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Request", "lastName": "User" }
+  },
+  {
+    "username": "test_assigned-user",
+    "email": "test_assigned-user@test.com",
+    "password": "password123",
+    "name": "Assigned User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Assigned", "lastName": "User" }
+  },
+  {
+    "username": "test_user_past",
+    "email": "test_user_past@test.com",
+    "password": "password123",
+    "name": "Past User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Past", "lastName": "User" }
+  },
+  {
+    "username": "test_test-user-2",
+    "email": "test_test-user-2@test.com",
+    "password": "password123",
+    "name": "Test UserTwo",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Test", "lastName": "UserTwo" }
+  },
+  {
+    "username": "test_withdrawUser",
+    "email": "test_withdrawUser@test.com",
+    "password": "password123",
+    "name": "Withdraw User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Withdraw", "lastName": "User" }
+  },
+  {
+    "username": "test_leaveUser",
+    "email": "test_leaveUser@test.com",
+    "password": "password123",
+    "name": "Leave User",
+    "status": "active",
+    "roles": [],
+    "profile": { "firstName": "Leave", "lastName": "User" }
+  }
+]

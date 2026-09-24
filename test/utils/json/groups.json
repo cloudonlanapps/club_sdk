@@ -1,0 +1,7 @@
+[
+  {
+    "name": "test_public_staff",
+    "description": "Staff visible on public website",
+    "members": ["test_coach_1", "test_coach_2"]
+  }
+]
