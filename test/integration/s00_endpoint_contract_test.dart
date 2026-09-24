@@ -26,7 +26,6 @@ void main() {
     const uncoveredByDesign = <String, String>{
       '/': 'infrastructure, not API surface',
       '/health': 'infrastructure, not API surface',
-      '/static/images/coaches/{}': 'static asset, served directly',
       '/v1/media/by_id/{}/encrypt':
           'super-admin encrypt-in-place backfill (club_server#285); operator '
           'tooling exposed through the admin CLI, not an app SDK',
