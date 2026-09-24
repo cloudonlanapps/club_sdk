@@ -35,6 +35,7 @@ void main() {
         await h.source.rescheduleOccurrence(
           1,
           occTime,
+          version: 1,
           newStartTimeUtc: newStart,
           newDurationMinutes: 90,
           newVenueId: 5,
@@ -66,6 +67,7 @@ void main() {
         await h.source.rescheduleOccurrence(
           1,
           occTime,
+          version: 1,
           newDurationMinutes: 45,
         );
 

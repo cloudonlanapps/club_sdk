@@ -1,5 +1,6 @@
 import '../models/media.dart';
 import '../models/media_link.dart';
+import '../models/media_variant_info.dart';
 import '../models/pagination.dart';
 
 /// Interface for v2 media operations.
@@ -63,7 +64,24 @@ abstract interface class MediaSource {
   ///
   /// Endpoint is auth-optional: public media downloads without a token;
   /// non-public media require an authenticated client.
-  Future<List<int>> download(String uuid, {String variant});
+  ///
+  /// [filename] (`MediaRef.filename`) is appended to the URL, which the
+  /// server ignores for the lookup (club_server#424, #426).
+  Future<List<int>> download(
+    String uuid, {
+    String variant,
+    String? filename,
+  });
+
+  /// What [variant] of a media item is — its type and size — asked with a
+  /// `HEAD` on its download URL, without fetching it (club_server#426).
+  ///
+  /// Returns null when the item has no such variant (404), e.g. the poster
+  /// of a PDF uploaded with `preserveOriginal`. Other failures throw: 400
+  /// `INVALID_VARIANT` for a variant its media type never has, 409 while the
+  /// file is still converting. A HEAD answer has no body, so those errors
+  /// carry their status and no code.
+  Future<MediaVariantInfo?> probeVariant(String uuid, {String variant});
 
   /// Reverse lookup: every link row referencing this media.
   ///

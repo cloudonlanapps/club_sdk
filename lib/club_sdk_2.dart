@@ -123,6 +123,7 @@ export 'sdk/models/media_link.dart'
         MediaLinkReverseEntry;
 export 'sdk/models/media_link_limits.dart' show MediaLinkLimits;
 export 'sdk/models/media_ref.dart' show MediaRef;
+export 'sdk/models/media_variant_info.dart' show MediaVariantInfo;
 export 'sdk/models/member_credit_status.dart' show MemberCreditStatus;
 export 'sdk/models/my_attendance_record.dart' show MyAttendanceRecord;
 export 'sdk/models/my_attendance_stats.dart' show MyAttendanceStats;

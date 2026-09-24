@@ -69,6 +69,7 @@ class Media {
 
   final int id;
   final String uuid;
+
   /// The name the file was uploaded under. See [originalMimeType].
   final String originalFilename;
   final String mediaType;

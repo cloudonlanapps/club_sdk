@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 
-/// What this deployment can do (`GET /capabilities`, club_server#339).
+/// What this deployment can do (`GET /capabilities`, club_server#339): the
+/// optional modules, and whether registration needs identity verification.
 ///
 /// The optional modules are switched per deployment and every one of their
 /// routes stays registered, answering 503 where the module is off, so the
@@ -15,6 +16,7 @@ class Capabilities {
     this.creditSystem = false,
     this.evaluations = false,
     this.eventMarketing = false,
+    this.identityVerification = true,
   });
 
   factory Capabilities.fromMap(Map<String, dynamic> map) {
@@ -22,6 +24,7 @@ class Capabilities {
       creditSystem: (map['creditSystem'] as bool?) ?? false,
       evaluations: (map['evaluations'] as bool?) ?? false,
       eventMarketing: (map['eventMarketing'] as bool?) ?? false,
+      identityVerification: (map['identityVerification'] as bool?) ?? true,
     );
   }
 
@@ -37,15 +40,26 @@ class Capabilities {
   /// Extended event marketing (club_server#410).
   final bool eventMarketing;
 
+  /// Whether a registrant must upload an identity document and submit for
+  /// review before an admin can approve them (club_server#428, #2).
+  ///
+  /// When false, `register` returns the user already `pending` and admins
+  /// are notified at once; skip the document and submit-for-review steps.
+  /// **Absent means true**, unlike the module flags: a server that predates
+  /// the field always required verification.
+  final bool identityVerification;
+
   Capabilities copyWith({
     bool? creditSystem,
     bool? evaluations,
     bool? eventMarketing,
+    bool? identityVerification,
   }) {
     return Capabilities(
       creditSystem: creditSystem ?? this.creditSystem,
       evaluations: evaluations ?? this.evaluations,
       eventMarketing: eventMarketing ?? this.eventMarketing,
+      identityVerification: identityVerification ?? this.identityVerification,
     );
   }
 
@@ -54,6 +68,7 @@ class Capabilities {
       'creditSystem': creditSystem,
       'evaluations': evaluations,
       'eventMarketing': eventMarketing,
+      'identityVerification': identityVerification,
     };
   }
 
@@ -62,7 +77,8 @@ class Capabilities {
   @override
   String toString() =>
       'Capabilities(creditSystem: $creditSystem, evaluations: $evaluations, '
-      'eventMarketing: $eventMarketing)';
+      'eventMarketing: $eventMarketing, '
+      'identityVerification: $identityVerification)';
 
   @override
   bool operator ==(Object other) {
@@ -70,10 +86,14 @@ class Capabilities {
     return other is Capabilities &&
         other.creditSystem == creditSystem &&
         other.evaluations == evaluations &&
-        other.eventMarketing == eventMarketing;
+        other.eventMarketing == eventMarketing &&
+        other.identityVerification == identityVerification;
   }
 
   @override
   int get hashCode =>
-      creditSystem.hashCode ^ evaluations.hashCode ^ eventMarketing.hashCode;
+      creditSystem.hashCode ^
+      evaluations.hashCode ^
+      eventMarketing.hashCode ^
+      identityVerification.hashCode;
 }

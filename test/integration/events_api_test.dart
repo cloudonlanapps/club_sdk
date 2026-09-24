@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/credit_seed.dart';
 import '../utils/event_time.dart';
+import '../utils/occurrence_version.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -466,6 +467,7 @@ void main() {
           await client.occurrences.rescheduleOccurrence(
             event.id,
             start,
+            version: await occurrenceVersion(client, event.id, start),
             newStartTimeUtc: start.add(const Duration(hours: 1)),
           );
           expect(
@@ -1159,6 +1161,7 @@ void main() {
         await client.occurrences.cancelOccurrence(
           event.id,
           futureStart,
+          version: await occurrenceVersion(client, event.id, futureStart),
           reason: 'R',
         );
         final occ = await client.occurrences.getOccurrence(

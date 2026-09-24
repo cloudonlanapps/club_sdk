@@ -3,6 +3,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/module_gate.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -19,6 +20,9 @@ import '../utils/test_client.dart';
 void main() {
   group('Section 1: Authentication', () {
     late SecureClient client;
+    // Where a new sign-up lands: registered, or pending when the stack has
+    // identity verification off (#2).
+    late UserStatus signUpAs;
 
     setUpAll(() async {
       client = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -32,6 +36,7 @@ void main() {
 
       // Seed one user (test_alice) needed by login/logout/refresh/reset tests
       await client.auth.login(sudoUsername, sudoPassword);
+      signUpAs = signUpStatus(await stackCapabilities(client));
 
       await registerAndApprove(
         client: client,
@@ -70,7 +75,7 @@ void main() {
         );
 
         expect(user.username, 'test_new_user_101');
-        expect(user.status, UserStatus.registered);
+        expect(user.status, signUpAs);
       });
 
       test('username must be unique', () async {
@@ -136,7 +141,7 @@ void main() {
         );
 
         expect(user.username, 'test_optional_fields_101');
-        expect(user.status, UserStatus.registered);
+        expect(user.status, signUpAs);
       });
 
       test('registered user can login (to call submitForReview)', () async {
@@ -157,7 +162,7 @@ void main() {
         expect(token.accessToken, isNotEmpty);
 
         final currentUser = await client.auth.getCurrentUser();
-        expect(currentUser.status, UserStatus.registered);
+        expect(currentUser.status, signUpAs);
       });
     });
 

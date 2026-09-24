@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/occurrence_version.dart';
 import '../utils/test_client.dart';
 
 const _weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
@@ -257,7 +258,11 @@ void main() {
 
     test('Issue 16: drop and reinstate a one-off', () async {
       final event = await oneOff('test_I16 drop');
-      final dropped = await client.events.drop(event.id, reason: 'no ice');
+      final dropped = await client.events.drop(
+        event.id,
+        version: await occurrenceVersion(client, event.id, anchor),
+        reason: 'no ice',
+      );
       expect(dropped.id, event.id);
       // A drop cancels the single occurrence; the event keeps no cutoff.
       expect(dropped.untilTimeUtc, isNull);
@@ -268,8 +273,9 @@ void main() {
         isTrue,
       );
 
+      final droppedVersion = await occurrenceVersion(client, event.id, anchor);
       await expectLater(
-        client.events.drop(event.id, reason: 'again'),
+        client.events.drop(event.id, version: droppedVersion, reason: 'again'),
         throwsA(
           isA<ServerException>().having(
             (e) => e.code,
@@ -279,7 +285,10 @@ void main() {
         ),
       );
 
-      final back = await client.events.reinstate(event.id);
+      final back = await client.events.reinstate(
+        event.id,
+        version: await occurrenceVersion(client, event.id, anchor),
+      );
       expect(back.id, event.id);
       final restored = await client.occurrences.getOccurrence(event.id, anchor);
       expect(restored.status, OccurrenceStatus.scheduled);

@@ -8,6 +8,7 @@ class AttendanceEndpoints {
       '/events/by_id/$eventId/occurrences/$timeStr/attendance';
   String clearAttendance(int eventId, Object timeStr, String membername) =>
       '/events/by_id/$eventId/occurrences/$timeStr/attendance/$membername';
+
   /// Cross-event attendance over a time window.
   String get occurrencesReport => '/events/occurrences/attendance';
   String approveLeave(int eventId, Object timeStr) =>

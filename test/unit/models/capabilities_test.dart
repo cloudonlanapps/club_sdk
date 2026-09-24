@@ -29,6 +29,38 @@ void main() {
       expect(c.hashCode, const Capabilities(evaluations: true).hashCode);
     });
 
+    test('Issue 2: identityVerification reads true when the server '
+        'omits it', () {
+      // A server that predates the field always required verification.
+      final old = Capabilities.fromMap(const {'creditSystem': false});
+      expect(old.identityVerification, isTrue);
+      expect(const Capabilities().identityVerification, isTrue);
+    });
+
+    test('Issue 2: identityVerification reads the server value', () {
+      expect(
+        Capabilities.fromMap(const {
+          'identityVerification': false,
+        }).identityVerification,
+        isFalse,
+      );
+      expect(
+        Capabilities.fromMap(const {
+          'identityVerification': true,
+        }).identityVerification,
+        isTrue,
+      );
+    });
+
+    test('Issue 2: identityVerification round-trips and takes part in '
+        'equality', () {
+      const off = Capabilities(identityVerification: false);
+      expect(off.toMap()['identityVerification'], isFalse);
+      expect(Capabilities.fromMap(off.toMap()), off);
+      expect(off, isNot(const Capabilities()));
+      expect(off.copyWith(identityVerification: true), const Capabilities());
+    });
+
     test('Issue 15: endpoint', () {
       expect(const CapabilitiesEndpoints().capabilities, '/capabilities');
     });

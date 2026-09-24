@@ -2,6 +2,10 @@
 /// `register → submitForReview → approveUser` lifecycle introduced by
 /// server #120 / SDK #374.
 ///
+/// On a deployment with identity verification off (club_server#428, #2),
+/// `register` already returns the user `pending`, so the document upload and
+/// submit-for-review are skipped and the helper goes straight to approval.
+///
 /// Caller must be logged in as an admin (or sudo) when invoked; the helper
 /// logs the admin out to act as the new user for `submitForReview`, then
 /// logs the admin back in before calling `approveUser`. The admin session
@@ -30,7 +34,7 @@ Future<UserInfo> registerAndApprove({
   String? middleName,
   String? lastName,
 }) async {
-  await client.auth.register(
+  final registered = await client.auth.register(
     username: username,
     email: email,
     password: password,
@@ -41,12 +45,12 @@ Future<UserInfo> registerAndApprove({
     middleName: middleName,
     lastName: lastName,
   );
-  // login() replaces the current session, so no explicit logout is needed
-  // here. A pending/registered user cannot logout (server returns 403
-  // ACCOUNT_NOT_ACTIVE), so we just swap sessions in-place.
-  await client.auth.login(username, password);
-  await attachIdentityDocument(client, username);
-  await client.users.submitForReview();
-  await client.auth.login(adminUsername, adminPassword);
+  await submitForReviewIfRequired(
+    client: client,
+    registered: registered,
+    password: password,
+    adminUsername: adminUsername,
+    adminPassword: adminPassword,
+  );
   return client.users.approveUser(username);
 }

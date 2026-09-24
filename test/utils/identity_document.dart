@@ -1,5 +1,7 @@
 /// Test helper for the server-side identity-document precondition on
-/// `POST /users/me/submit-for-review` introduced by server #142.
+/// `POST /users/me/submit-for-review` introduced by server #142. The
+/// precondition applies only while the deployment requires identity
+/// verification (`Capabilities.identityVerification`, #2).
 ///
 /// The server rejects `submit-for-review` with 422 `IDENTITY_DOCUMENT_REQUIRED`
 /// unless the caller has a live `user_media` link tagged `identity_document`
@@ -35,6 +37,32 @@ Future<void> attachIdentityDocument(
     tag: 'identity_document',
     mediaUuid: media.uuid,
   );
+}
+
+/// Takes a freshly [registered] user to `pending`, then returns the session
+/// to the admin.
+///
+/// With identity verification on, `register` leaves the user `registered`:
+/// log in as them, attach an identity document and submit for review. With
+/// it off (club_server#428, #2), `register` already returned them `pending`
+/// and submit-for-review would be refused, so only the admin login happens.
+/// Either way [client] ends logged in as the admin.
+Future<void> submitForReviewIfRequired({
+  required SecureClient client,
+  required UserInfo registered,
+  required String password,
+  required String adminUsername,
+  required String adminPassword,
+}) async {
+  if (registered.status == UserStatus.registered) {
+    // login() replaces the current session, so no explicit logout is needed
+    // here. A registered user cannot logout (server returns 403
+    // ACCOUNT_NOT_ACTIVE), so we just swap sessions in-place.
+    await client.auth.login(registered.username, password);
+    await attachIdentityDocument(client, registered.username);
+    await client.users.submitForReview();
+  }
+  await client.auth.login(adminUsername, adminPassword);
 }
 
 /// Minimal valid 1×1 white PNG (67 bytes).

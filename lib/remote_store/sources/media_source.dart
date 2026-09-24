@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import '../../sdk/exceptions/exceptions.dart';
 import '../../sdk/interfaces/media.dart';
 import '../../sdk/models/media.dart';
 import '../../sdk/models/media_link.dart';
+import '../../sdk/models/media_variant_info.dart';
 import '../../sdk/models/pagination.dart';
 import '../endpoints/endpoints.dart';
 import '../remote_store.dart';
@@ -100,10 +102,37 @@ class RemoteMediaSource implements MediaSource {
   }
 
   @override
-  Future<List<int>> download(String uuid, {String variant = 'original'}) async {
+  Future<List<int>> download(
+    String uuid, {
+    String variant = 'original',
+    String? filename,
+  }) async {
     return _store.downloadBytes(
-      endpoints.media.download(uuid),
+      filename == null
+          ? endpoints.media.download(uuid)
+          : endpoints.media.downloadNamed(uuid, filename),
       queryParams: {'variant': variant},
+    );
+  }
+
+  @override
+  Future<MediaVariantInfo?> probeVariant(
+    String uuid, {
+    String variant = 'original',
+  }) async {
+    final Map<String, String> headers;
+    try {
+      headers = await _store.head(
+        endpoints.media.download(uuid),
+        queryParams: {'variant': variant},
+      );
+    } on ServerException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+    return MediaVariantInfo(
+      contentType: headers['content-type'] ?? 'application/octet-stream',
+      contentLength: int.tryParse(headers['content-length'] ?? ''),
     );
   }
 

@@ -5,7 +5,7 @@ A pure-Dart client for the club_server API: events, users, attendance, enrollmen
 ## Quick Reference
 
 - **Language**: Dart (SDK ^3.11.0)
-- **Package**: `club_sdk_2` (v0.1.0)
+- **Package**: `club_sdk_2` (v0.2.0)
 - **Repo**: `cloudonlanapps/club_sdk` (public)
 - **Main branch**: `main`
 - **Linting**: `very_good_analysis` (10.3.0)

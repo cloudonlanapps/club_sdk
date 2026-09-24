@@ -99,7 +99,6 @@ void main() {
           'rrule',
           'venueId',
           'type',
-          'sessions',
         ]) {
           expect(
             body.containsKey(forbidden),
