@@ -688,6 +688,7 @@ void main() {
         // Venue changes move through /reschedule, not the metadata PATCH (#232).
         final updated = await client.events.rescheduleEvent(
           event.id,
+          version: event.version,
           venueId: venue2Id,
         );
 

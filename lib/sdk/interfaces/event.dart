@@ -160,8 +160,15 @@ abstract interface class EventSource {
   /// `OCCURRENCE_OVERRIDES_PRESENT` (with the offending `occurrenceTimeUtcs` in
   /// `ServerException.details`) when occurrence overrides exist, unless
   /// [resetOverrides] is `true` to clear them.
+  ///
+  /// [version] is the event version the caller last loaded
+  /// (club_server#434, #5), as for [updateEvent], [correctionOnEvent] and
+  /// [updateEventForAllFuture]: a reschedule rewrites the timetable those
+  /// edits read. A stale one is refused with `StaleVersionException` and
+  /// nothing moves; a successful reschedule bumps the version.
   Future<Event> rescheduleEvent(
     int eventId, {
+    required int version,
     DateTime? startTimeUtc,
     DateTime? endTimeUtc,
     String? rrule,

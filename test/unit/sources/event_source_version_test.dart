@@ -55,6 +55,21 @@ void main() {
       expect(bodyOf(h.requests.single)['version'], 7);
     });
 
+    test('Issue 5: rescheduleEvent sends version', () async {
+      final h = harness();
+      final e = await h.source.rescheduleEvent(
+        42,
+        version: 7,
+        venueId: 3,
+      );
+      final r = h.requests.single;
+      expect(r.method, 'POST');
+      expect(r.url.path, endsWith('/events/by_id/42/reschedule'));
+      expect(bodyOf(r)['version'], 7);
+      expect(bodyOf(r)['venueId'], 3);
+      expect(e.version, 8);
+    });
+
     test('Issue 25: updateEventForAllFuture sends version', () async {
       final h = harness();
       await h.source.updateEventForAllFuture(

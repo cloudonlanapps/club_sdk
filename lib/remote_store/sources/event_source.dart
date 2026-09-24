@@ -203,6 +203,7 @@ class RemoteEventSource implements EventSource {
   @override
   Future<Event> rescheduleEvent(
     int eventId, {
+    required int version,
     DateTime? startTimeUtc,
     DateTime? endTimeUtc,
     String? rrule,
@@ -217,6 +218,7 @@ class RemoteEventSource implements EventSource {
     // getter leaves the stored timetable untouched (re-validated against the
     // new window).
     final body = <String, dynamic>{
+      'version': version,
       if (startTimeUtc != null)
         'startTimeUtc': startTimeUtc.millisecondsSinceEpoch,
       if (endTimeUtc != null) 'endTimeUtc': endTimeUtc.millisecondsSinceEpoch,

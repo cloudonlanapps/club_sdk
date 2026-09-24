@@ -123,6 +123,7 @@ void main() {
 
         await h.source.rescheduleEvent(
           42,
+          version: 1,
           startTimeUtc: start,
           endTimeUtc: end,
           rrule: 'FREQ=DAILY;COUNT=3',
@@ -147,7 +148,7 @@ void main() {
       () async {
         final h = _harness();
 
-        await h.source.rescheduleEvent(42, venueId: 7);
+        await h.source.rescheduleEvent(42, version: 1, venueId: 7);
 
         final body = jsonDecode(h.requests.single.body) as Map<String, dynamic>;
         expect(body['venueId'], 7);
@@ -172,6 +173,7 @@ void main() {
 
         await h.source.rescheduleEvent(
           42,
+          version: 1,
           startTimeUtc: start,
           endTimeUtc: end,
           rrule: 'FREQ=DAILY;COUNT=3',
@@ -199,6 +201,7 @@ void main() {
 
         await h.source.rescheduleEvent(
           42,
+          version: 1,
           startTimeUtc: start,
           endTimeUtc: end,
           rrule: 'FREQ=DAILY;COUNT=3',
