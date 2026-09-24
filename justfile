@@ -4,8 +4,8 @@
 # isolated club_server stack started by native_deploy's background_server.sh
 # (expected on PATH). The stack is described by a conf in this repo:
 # sdk_test.conf (optional modules off) or sdk_test_modules.conf (credits,
-# evaluations, event marketing on). Each conf names the server checkout it
-# runs, relative to itself; override with SDK_CONF / SDK_MODULES_CONF.
+# evaluations, event marketing on). Each conf clones the server's main branch
+# from git; override with SDK_CONF / SDK_MODULES_CONF.
 
 SDK_CONF         := env_var_or_default('SDK_CONF', 'sdk_test.conf')
 SDK_MODULES_CONF := env_var_or_default('SDK_MODULES_CONF', 'sdk_test_modules.conf')

@@ -124,9 +124,9 @@ just test-modules                      # stack with credits, evaluations, market
 Each recipe spins up its **own** fresh isolated server (free ports, started in
 tmux via `background_server.sh` (native_deploy, on PATH)) and tears it down on exit — no shared
 stack to reset or collide on. The stack is described by `sdk_test.conf` or
-`sdk_test_modules.conf`, whose `source` names the club_server checkout relative
-to the conf (`../../server/club_server`, i.e. this repo checked out under a
-workspace's `packages/`); point `SDK_CONF` at your own conf otherwise. The
+`sdk_test_modules.conf`, whose `source` clones club_server's `main` from git
+afresh for each run (so it needs SSH access to that repo); to test against a
+local server checkout, point `source` at it or point `SDK_CONF` at your own conf. The
 recipes inject `MYCLUB_API_BASE_URL` (the just-picked port),
 `MYCLUB_SUDO_USERNAME` and `MYCLUB_SUDO_PASSWORD` (the conf's
 `bootstrap_password`) so `test_client.dart` connects to that stack. Running
