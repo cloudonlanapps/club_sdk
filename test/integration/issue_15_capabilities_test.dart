@@ -6,7 +6,8 @@ import '../utils/test_client.dart';
 
 /// Issue 15: `GET /capabilities` (club_server#339, #302, #410). Passes on
 /// a stack with the modules on or off; the module suites assert the
-/// specific answer for their conf.
+/// specific answer for their conf. Issue 18: the server answers it before
+/// login too (club_server#443), so a signup page can read it.
 void main() {
   group('Issue 15: capabilities', () {
     late SecureClient client;
@@ -36,13 +37,15 @@ void main() {
       },
     );
 
-    test('Issue 15: an anonymous caller is refused', () async {
+    test('Issue 18: a client that has not logged in reads the same '
+        'capabilities as a signed-in one', () async {
+      final signedIn = await client.capabilities.getCapabilities();
       final anon = await createRemoteSecureClient(baseUrl: baseUrl);
-      await expectLater(
-        anon.capabilities.getCapabilities(),
-        throwsA(
-          isA<ServerException>().having((e) => e.statusCode, 'status', 401),
-        ),
+      final caps = await anon.capabilities.getCapabilities();
+      expect(caps, signedIn);
+      expect(
+        caps.toMap().keys,
+        containsAll(['creditSystem', 'identityVerification']),
       );
     });
   });
