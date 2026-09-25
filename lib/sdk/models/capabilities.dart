@@ -8,8 +8,8 @@ import 'package:meta/meta.dart';
 /// The optional modules are switched per deployment and every one of their
 /// routes stays registered, answering 503 where the module is off, so the
 /// published OpenAPI schema does not vary with configuration. Read this
-/// once after login to decide which features to show; a call into a
-/// disabled module surfaces as `ModuleDisabledException`.
+/// once, before or after login, to decide which features to show; a call
+/// into a disabled module surfaces as `ModuleDisabledException`.
 @immutable
 class Capabilities {
   const Capabilities({
