@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/test_client.dart';
+import '../utils/test_png.dart';
 
 /// SDK-side end-to-end coverage of the v2 media flow that backs the
 /// `avatarImageProvider` + `avatarMutationProvider` from `cl_remote_store`
@@ -16,78 +17,6 @@ void main() {
     late SecureClient adminClient;
 
     const tag = 'user_avatar';
-
-    final pngBytes = <int>[
-      0x89,
-      0x50,
-      0x4E,
-      0x47,
-      0x0D,
-      0x0A,
-      0x1A,
-      0x0A,
-      0x00,
-      0x00,
-      0x00,
-      0x0D,
-      0x49,
-      0x48,
-      0x44,
-      0x52,
-      0x00,
-      0x00,
-      0x00,
-      0x01,
-      0x00,
-      0x00,
-      0x00,
-      0x01,
-      0x08,
-      0x02,
-      0x00,
-      0x00,
-      0x00,
-      0x90,
-      0x77,
-      0x53,
-      0xDE,
-      0x00,
-      0x00,
-      0x00,
-      0x0C,
-      0x49,
-      0x44,
-      0x41,
-      0x54,
-      0x08,
-      0xD7,
-      0x63,
-      0xF8,
-      0xCF,
-      0xC0,
-      0x00,
-      0x00,
-      0x00,
-      0x02,
-      0x00,
-      0x01,
-      0xE2,
-      0x21,
-      0xBC,
-      0x33,
-      0x00,
-      0x00,
-      0x00,
-      0x00,
-      0x49,
-      0x45,
-      0x4E,
-      0x44,
-      0xAE,
-      0x42,
-      0x60,
-      0x82,
-    ];
 
     setUpAll(() async {
       adminClient = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -111,7 +40,7 @@ void main() {
       'Issue 554: upload + attach makes listByTag find the new avatar',
       () async {
         final media = await adminClient.media.upload(
-          fileBytes: pngBytes,
+          fileBytes: testPngBytes,
           filename: 'issue_554_initial.png',
           contentType: 'image/png',
           preserveOriginal: true,
@@ -146,7 +75,7 @@ void main() {
       'Issue 554: replace flow attaches new media before soft-deleting prior',
       () async {
         final first = await adminClient.media.upload(
-          fileBytes: pngBytes,
+          fileBytes: testPngBytes,
           filename: 'issue_554_first.png',
           contentType: 'image/png',
           preserveOriginal: true,
@@ -167,7 +96,7 @@ void main() {
           expect(priorSnapshot, hasLength(1));
 
           second = await adminClient.media.upload(
-            fileBytes: pngBytes,
+            fileBytes: testPngBytes,
             filename: 'issue_554_second.png',
             contentType: 'image/png',
             preserveOriginal: true,
@@ -214,7 +143,7 @@ void main() {
       'Issue 554: clear detaches every avatar link for the user',
       () async {
         final media = await adminClient.media.upload(
-          fileBytes: pngBytes,
+          fileBytes: testPngBytes,
           filename: 'issue_554_clear.png',
           contentType: 'image/png',
           preserveOriginal: true,
