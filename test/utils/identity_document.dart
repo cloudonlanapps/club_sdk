@@ -19,7 +19,8 @@ import 'test_png.dart';
 
 /// Uploads a tiny placeholder image and attaches it to [username] as an
 /// `identity_document` user-media link, satisfying the server precondition
-/// for `submit-for-review`.
+/// for `submit-for-review`. Like the app, it restricts the document to the
+/// user and admins rather than leaving it public.
 ///
 /// The caller must be logged in as [username] (or as an admin acting on
 /// that user) when invoked.
@@ -32,6 +33,7 @@ Future<void> attachIdentityDocument(
     filename: '${username}_id.png',
     contentType: 'image/png',
     preserveOriginal: true,
+    accessRoles: const ['self', 'admin'],
   );
   await client.userMedia.attach(
     username,
