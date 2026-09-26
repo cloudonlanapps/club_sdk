@@ -454,15 +454,18 @@ void main() {
       test(
         '8.02: Reschedule Occurrence - changes occurrence time',
         () async {
+          // An occurrence-level reschedule is a camp's or programme's verb;
+          // a one-off moves as a whole with rescheduleEvent (club_server#472).
           final start = nextStart();
           final event = await client.events.createEvent(
             title: 'test_Reschedule Test',
             description: 'D',
-            type: EventType.oneOff,
+            type: EventType.camp,
             visibility: Visibility.public,
             venueId: v1Id,
             startTimeUtc: start,
             endTimeUtc: start.add(const Duration(hours: 1)),
+            rrule: 'FREQ=DAILY;COUNT=1',
           );
           await client.occurrences.rescheduleOccurrence(
             event.id,
@@ -477,6 +480,37 @@ void main() {
             )).actualStartTimeUtc,
             start.add(const Duration(hours: 1)),
           );
+        },
+      );
+
+      test(
+        '8.02b: Reschedule Occurrence - a one-off is refused',
+        () async {
+          final start = nextStart();
+          final event = await client.events.createEvent(
+            title: 'test_Reschedule One-off',
+            description: 'D',
+            type: EventType.oneOff,
+            visibility: Visibility.public,
+            venueId: v1Id,
+            startTimeUtc: start,
+            endTimeUtc: start.add(const Duration(hours: 1)),
+          );
+          await expectLater(
+            client.occurrences.rescheduleOccurrence(
+              event.id,
+              start,
+              version: await occurrenceVersion(client, event.id, start),
+              newStartTimeUtc: start.add(const Duration(hours: 1)),
+            ),
+            throwsA(
+              isA<ServerException>()
+                  .having((e) => e.statusCode, 'statusCode', 422)
+                  .having((e) => e.code, 'code', SdkErrorCode.invalidState),
+            ),
+          );
+          final occ = await client.occurrences.getOccurrence(event.id, start);
+          expect(occ.actualStartTimeUtc, start);
         },
       );
 

@@ -16,6 +16,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/credit_seed.dart';
 import '../utils/event_time.dart';
 import '../utils/occurrence_version.dart';
 import '../utils/register_and_approve.dart';
@@ -128,6 +129,9 @@ void main() {
       for (final m in memberNames) {
         await register(m);
       }
+      // Where the credit system is on, joining a programme needs usable
+      // credit; elsewhere this does nothing.
+      await seedEnrolmentCreditIfGated(setup, memberNames);
 
       // Every event gets its own venue, so no venue clash muddies a report.
       for (final key in [
