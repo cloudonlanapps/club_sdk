@@ -72,6 +72,15 @@ class Enrollment {
   final EnrollmentStatus status;
   final bool isTrial;
   final String? previousStatus;
+
+  /// The [withdrawalReason] the server writes when a mark used up a trial
+  /// member's credit and ended the trial (#30); see
+  /// `NotificationType.enrollmentTrialEnded`.
+  static const trialCreditExhaustedReason = 'trialCreditExhausted';
+
+  /// Why the member left. [trialCreditExhaustedReason] when the server ended
+  /// a trial because a mark used up its credit; otherwise free text an admin
+  /// wrote.
   final String? withdrawalReason;
   final DateTime createdAtUtc;
   final DateTime? updatedAtUtc;
