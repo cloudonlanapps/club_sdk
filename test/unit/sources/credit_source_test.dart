@@ -44,6 +44,29 @@ const rosterPage = <String, dynamic>{
   'limit': 50,
 };
 
+const entryPage = <String, dynamic>{
+  'items': [
+    {
+      'id': 41,
+      'accountId': 'AB12CD34',
+      'membername': 'alice',
+      'amount': -1,
+      'entryType': 'sessionDeduction',
+      'eventId': 9,
+      'occurrenceTimeUtc': null,
+      'reason': 'Attendance',
+      'actorUsername': 'coach1',
+      'createdAtUtc': 1790000000000,
+      'offsetsEntryId': null,
+      'balanceAfter': 9,
+      'totalAfter': 9,
+    },
+  ],
+  'total': 1,
+  'offset': 0,
+  'limit': 50,
+};
+
 void main() {
   group('RemoteCreditSource.listEventCredits', () {
     test('Issue 20: sends the roster filter by its wire name', () async {
@@ -88,6 +111,35 @@ void main() {
       expect(h.requests.single.url.queryParameters['state'], 'blocked');
       expect(page.items.single.boundCredits, 3);
       expect(page.items.single.blocked, isTrue);
+    });
+  });
+
+  group('RemoteCreditSource.listEntries', () {
+    test('Issue 22: sends the order by its wire name', () async {
+      final h = creditHarness(entryPage);
+
+      final page = await h.source.listEntries(
+        accountId: 'AB12CD34',
+        order: EntryOrder.newestFirst,
+      );
+
+      final uri = h.requests.single.url;
+      expect(uri.path, '/v1/credits/entries');
+      expect(uri.queryParameters['order'], 'desc');
+      expect(uri.queryParameters['accountId'], 'AB12CD34');
+      expect(page.items.single.balanceAfter, 9);
+      expect(page.items.single.totalAfter, 9);
+    });
+
+    test("Issue 22: omits the order so the server's default applies", () async {
+      final h = creditHarness(entryPage);
+
+      await h.source.listEntries();
+
+      expect(
+        h.requests.single.url.queryParameters.containsKey('order'),
+        isFalse,
+      );
     });
   });
 }

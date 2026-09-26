@@ -2,6 +2,7 @@ import '../../sdk/interfaces/my_credits.dart';
 import '../../sdk/models/credit_account.dart';
 import '../../sdk/models/credit_account_state.dart';
 import '../../sdk/models/credit_entry.dart';
+import '../../sdk/models/entry_order.dart';
 import '../../sdk/models/pagination.dart';
 import '../endpoints/endpoints.dart';
 import '../remote_store.dart';
@@ -45,6 +46,7 @@ class RemoteMyCreditsSource implements MyCreditsSource {
     int? eventId,
     DateTime? fromUtc,
     DateTime? toUtc,
+    EntryOrder? order,
     int offset = 0,
     int limit = 50,
   }) async {
@@ -56,6 +58,7 @@ class RemoteMyCreditsSource implements MyCreditsSource {
         if (fromUtc != null)
           'fromTs': fromUtc.millisecondsSinceEpoch.toString(),
         if (toUtc != null) 'toTs': toUtc.millisecondsSinceEpoch.toString(),
+        if (order != null) 'order': order.wireName,
         'offset': offset.toString(),
         'limit': limit.toString(),
       },

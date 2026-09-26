@@ -4,6 +4,7 @@ import '../models/credit_account_state.dart';
 import '../models/credit_entry.dart';
 import '../models/credit_entry_type.dart';
 import '../models/credit_transfer_result.dart';
+import '../models/entry_order.dart';
 import '../models/member_credit_status.dart';
 import '../models/pagination.dart';
 import '../models/roster_credit_filter.dart';
@@ -103,7 +104,9 @@ abstract interface class CreditSource {
   // LEDGER AND ROSTER (ADMIN OR COACH)
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// The ledger across accounts, newest first.
+  /// The ledger across accounts, oldest first unless [order] says
+  /// otherwise. Each entry carries the running `balanceAfter` and
+  /// `totalAfter`, independent of the filters and page.
   Future<PaginatedList<CreditEntry>> listEntries({
     String? membername,
     String? accountId,
@@ -112,6 +115,7 @@ abstract interface class CreditSource {
     DateTime? occurrenceTimeUtc,
     DateTime? fromUtc,
     DateTime? toUtc,
+    EntryOrder? order,
     int offset = 0,
     int limit = 50,
   });

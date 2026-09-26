@@ -1,6 +1,7 @@
 import '../models/credit_account.dart';
 import '../models/credit_account_state.dart';
 import '../models/credit_entry.dart';
+import '../models/entry_order.dart';
 import '../models/pagination.dart';
 
 /// A member's view of their own credit (`/mycredits`, #14).
@@ -27,13 +28,16 @@ abstract interface class MyCreditsSource {
   Future<CreditAccount> getMyAccount(String username, String accountId);
 
   /// The member's statement: which occurrence took what from which account,
-  /// newest first.
+  /// oldest first unless [order] says otherwise. Each entry carries the
+  /// running `balanceAfter` and `totalAfter`, independent of the filters
+  /// and page.
   Future<PaginatedList<CreditEntry>> listMyEntries(
     String username, {
     String? accountId,
     int? eventId,
     DateTime? fromUtc,
     DateTime? toUtc,
+    EntryOrder? order,
     int offset = 0,
     int limit = 50,
   });

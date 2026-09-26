@@ -5,6 +5,7 @@ import '../../sdk/models/credit_account_state.dart';
 import '../../sdk/models/credit_entry.dart';
 import '../../sdk/models/credit_entry_type.dart';
 import '../../sdk/models/credit_transfer_result.dart';
+import '../../sdk/models/entry_order.dart';
 import '../../sdk/models/member_credit_status.dart';
 import '../../sdk/models/pagination.dart';
 import '../../sdk/models/roster_credit_filter.dart';
@@ -135,6 +136,7 @@ class RemoteCreditSource implements CreditSource {
     DateTime? occurrenceTimeUtc,
     DateTime? fromUtc,
     DateTime? toUtc,
+    EntryOrder? order,
     int offset = 0,
     int limit = 50,
   }) async {
@@ -151,6 +153,7 @@ class RemoteCreditSource implements CreditSource {
         if (fromUtc != null)
           'fromTs': fromUtc.millisecondsSinceEpoch.toString(),
         if (toUtc != null) 'toTs': toUtc.millisecondsSinceEpoch.toString(),
+        if (order != null) 'order': order.wireName,
         'offset': offset.toString(),
         'limit': limit.toString(),
       },
