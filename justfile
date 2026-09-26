@@ -56,9 +56,14 @@ test keep="": (_run "test/integration/" keep)
 [group('tests')]
 test-one FILE keep="": (_run ("test/integration/" + FILE) keep)
 
-#   just test-modules                       # the module suites, modules on
-#   just test-modules s11_credits_test.dart
-# Run integration tests against a stack with the optional modules on.
+#   just test-modules                       # the WHOLE suite, modules on
+#   just test-modules issue_14_credits_test.dart
+# With no FILE this runs every integration file, not only the module ones:
+# many suites assert behaviour on both stacks (e.g. credit-gated enrolment),
+# so a modules run is a full second pass. The module suites themselves are
+# issue_14_credits, issue_15_capabilities, issue_15_evaluations,
+# issue_22_public_catalogue and issue_33_credit_rules; run one by name.
+# Run the whole integration suite (or FILE) with the optional modules on.
 [group('tests')]
 test-modules FILE="" keep="": (_run ("test/integration/" + FILE) keep SDK_MODULES_CONF)
 
