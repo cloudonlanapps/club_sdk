@@ -746,6 +746,86 @@ void main() {
       },
     );
 
+    group('Issue 23: an account can be opened whatever the user status', () {
+      Future<CreditAccount> openFor(String name) => admin.credits.openAccount(
+        membername: name,
+        credits: 3,
+        validFromUtc: dayAt(-1),
+        validUntilUtc: dayAt(60),
+        reason: 'paid before approval',
+      );
+
+      test('for a user whose registration awaits review', () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        const name = 'test_credit_pending';
+        final registered = await admin.auth.register(
+          username: name,
+          email: '$name@example.com',
+          password: 'password123',
+          phone: '+919000000003',
+          dateOfBirthUtc: DateTime.utc(2001),
+          gender: Gender.female,
+          firstName: 'Test',
+          lastName: name,
+        );
+        expect(registered.status, UserStatus.pending);
+
+        final account = await openFor(name);
+
+        expect(account.membername, name);
+        expect(account.balance, 3);
+        final accounts = await admin.credits.listAccounts(membername: name);
+        expect(accounts.items.map((a) => a.accountId), [account.accountId]);
+        expect(
+          (await admin.users.getUserInfo(name)).status,
+          UserStatus.pending,
+          reason: 'opening an account does not approve anyone',
+        );
+      });
+
+      test('for a blocked user', () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        const name = 'test_credit_blocked';
+        await registerAndApprove(
+          client: admin,
+          adminUsername: sudoUsername,
+          adminPassword: sudoPassword,
+          username: name,
+          email: '$name@example.com',
+          password: 'password123',
+          phone: '+919000000004',
+          dateOfBirthUtc: DateTime.utc(2001),
+          gender: Gender.male,
+          firstName: 'Test',
+          lastName: name,
+        );
+        final blocked = await admin.users.blockUser(name);
+        expect(blocked.status, UserStatus.blocked);
+
+        final account = await openFor(name);
+
+        expect(account.membername, name);
+        expect(account.balance, 3);
+        final accounts = await admin.credits.listAccounts(membername: name);
+        expect(accounts.items.map((a) => a.accountId), [account.accountId]);
+      });
+
+      test('but not for an unknown username', () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        await expectLater(
+          openFor('test_credit_nobody'),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'status', 404)
+                .having((e) => e.code, 'code', SdkErrorCode.userNotFound),
+          ),
+        );
+      });
+    });
+
     test('14.11: a member reads their own accounts and statement', () async {
       if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
 

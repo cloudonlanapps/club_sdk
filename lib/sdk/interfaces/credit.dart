@@ -38,6 +38,11 @@ abstract interface class CreditSource {
   /// and `INVALID_VALIDITY_WINDOW` when the window ends before it starts or
   /// lies wholly in the past. Opening an account for a blocked member
   /// restores them at once.
+  ///
+  /// [membername] may be any existing user, whatever their account status
+  /// (registered, pending, active, blocked or left), so credit can be
+  /// recorded before approval. An unknown username throws
+  /// `ServerException(404, USER_NOT_FOUND)`.
   Future<CreditAccount> openAccount({
     required String membername,
     required int credits,
