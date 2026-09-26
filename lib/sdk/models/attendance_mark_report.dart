@@ -12,12 +12,16 @@ import 'refused_attendance.dart';
 /// [marked], those the server declined are in [refused] with a reason.
 /// One member's lapsed credit never stops another's attendance being
 /// recorded, so a call succeeds even when some members were refused.
-/// Where the credit system is off, [refused] is always empty.
+/// A member whose mark spent the last of their trial credit is also in
+/// [trialEnded]: their trial is over and they have left the programme.
+/// Where the credit system is off, [refused] and [trialEnded] are always
+/// empty.
 @immutable
 class AttendanceMarkReport {
   const AttendanceMarkReport({
     this.marked = const [],
     this.refused = const [],
+    this.trialEnded = const [],
   });
 
   factory AttendanceMarkReport.fromMap(Map<String, dynamic> map) {
@@ -28,6 +32,9 @@ class AttendanceMarkReport {
       refused: (map['refused'] as List<dynamic>? ?? const [])
           .map((e) => RefusedAttendance.fromMap(e as Map<String, dynamic>))
           .toList(),
+      trialEnded: (map['trialEnded'] as List<dynamic>? ?? const [])
+          .map((e) => (e as Map<String, dynamic>)['membername'] as String)
+          .toList(),
     );
   }
 
@@ -37,16 +44,23 @@ class AttendanceMarkReport {
   final List<MarkedAttendance> marked;
   final List<RefusedAttendance> refused;
 
+  /// Membernames whose trial this mark ended (trial credit used up, so
+  /// the server removed them from the programme). Each is also in
+  /// [marked]. Empty from a server that predates it.
+  final List<String> trialEnded;
+
   /// Every requested member was recorded.
   bool get allMarked => refused.isEmpty;
 
   AttendanceMarkReport copyWith({
     List<MarkedAttendance>? marked,
     List<RefusedAttendance>? refused,
+    List<String>? trialEnded,
   }) {
     return AttendanceMarkReport(
       marked: marked ?? this.marked,
       refused: refused ?? this.refused,
+      trialEnded: trialEnded ?? this.trialEnded,
     );
   }
 
@@ -54,6 +68,7 @@ class AttendanceMarkReport {
     return {
       'marked': marked.map((e) => e.toMap()).toList(),
       'refused': refused.map((e) => e.toMap()).toList(),
+      'trialEnded': trialEnded.map((e) => {'membername': e}).toList(),
     };
   }
 
@@ -61,7 +76,8 @@ class AttendanceMarkReport {
 
   @override
   String toString() =>
-      'AttendanceMarkReport(marked: $marked, refused: $refused)';
+      'AttendanceMarkReport(marked: $marked, refused: $refused, '
+      'trialEnded: $trialEnded)';
 
   @override
   bool operator ==(Object other) {
@@ -69,12 +85,13 @@ class AttendanceMarkReport {
     const eq = ListEquality<Object>();
     return other is AttendanceMarkReport &&
         eq.equals(other.marked, marked) &&
-        eq.equals(other.refused, refused);
+        eq.equals(other.refused, refused) &&
+        eq.equals(other.trialEnded, trialEnded);
   }
 
   @override
   int get hashCode {
     const eq = ListEquality<Object>();
-    return Object.hash(eq.hash(marked), eq.hash(refused));
+    return Object.hash(eq.hash(marked), eq.hash(refused), eq.hash(trialEnded));
   }
 }
