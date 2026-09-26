@@ -39,6 +39,11 @@ abstract interface class AttendanceSource {
   /// does not throw for that. Where credit is off, `refused` is always
   /// empty. Marking `present`, `absent` or `late` charges one occurrence;
   /// moving between those three costs nothing more, and clearing refunds.
+  ///
+  /// A mark that spends the last of a trial member's credit ends their
+  /// trial: the server removes them from the programme and names them in
+  /// `trialEnded` (as well as `marked`). When it is non-empty, refresh the
+  /// event's enrollments.
   Future<AttendanceMarkReport> markAttendance(
     int eventId,
     DateTime occurrenceTimeUtc,

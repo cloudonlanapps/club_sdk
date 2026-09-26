@@ -31,6 +31,7 @@ void main() {
     const lapsedName = 'test_credit_lapsed';
     const leaverName = 'test_credit_leaver';
     const mixedName = 'test_credit_mixed';
+    const trialName = 'test_credit_trial';
 
     setUpAll(() async {
       admin = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -49,6 +50,7 @@ void main() {
         lapsedName,
         leaverName,
         mixedName,
+        trialName,
       ]) {
         await registerAndApprove(
           client: admin,
@@ -99,6 +101,42 @@ void main() {
       member = await createRemoteSecureClient(baseUrl: baseUrl);
       await member.auth.login(memberName, 'password123');
     });
+
+    // The register opens 30 minutes before an occurrence, so a programme
+    // starting 10 minutes out can be marked now. Each has its own venue
+    // and organizer, so two made in the same minute do not clash.
+    Future<Event> createMarkableProgramme(String suffix) async {
+      final organizer = 'test_credit_org_$suffix';
+      await registerAndApprove(
+        client: admin,
+        adminUsername: sudoUsername,
+        adminPassword: sudoPassword,
+        username: organizer,
+        email: '$organizer@example.com',
+        password: 'password123',
+        phone: '+919000000002',
+        dateOfBirthUtc: DateTime.utc(1990),
+        gender: Gender.female,
+        firstName: 'Test',
+        lastName: organizer,
+      );
+      final venue = await admin.venues.createVenue(
+        name: 'test_credit_venue_$suffix',
+        address: '2 Rink Road',
+      );
+      final start = nowUtcMinute().add(const Duration(minutes: 10));
+      return admin.events.createEvent(
+        title: 'test_credit_programme_$suffix',
+        description: 'a programme marked today',
+        type: EventType.programme,
+        venueId: venue.id,
+        visibility: Visibility.public,
+        organizerName: organizer,
+        startTimeUtc: start,
+        endTimeUtc: start.add(const Duration(hours: 1)),
+        rrule: weeklyOn(start),
+      );
+    }
 
     tearDownAll(() async {
       await admin.auth.logout();
@@ -567,6 +605,58 @@ void main() {
         final row = roster.items.firstWhere((r) => r.membername == mixedName);
         expect(row.usableCredits, 24);
         expect(row.boundCredits, 4, reason: 'only the programme share');
+      },
+    );
+
+    test(
+      'Issue 21: a mark that spends the last trial credit reports the '
+      'trial as ended',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        final programme = await createMarkableProgramme('trial');
+        final trial = await admin.credits.openAccount(
+          membername: trialName,
+          credits: 1,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(60),
+          reason: 'one trial session',
+          eventId: programme.id,
+          isTrial: true,
+        );
+        await admin.enrollments.assignTrial(programme.id, trialName);
+        expect(
+          await admin.enrollments.getEnrollmentStatus(programme.id, trialName),
+          EnrollmentStatus.assignedTrial,
+        );
+
+        final report = await admin.attendance.markAttendance(
+          programme.id,
+          programme.startTimeUtc,
+          [
+            const AttendanceMarkRecord(
+              membername: trialName,
+              status: AttendanceStatus.present,
+            ),
+          ],
+        );
+
+        expect(report.marked.map((m) => m.membername), [trialName]);
+        expect(report.refused, isEmpty);
+        expect(report.trialEnded, [trialName]);
+        expect((await admin.credits.getAccount(trial.accountId)).balance, 0);
+        final trialMember = await createRemoteSecureClient(baseUrl: baseUrl);
+        await trialMember.auth.login(trialName, 'password123');
+        addTearDown(trialMember.auth.logout);
+        expect((await trialMember.auth.getCurrentUser()).username, trialName);
+        for (final viewer in [admin, trialMember]) {
+          final enrollment = await viewer.myEvents.getMyEnrollment(
+            trialName,
+            programme.id,
+          );
+          expect(enrollment.status, EnrollmentStatus.removed);
+          expect(enrollment.withdrawnAtUtc, isNotNull);
+        }
       },
     );
 
