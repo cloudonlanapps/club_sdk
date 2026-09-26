@@ -125,7 +125,9 @@ Future<void> clearTestArtifacts({
   // Events
   _log('[events]');
   try {
-    final deletedEvents = await client.events.listDeletedEvents(limit: 100);
+    final deletedEvents = (await client.events.listDeletedEvents(
+      limit: 100,
+    )).items;
     for (final event in deletedEvents) {
       if (event.title.startsWith(_prefix)) {
         await _fire(

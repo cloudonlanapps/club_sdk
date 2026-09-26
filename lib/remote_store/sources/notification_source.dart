@@ -94,6 +94,7 @@ class RemoteNotificationSource implements NotificationSource {
     required Map<String, dynamic> payload,
     PendingActionType? pendingActionType,
     int? pendingActionId,
+    String? pendingActionKey,
   }) async {
     final body = <String, dynamic>{
       'username': username,
@@ -103,6 +104,7 @@ class RemoteNotificationSource implements NotificationSource {
       if (pendingActionType != null)
         'pendingActionType': pendingActionType.wireName,
       'pendingActionId': ?pendingActionId,
+      'pendingActionKey': ?pendingActionKey,
     };
     final response = await _store.post(
       endpoints.notifications.list,

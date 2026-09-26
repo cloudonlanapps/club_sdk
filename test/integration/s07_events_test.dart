@@ -269,7 +269,9 @@ void main() {
         expect(activeEvents.items.any((e) => e.id == event.id), isFalse);
 
         // Verify present in deleted list
-        final deletedEvents = await client.events.listDeletedEvents(limit: 100);
+        final deletedEvents = (await client.events.listDeletedEvents(
+          limit: 100,
+        )).items;
         expect(deletedEvents.any((e) => e.id == event.id), isTrue);
       });
     });

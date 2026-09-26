@@ -51,6 +51,7 @@ abstract interface class NotificationSource {
     required Map<String, dynamic> payload,
     PendingActionType? pendingActionType,
     int? pendingActionId,
+    String? pendingActionKey,
   });
 
   /// Soft delete a notification.

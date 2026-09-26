@@ -73,6 +73,10 @@ class EvaluationCategory {
     };
   }
 
+  /// The request shape for creating or updating a template: [toMap] without
+  /// [id], which the server's category input forbids (#46).
+  Map<String, dynamic> toInputMap() => toMap()..remove('id');
+
   String toJson() => json.encode(toMap());
 
   @override

@@ -1,3 +1,4 @@
+import '../../sdk/exceptions/exceptions.dart';
 import '../../sdk/interfaces/auth.dart';
 import '../../sdk/models/auth_token.dart';
 import '../../sdk/models/gender.dart';
@@ -62,8 +63,16 @@ class RemoteAuthSource implements AuthSource {
 
   @override
   Future<void> logout() async {
-    await _store.postVoid(endpoints.auth.logout);
-    _store.authToken = null;
+    try {
+      await _store.postVoid(endpoints.auth.logout);
+    } on ServerException catch (e) {
+      // The server refuses logout for a user who is not active (403
+      // ACCOUNT_NOT_ACTIVE) or whose token is already dead (401). Either way
+      // the caller asked to sign out, which is done locally below (#45).
+      if (e.statusCode != 401 && e.statusCode != 403) rethrow;
+    } finally {
+      _store.authToken = null;
+    }
   }
 
   @override

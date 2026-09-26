@@ -52,7 +52,8 @@ abstract interface class PublicSource {
 
   /// The extended marketing blocks of up to 50 public events at once, for
   /// listing cards, keyed by public id. Unknown and private ids are
-  /// silently absent; more than 50 is a 422 `TOO_MANY_IDS`; 503
+  /// silently absent; an empty list returns `{}` without a request; more
+  /// than 50 is a 422 `TOO_MANY_IDS`; 503
   /// `ModuleDisabledException` where the module is off.
   Future<Map<String, EventMarketing>> listPublicEventMarketing(
     List<String> publicIds,

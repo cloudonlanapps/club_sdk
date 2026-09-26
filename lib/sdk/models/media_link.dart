@@ -6,13 +6,15 @@ import 'media_ref.dart';
 
 /// Owner type for per-owner media link tables (#162).
 ///
-/// One of `user`, `event`, `group`, `venue` — the four owners that can
-/// attach media via dedicated link tables.
+/// One of `user`, `event`, `group`, `venue`, `evaluation` — the owners that
+/// attach media via dedicated link tables. `evaluation` appears only where
+/// the evaluations module is on (#42).
 enum MediaLinkOwnerType {
   user('user'),
   event('event'),
   group('group'),
-  venue('venue');
+  venue('venue'),
+  evaluation('evaluation');
 
   const MediaLinkOwnerType(this.wire);
 

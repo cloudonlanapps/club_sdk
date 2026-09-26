@@ -797,7 +797,9 @@ void main() {
           );
         });
 
-        final deleted = await adminClient.events.listDeletedEvents(limit: 100);
+        final deleted = (await adminClient.events.listDeletedEvents(
+          limit: 100,
+        )).items;
         final stored = deleted.singleWhere((e) => e.id == k.id);
         expect(stored.title, k.title);
         expect(stored.startTimeUtc, k.startTimeUtc);
@@ -842,9 +844,9 @@ void main() {
             );
           });
 
-          final deleted = await adminClient.events.listDeletedEvents(
+          final deleted = (await adminClient.events.listDeletedEvents(
             limit: 100,
-          );
+          )).items;
           final stored = deleted.singleWhere((e) => e.id == l.id);
           expect(stored.title, l.title);
           expect(stored.startTimeUtc, l.startTimeUtc);

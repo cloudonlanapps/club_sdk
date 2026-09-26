@@ -118,6 +118,11 @@ abstract interface class EventSource {
   /// The basic marketing block ([shortDescription], [stamp], [highlights],
   /// [includes]) takes getters: one returning `null` clears the field, an
   /// omitted getter leaves it alone (club_server#409, #22).
+  ///
+  /// [coachNames] takes a getter: one returning `null` (or an empty list)
+  /// clears the coaches, an omitted getter leaves them alone (#48).
+  /// [organizerName] cannot be cleared, since every event has an organizer:
+  /// `null` leaves it unchanged.
   Future<Event> updateEvent(
     int eventId, {
     required int version,
@@ -235,6 +240,11 @@ abstract interface class EventSource {
   ///
   /// Throws `ServerException` with `INVALID_EVENT_TYPE` if the event
   /// is a camp or one-off (use [rescheduleEvent]).
+  ///
+  /// [coachNames] takes a getter: one returning `null` (or an empty list)
+  /// clears the coaches, an omitted getter leaves them alone (#48).
+  /// [organizerName] cannot be cleared, since every event has an organizer:
+  /// `null` leaves it unchanged.
   Future<Event> updateEventForAllFuture(
     int eventId, {
     required int version,
@@ -327,10 +337,10 @@ abstract interface class EventSource {
   /// A camp or one-off has exactly one; a programme one per split.
   Future<List<EventSchedule>> listSchedules(int eventId);
 
-  /// Lists soft-deleted events.
-  Future<List<Event>> listDeletedEvents({
-    int? limit,
-    int? offset,
+  /// Lists soft-deleted events, one page at a time, with the total (#51).
+  Future<PaginatedList<Event>> listDeletedEvents({
+    int offset = 0,
+    int limit = 20,
   });
 
   /// Soft deletes an event.
