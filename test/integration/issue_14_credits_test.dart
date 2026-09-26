@@ -27,6 +27,7 @@ void main() {
 
     const memberName = 'test_credit_member';
     const otherName = 'test_credit_other';
+    const inviteeName = 'test_credit_invitee';
 
     setUpAll(() async {
       admin = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -38,7 +39,7 @@ void main() {
       await admin.auth.login(sudoUsername, sudoPassword);
       creditsOn = (await stackCapabilities(admin)).creditSystem;
 
-      for (final name in [memberName, otherName]) {
+      for (final name in [memberName, otherName, inviteeName]) {
         await registerAndApprove(
           client: admin,
           adminUsername: sudoUsername,
@@ -380,17 +381,12 @@ void main() {
       () async {
         if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
 
-        // Credit gates enrolment: a member with no usable account cannot
-        // even be invited to a credited programme.
-        await expectLater(
-          admin.enrollments.invite(programmeId, otherName),
-          throwsA(
-            isA<ServerException>().having(
-              (e) => e.code,
-              'code',
-              SdkErrorCode.insufficientCredit,
-            ),
-          ),
+        // Inviting is an offer, not an enrolment: it is not credit-gated
+        // (club_server#446), so a member with no credit can be invited.
+        await admin.enrollments.invite(programmeId, otherName);
+        expect(
+          await admin.enrollments.getEnrollmentStatus(programmeId, otherName),
+          EnrollmentStatus.invited,
         );
         await admin.enrollments.assign(programmeId, memberName);
 
@@ -400,7 +396,7 @@ void main() {
         expect(
           names,
           isNot(contains(otherName)),
-          reason: 'the uncredited member was never enrolled',
+          reason: 'the invited member is not enrolled',
         );
 
         final row = roster.items.firstWhere((r) => r.membername == memberName);
@@ -411,6 +407,53 @@ void main() {
           reason: 'this member holds a usable account on the programme',
         );
         expect(row.payingAccountId, isNotNull);
+      },
+    );
+
+    test(
+      '14.10b: an invited member without credit cannot accept until '
+      'an account is opened',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        await admin.enrollments.invite(programmeId, inviteeName);
+        final invitee = await createRemoteSecureClient(baseUrl: baseUrl);
+        await invitee.auth.login(inviteeName, 'password123');
+        addTearDown(invitee.auth.logout);
+        expect((await invitee.auth.getCurrentUser()).username, inviteeName);
+
+        await expectLater(
+          invitee.myEvents.acceptInvite(inviteeName, programmeId),
+          throwsA(
+            isA<ServerException>().having(
+              (e) => e.code,
+              'code',
+              SdkErrorCode.insufficientCredit,
+            ),
+          ),
+        );
+        expect(
+          await admin.enrollments.getEnrollmentStatus(programmeId, inviteeName),
+          EnrollmentStatus.invited,
+          reason: 'a refused acceptance leaves the invitation open',
+        );
+
+        await admin.credits.openAccount(
+          membername: inviteeName,
+          credits: 5,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(120),
+          reason: 'paid after the invitation',
+          eventId: programmeId,
+        );
+        await invitee.myEvents.acceptInvite(inviteeName, programmeId);
+
+        expect(
+          await admin.enrollments.getEnrollmentStatus(programmeId, inviteeName),
+          EnrollmentStatus.accepted,
+        );
+        final roster = await admin.credits.listEventCredits(programmeId);
+        expect(roster.items.map((r) => r.membername), contains(inviteeName));
       },
     );
 

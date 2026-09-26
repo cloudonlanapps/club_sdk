@@ -38,6 +38,10 @@ abstract interface class EnrollmentSource {
   // ══════════════════════════════════════════════════════════════════════════
 
   /// Invites a user to an event.
+  ///
+  /// Not credit-gated: an invitation is an offer, so a member with no
+  /// credit can be invited. The credit check runs when they accept
+  /// (`MyEventsSource.acceptInvite`).
   Future<void> invite(int eventId, String username);
 
   /// Invites multiple users atomically.
