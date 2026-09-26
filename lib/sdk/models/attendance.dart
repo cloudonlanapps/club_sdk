@@ -17,6 +17,8 @@ class AttendanceRecord {
     required this.status,
     required this.recordedAtUtc,
     this.notes,
+    this.previousStatus,
+    this.leaveReason,
   });
 
   factory AttendanceRecord.fromMap(Map<String, dynamic> map) {
@@ -27,6 +29,10 @@ class AttendanceRecord {
       membername: map['membername'] as String,
       status: AttendanceStatus.values.byName(map['status'] as String),
       notes: map['notes'] as String?,
+      previousStatus: map['previousStatus'] == null
+          ? null
+          : AttendanceStatus.values.byName(map['previousStatus'] as String),
+      leaveReason: map['leaveReason'] as String?,
       recordedAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['recordedAtUtc'] as int,
         isUtc: true,
@@ -44,6 +50,12 @@ class AttendanceRecord {
   final String membername;
   final AttendanceStatus status;
   final String? notes;
+
+  /// The status before a leave request, which a rejection restores (#50).
+  final AttendanceStatus? previousStatus;
+
+  /// The member's reason for a leave request (#50).
+  final String? leaveReason;
   final DateTime recordedAtUtc;
 
   AttendanceRecord copyWith({
@@ -52,6 +64,8 @@ class AttendanceRecord {
     String? membername,
     AttendanceStatus? status,
     String? Function()? notes,
+    AttendanceStatus? Function()? previousStatus,
+    String? Function()? leaveReason,
     DateTime? recordedAtUtc,
   }) {
     return AttendanceRecord(
@@ -60,6 +74,10 @@ class AttendanceRecord {
       membername: membername ?? this.membername,
       status: status ?? this.status,
       notes: notes != null ? notes() : this.notes,
+      previousStatus: previousStatus != null
+          ? previousStatus()
+          : this.previousStatus,
+      leaveReason: leaveReason != null ? leaveReason() : this.leaveReason,
       recordedAtUtc: recordedAtUtc ?? this.recordedAtUtc,
     );
   }
@@ -71,6 +89,8 @@ class AttendanceRecord {
       'membername': membername,
       'status': status.name,
       'notes': notes,
+      'previousStatus': previousStatus?.name,
+      'leaveReason': leaveReason,
       'recordedAtUtc': recordedAtUtc.millisecondsSinceEpoch,
     };
   }
@@ -93,6 +113,8 @@ class AttendanceRecord {
         other.membername == membername &&
         other.status == status &&
         other.notes == notes &&
+        other.previousStatus == previousStatus &&
+        other.leaveReason == leaveReason &&
         other.recordedAtUtc == recordedAtUtc;
   }
 
@@ -103,6 +125,8 @@ class AttendanceRecord {
         membername.hashCode ^
         status.hashCode ^
         notes.hashCode ^
+        previousStatus.hashCode ^
+        leaveReason.hashCode ^
         recordedAtUtc.hashCode;
   }
 }

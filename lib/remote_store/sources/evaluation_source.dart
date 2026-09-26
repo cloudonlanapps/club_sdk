@@ -206,7 +206,7 @@ class RemoteEvaluationSource implements EvaluationSource {
         'name': name,
         'description': ?description,
         'scopes': scopes.map((s) => s.wireName).toList(),
-        'categories': categories.map((c) => c.toMap()).toList(),
+        'categories': categories.map((c) => c.toInputMap()).toList(),
       },
     );
     return EvaluationTemplate.fromMap(response);
@@ -227,7 +227,7 @@ class RemoteEvaluationSource implements EvaluationSource {
         'description': ?description,
         if (scopes != null) 'scopes': scopes.map((s) => s.wireName).toList(),
         if (categories != null)
-          'categories': categories.map((c) => c.toMap()).toList(),
+          'categories': categories.map((c) => c.toInputMap()).toList(),
       },
     );
     return EvaluationTemplate.fromMap(response);

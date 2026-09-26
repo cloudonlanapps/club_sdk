@@ -29,10 +29,14 @@ abstract interface class UserSource {
   /// Get a user's private profile by username.
   Future<UserPrivate> getUserPrivate(String username);
 
-  /// Fetch a paginated list of soft-deleted users.
+  /// Fetch a paginated list of soft-deleted users, filtered and sorted like
+  /// [getUsers] (#52).
   Future<PaginatedList<UserInfo>> getDeletedUsers({
     int offset = 0,
     int limit = 20,
+    String? searchTerm,
+    String? sortBy,
+    bool descending = false,
   });
 
   /// Live user counts by status (admin or coach), from `GET /users/count`

@@ -64,11 +64,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      try {
-        await adminClient.auth.logout();
-      } on Exception {
-        /* ignore */
-      }
+      await adminClient.auth.logout();
     });
 
     test(
@@ -207,7 +203,19 @@ void main() {
             ),
           ),
         );
-        // No logout — pending users get 403 ACCOUNT_NOT_ACTIVE on /auth/logout.
+        // Issue 45: the server refuses logout for a pending user (403
+        // ACCOUNT_NOT_ACTIVE), but the client is signed out all the same.
+        await userClient.auth.logout();
+        await expectLater(
+          userClient.auth.getCurrentUser(),
+          throwsA(
+            isA<ServerException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              401,
+            ),
+          ),
+        );
       },
     );
 
@@ -312,7 +320,7 @@ void main() {
       final userClient = await loginAs(username);
       await attachIdentityDocument(userClient, username);
       await userClient.users.submitForReview();
-      // Skip user logout — pending users get 403 on /auth/logout.
+      await userClient.auth.logout();
 
       final blocked = await adminClient.users.blockUser(username);
       expect(blocked.status, UserStatus.blocked);

@@ -374,6 +374,17 @@ void main() {
           u1,
         );
 
+        // Issue 43: with no record yet the server answers 200 `null`, which
+        // reads as "no attendance".
+        expect(
+          await client.myEvents.getMyOccurrenceAttendance(
+            u1,
+            event.id,
+            occTime,
+          ),
+          isNull,
+        );
+
         await client.myEvents.requestLeave(
           u1,
           event.id,
@@ -386,6 +397,23 @@ void main() {
           occTime,
         );
         expect(occ, isNotNull);
+
+        // Issue 50: staff and the member both see the reason.
+        final register = await client.attendance.getAttendanceForOccurrence(
+          event.id,
+          occTime,
+        );
+        final row = register.singleWhere((r) => r.membername == u1);
+        expect(row.status, AttendanceStatus.onLeaveRequested);
+        expect(row.leaveReason, 'Family emergency');
+
+        final mine = await client.myEvents.getMyOccurrenceAttendance(
+          u1,
+          event.id,
+          occTime,
+        );
+        expect(mine?.status, AttendanceStatus.onLeaveRequested);
+        expect(mine?.leaveReason, 'Family emergency');
       });
 
       test('10.03c: Declare Leave - without reason', () async {

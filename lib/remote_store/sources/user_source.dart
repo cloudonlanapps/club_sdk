@@ -47,10 +47,16 @@ class RemoteUserSource implements UserSource {
   Future<PaginatedList<UserInfo>> getDeletedUsers({
     int offset = 0,
     int limit = 20,
+    String? searchTerm,
+    String? sortBy,
+    bool descending = false,
   }) async {
     final queryParams = <String, String>{
       'offset': offset.toString(),
       'limit': limit.toString(),
+      'searchTerm': ?searchTerm,
+      'sortBy': ?sortBy,
+      'descending': descending.toString(),
     };
     final response = await _store.get(
       endpoints.users.deleted,

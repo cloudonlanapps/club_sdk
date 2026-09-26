@@ -923,9 +923,9 @@ void main() {
         );
 
         // Verify present in deleted list
-        final deletedEvents = await client.events.listDeletedEvents(
+        final deletedEvents = (await client.events.listDeletedEvents(
           limit: 100,
-        );
+        )).items;
         expect(
           deletedEvents.any((e) => e.id == event.id),
           isTrue,
@@ -945,9 +945,9 @@ void main() {
         await client.events.deleteEvent(event.id);
 
         // Confirm in deleted list before restore
-        final deletedBefore = await client.events.listDeletedEvents(
+        final deletedBefore = (await client.events.listDeletedEvents(
           limit: 100,
-        );
+        )).items;
         expect(
           deletedBefore.any((e) => e.id == event.id),
           isTrue,
@@ -967,9 +967,9 @@ void main() {
         );
 
         // Verify absent from deleted list
-        final deletedAfter = await client.events.listDeletedEvents(
+        final deletedAfter = (await client.events.listDeletedEvents(
           limit: 100,
-        );
+        )).items;
         expect(
           deletedAfter.any((e) => e.id == event.id),
           isFalse,
@@ -998,9 +998,9 @@ void main() {
           isFalse,
         );
 
-        final deletedEvents = await client.events.listDeletedEvents(
+        final deletedEvents = (await client.events.listDeletedEvents(
           limit: 100,
-        );
+        )).items;
         expect(
           deletedEvents.any((e) => e.id == event.id),
           isFalse,

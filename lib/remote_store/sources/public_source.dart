@@ -79,6 +79,8 @@ class RemotePublicSource implements PublicSource {
   Future<Map<String, EventMarketing>> listPublicEventMarketing(
     List<String> publicIds,
   ) async {
+    // `ids=` is a 422; nothing asked for is nothing to fetch (#47).
+    if (publicIds.isEmpty) return {};
     final response = await _store.getList(
       endpoints.public.eventsMarketing,
       queryParams: {'ids': publicIds.join(',')},

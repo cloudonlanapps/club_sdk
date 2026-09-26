@@ -34,7 +34,7 @@ Future<Map<String, int>> dumpDeletedEntities({
   // Fetch all deleted entities
   final users = await _getAllDeletedUsers(client);
   final venues = await _getAllDeletedVenues(client);
-  final events = await client.events.listDeletedEvents(limit: 100);
+  final events = (await client.events.listDeletedEvents(limit: 100)).items;
   final groups = await _getAllDeletedGroups(client);
 
   // Print sections

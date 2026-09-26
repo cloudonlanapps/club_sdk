@@ -178,7 +178,8 @@ class RemoteEventSource implements EventSource {
       'description': ?description,
       if (visibility != null) 'visibility': visibility.name,
       'organizerName': ?organizerName,
-      if (coachNames != null) 'coachNames': coachNames(),
+      // The server clears coaches on [] and ignores null (#48).
+      if (coachNames != null) 'coachNames': coachNames() ?? const <String>[],
       if (gender != null) 'gender': gender()?.serverValue,
       if (dobOnOrAfterUtc != null)
         'dobOnOrAfterUtc': dobOnOrAfterUtc()?.millisecondsSinceEpoch,
@@ -299,7 +300,8 @@ class RemoteEventSource implements EventSource {
       'effectiveDateTimeUtc': effectiveDateTimeUtc.millisecondsSinceEpoch,
       'venueId': ?venueId,
       'organizerName': ?organizerName,
-      if (coachNames != null) 'coachNames': coachNames(),
+      // The server clears coaches on [] and ignores null (#48).
+      if (coachNames != null) 'coachNames': coachNames() ?? const <String>[],
       if (startTimeUtc != null)
         'startTimeUtc': startTimeUtc.millisecondsSinceEpoch,
       if (endTimeUtc != null) 'endTimeUtc': endTimeUtc.millisecondsSinceEpoch,
@@ -410,21 +412,19 @@ class RemoteEventSource implements EventSource {
   }
 
   @override
-  Future<List<Event>> listDeletedEvents({
-    int? limit,
-    int? offset,
+  Future<PaginatedList<Event>> listDeletedEvents({
+    int offset = 0,
+    int limit = 20,
   }) async {
     final queryParams = <String, String>{
-      if (limit != null) 'limit': limit.toString(),
-      if (offset != null) 'offset': offset.toString(),
+      'offset': offset.toString(),
+      'limit': limit.toString(),
     };
-    final response = await _store.getList(
+    final response = await _store.get(
       endpoints.events.deleted,
       queryParams: queryParams,
     );
-    return response
-        .map((item) => Event.fromMap(item as Map<String, dynamic>))
-        .toList();
+    return PaginatedList.fromMap(response, Event.fromMap);
   }
 
   @override

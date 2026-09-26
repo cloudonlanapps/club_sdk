@@ -33,6 +33,10 @@ abstract interface class AuthSource {
   Future<bool> isUsernameAvailable(String username);
 
   /// Logout the current user.
+  ///
+  /// Always signs the client out locally. A 401 or 403 from the server (a
+  /// registered or pending user, or an already expired token) is not an
+  /// error; any other failure still throws, after the token is cleared.
   Future<void> logout();
 
   /// Request password reset for the given email.
