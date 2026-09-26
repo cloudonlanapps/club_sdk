@@ -158,15 +158,12 @@ class RemoteMyEventsSource implements MyEventsSource {
     DateTime occurrenceTimeUtc,
   ) async {
     final timeStr = occurrenceTimeUtc.millisecondsSinceEpoch.toString();
-    try {
-      final response = await _store.get(
-        endpoints.myEvents.occurrenceAttendance(username, eventId, timeStr),
-      );
-      if (response.isEmpty) return null;
-      return AttendanceRecord.fromMap(response);
-    } on Object catch (_) {
-      return null;
-    }
+    // With no record the server answers 200 `null` (#43).
+    final response = await _store.getOrNull(
+      endpoints.myEvents.occurrenceAttendance(username, eventId, timeStr),
+    );
+    if (response == null || response.isEmpty) return null;
+    return AttendanceRecord.fromMap(response);
   }
 
   @override

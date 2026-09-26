@@ -42,6 +42,8 @@ abstract final class SdkErrorCode {
   static const accountBlocked = 'ACCOUNT_BLOCKED';
   static const accountPending = 'ACCOUNT_PENDING';
   static const invalidRefreshToken = 'INVALID_REFRESH_TOKEN';
+  // A signed-in member who has left the club (status `left`).
+  static const accountLeft = 'ACCOUNT_LEFT';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 403 Forbidden
@@ -217,6 +219,9 @@ abstract final class SdkErrorCode {
   static const evaluationsDisabled = 'EVALUATIONS_DISABLED';
   static const eventMarketingDisabled = 'EVENT_MARKETING_DISABLED';
 
+  // Media encryption has no key configured on this deployment.
+  static const encryptionNotConfigured = 'ENCRYPTION_NOT_CONFIGURED';
+
   /// The codes that mean "module off", for `ModuleDisabledException`.
   static const Set<String> moduleDisabledCodes = {
     creditSystemDisabled,
@@ -228,6 +233,10 @@ abstract final class SdkErrorCode {
   // Client-side SDK codes (used with SdkError)
   // ═══════════════════════════════════════════════════════════════════════════
   static const rruleNotAllowed = 'RRULE_NOT_ALLOWED';
+  // A 2xx response whose body is not the JSON shape the call expects (a
+  // proxy's HTML page, a list where a map was expected). The server answered,
+  // so this is not an outage.
+  static const invalidResponse = 'INVALID_RESPONSE';
   static const rruleConstraintViolation = 'RRULE_CONSTRAINT_VIOLATION';
   static const invalidEventType = 'INVALID_EVENT_TYPE';
 }

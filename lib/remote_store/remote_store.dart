@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+import '../sdk/exceptions/error_codes.dart';
 import '../sdk/exceptions/exceptions.dart';
 import 'http/api_exception.dart';
 
@@ -20,11 +21,22 @@ typedef UrlTransformer = String Function(String url);
 /// re-sends the same rejected credentials and doubles the failed-login count.
 /// A refused refresh token is final too: when `onTokenExpired` refreshes
 /// through this same store, retrying it would re-enter the callback without
-/// end (#36).
-const _unrefreshable = {
+/// end (#36). A user who has been hard-deleted (`USER_NOT_FOUND`) or has left
+/// the club (`ACCOUNT_LEFT`) gets the same answer from `/auth/refresh`, so
+/// refreshing is pointless for them and loops the same way (#40).
+const Set<String> _unrefreshable = {
   'INVALID_CREDENTIALS',
   'ACCOUNT_BLOCKED',
   'INVALID_REFRESH_TOKEN',
+  SdkErrorCode.userNotFound,
+  SdkErrorCode.accountLeft,
+};
+
+/// 503 codes that say a feature is off on this deployment. They are final
+/// answers, not transient failures, so they are never retried (#39).
+const Set<String> _featureOffCodes = {
+  ...SdkErrorCode.moduleDisabledCodes,
+  SdkErrorCode.encryptionNotConfigured,
 };
 
 /// HTTP client wrapper for remote API communication.
@@ -37,6 +49,7 @@ class RemoteStore {
     http.Client? client,
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 3,
+    this.retryBaseDelay = const Duration(seconds: 1),
     this.onTokenExpired,
     this.urlTransformer,
     this.onServerReachable,
@@ -62,8 +75,13 @@ class RemoteStore {
   /// Request timeout duration. Defaults to 30 seconds.
   final Duration timeout;
 
-  /// Maximum number of retries for 5xx errors. Defaults to 3.
+  /// Maximum number of retries for 5xx errors and timeouts on safe requests
+  /// (GET, HEAD). Defaults to 3.
   final int maxRetries;
+
+  /// Delay before the first retry; each later retry doubles it (1s, 2s, 4s by
+  /// default).
+  final Duration retryBaseDelay;
 
   /// Callback invoked when a 401 error occurs.
   /// Should return a new access token if refresh succeeds, or null to fail.
@@ -126,6 +144,26 @@ class RemoteStore {
     });
   }
 
+  /// Performs a GET request whose answer may be JSON `null`, returned as
+  /// `null` (e.g. "no record").
+  Future<Map<String, dynamic>?> getOrNull(
+    String path, {
+    Map<String, String>? queryParams,
+  }) async {
+    return _executeWithRetry(() async {
+      final uri = _buildUri(path, queryParams);
+      final response = await _httpClient
+          .get(uri, headers: _headers)
+          .timeout(timeout);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          response.body.trim() == 'null') {
+        return null;
+      }
+      return _handleResponse(response);
+    });
+  }
+
   /// Performs a GET request that returns a list.
   Future<List<dynamic>> getList(
     String path, {
@@ -169,7 +207,7 @@ class RemoteStore {
           )
           .timeout(timeout);
       return _handleResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a POST request that returns no content (204).
@@ -184,7 +222,7 @@ class RemoteStore {
           )
           .timeout(timeout);
       _handleVoidResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a PATCH request.
@@ -202,7 +240,7 @@ class RemoteStore {
           )
           .timeout(timeout);
       return _handleResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a PUT request.
@@ -220,7 +258,7 @@ class RemoteStore {
           )
           .timeout(timeout);
       return _handleResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a PUT request that returns no content (204).
@@ -235,7 +273,7 @@ class RemoteStore {
           )
           .timeout(timeout);
       _handleVoidResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a multipart file upload (POST).
@@ -272,10 +310,10 @@ class RemoteStore {
         request.fields.addAll(fields);
       }
 
-      final streamedResponse = await request.send().timeout(timeout);
+      final streamedResponse = await _httpClient.send(request).timeout(timeout);
       final response = await http.Response.fromStream(streamedResponse);
       return _handleResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a GET request that returns raw bytes.
@@ -345,7 +383,7 @@ class RemoteStore {
         return null;
       }
       return _handleResponse(response);
-    });
+    }, idempotent: false);
   }
 
   /// Performs a health check against the server.
@@ -364,12 +402,27 @@ class RemoteStore {
     return response.statusCode == 200;
   }
 
-  /// Executes a request with retry logic for 5xx errors.
+  /// Executes a request with retry logic for 5xx errors and timeouts.
+  ///
+  /// Only an [idempotent] request is retried: a POST, PUT, PATCH, DELETE or
+  /// upload that timed out or failed with a 5xx may already have been applied,
+  /// so it fails at once and the caller decides (#41). A 503 that says a
+  /// feature is off is never retried (#39).
   ///
   /// Signals [onServerReachable] once per call, on the first response, however
-  /// many retries or token refreshes follow (#729).
-  Future<T> _executeWithRetry<T>(Future<T> Function() request) async {
+  /// many retries or token refreshes follow (#729). Signals
+  /// [onServerUnreachable] only for a failure that never produced a response
+  /// (#44).
+  Future<T> _executeWithRetry<T>(
+    Future<T> Function() request, {
+    bool idempotent = true,
+  }) async {
+    final retries = idempotent ? maxRetries : 0;
     var attempt = 0;
+    Future<void> backoff() => Future<void>.delayed(
+      retryBaseDelay * (1 << (attempt - 1)),
+    );
+
     var refreshed = false;
     var signalledReachable = false;
     void markReachable() {
@@ -406,29 +459,32 @@ class RemoteStore {
           }
         }
 
-        // Handle 5xx - retry with exponential backoff
-        if (e.statusCode >= 500 && attempt < maxRetries) {
+        // Handle 5xx - retry with exponential backoff, unless the server
+        // says a feature is off: that answer will not change.
+        if (e.statusCode >= 500 &&
+            !(e.statusCode == 503 && _featureOffCodes.contains(e.code)) &&
+            attempt < retries) {
           attempt++;
-          final delay = Duration(seconds: 1 << (attempt - 1)); // 1s, 2s, 4s
-          await Future<void>.delayed(delay);
+          await backoff();
           continue;
         }
 
         rethrow;
       } on TimeoutException {
         // Retry timeouts with exponential backoff
-        if (attempt < maxRetries) {
+        if (attempt < retries) {
           attempt++;
-          final delay = Duration(seconds: 1 << (attempt - 1));
-          await Future<void>.delayed(delay);
+          await backoff();
           continue;
         }
         // Retries exhausted and still no response → server is unreachable.
         onServerUnreachable?.call();
         rethrow;
-      } on Object {
+      } on Exception {
         // Connection-level failures (SocketException, connection refused,
         // http.ClientException) never produced a response → unreachable.
+        // A body that does not decode arrives as a ServerException above,
+        // and an Error is a bug, not an outage (#44).
         onServerUnreachable?.call();
         rethrow;
       }
@@ -449,7 +505,10 @@ class RemoteStore {
       if (response.body.isEmpty) {
         return <String, dynamic>{};
       }
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = _decode(response);
+      if (decoded is! Map<String, dynamic>) {
+        _throwInvalidResponse(response, 'expected a JSON object');
+      }
       return resolveStaticUrls(decoded) as Map<String, dynamic>;
     }
     _throwApiException(response);
@@ -460,15 +519,15 @@ class RemoteStore {
       if (response.body.isEmpty) {
         return <dynamic>[];
       }
-      final decoded = jsonDecode(response.body);
+      final decoded = _decode(response);
       final List<dynamic> list;
       if (decoded is List) {
         list = decoded;
       } else if (decoded is Map<String, dynamic> &&
-          decoded.containsKey('items')) {
+          decoded['items'] is List<dynamic>) {
         list = decoded['items'] as List<dynamic>;
       } else {
-        list = decoded as List<dynamic>;
+        _throwInvalidResponse(response, 'expected a JSON list');
       }
       return resolveStaticUrls(list) as List<dynamic>;
     }
@@ -532,6 +591,26 @@ class RemoteStore {
       '.json',
     ];
     return mediaExtensions.any(lowerUrl.endsWith);
+  }
+
+  /// Decodes a 2xx body. A body that is not JSON is an `INVALID_RESPONSE`
+  /// server error rather than a network failure (#44).
+  Object? _decode(http.Response response) {
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      _throwInvalidResponse(response, 'body is not JSON');
+    }
+  }
+
+  Never _throwInvalidResponse(http.Response response, String reason) {
+    throw ServerException(
+      statusCode: response.statusCode,
+      code: SdkErrorCode.invalidResponse,
+      message:
+          'Unexpected response from ${response.request?.url.path}: '
+          '$reason',
+    );
   }
 
   void _handleVoidResponse(http.Response response) {

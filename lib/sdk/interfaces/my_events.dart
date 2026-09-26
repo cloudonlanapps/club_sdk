@@ -88,7 +88,8 @@ abstract interface class MyEventsSource {
 
   /// Gets the user's attendance record for a specific occurrence.
   ///
-  /// Returns `null` if no attendance has been recorded.
+  /// Returns `null` if no attendance has been recorded. Any other failure
+  /// (401, 403, 5xx) throws.
   Future<AttendanceRecord?> getMyOccurrenceAttendance(
     String username,
     int eventId,
