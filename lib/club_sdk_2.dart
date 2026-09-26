@@ -89,6 +89,7 @@ export 'sdk/models/credit_entry_type.dart' show CreditEntryType;
 export 'sdk/models/credit_transfer_result.dart' show CreditTransferResult;
 export 'sdk/models/eligible_user.dart' show EligibleUser;
 export 'sdk/models/enrollment.dart' show Enrollment;
+export 'sdk/models/entry_order.dart' show EntryOrder;
 export 'sdk/models/enums.dart'
     show
         AttendanceStatus,

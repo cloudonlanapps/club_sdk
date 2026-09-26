@@ -9,7 +9,8 @@ import 'credit_entry_type.dart';
 /// [amount] is signed: a deduction is negative. A
 /// [CreditEntryType.validityExtended] entry carries zero. [offsetsEntryId]
 /// names the entry this one reverses (a refund names its deduction, a
-/// reversal its grant).
+/// reversal its grant). [balanceAfter] and [totalAfter] are the running
+/// figures a statement shows beside each line.
 @immutable
 class CreditEntry {
   const CreditEntry({
@@ -24,6 +25,8 @@ class CreditEntry {
     this.occurrenceTimeUtc,
     this.actorUsername,
     this.offsetsEntryId,
+    this.balanceAfter,
+    this.totalAfter,
   });
 
   factory CreditEntry.fromMap(Map<String, dynamic> map) {
@@ -47,6 +50,8 @@ class CreditEntry {
         isUtc: true,
       ),
       offsetsEntryId: map['offsetsEntryId'] as int?,
+      balanceAfter: map['balanceAfter'] as int?,
+      totalAfter: map['totalAfter'] as int?,
     );
   }
 
@@ -76,6 +81,15 @@ class CreditEntry {
   /// The entry this one reverses.
   final int? offsetsEntryId;
 
+  /// The account's balance after this entry, whatever filter or page the
+  /// listing used. Null from a server that predates it.
+  final int? balanceAfter;
+
+  /// The member's credit across all their accounts after this entry; a
+  /// transfer between their own accounts leaves it unchanged. Null from a
+  /// server that predates it.
+  final int? totalAfter;
+
   CreditEntry copyWith({
     int? id,
     String? accountId,
@@ -88,6 +102,8 @@ class CreditEntry {
     String? Function()? actorUsername,
     DateTime? createdAtUtc,
     int? Function()? offsetsEntryId,
+    int? Function()? balanceAfter,
+    int? Function()? totalAfter,
   }) {
     return CreditEntry(
       id: id ?? this.id,
@@ -107,6 +123,8 @@ class CreditEntry {
       offsetsEntryId: offsetsEntryId != null
           ? offsetsEntryId()
           : this.offsetsEntryId,
+      balanceAfter: balanceAfter != null ? balanceAfter() : this.balanceAfter,
+      totalAfter: totalAfter != null ? totalAfter() : this.totalAfter,
     );
   }
 
@@ -123,6 +141,8 @@ class CreditEntry {
       'actorUsername': actorUsername,
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'offsetsEntryId': offsetsEntryId,
+      'balanceAfter': balanceAfter,
+      'totalAfter': totalAfter,
     };
   }
 
@@ -132,7 +152,8 @@ class CreditEntry {
   String toString() =>
       'CreditEntry(id: $id, accountId: $accountId, amount: $amount, '
       'entryType: $entryType, eventId: $eventId, '
-      'occurrenceTimeUtc: $occurrenceTimeUtc)';
+      'occurrenceTimeUtc: $occurrenceTimeUtc, balanceAfter: $balanceAfter, '
+      'totalAfter: $totalAfter)';
 
   @override
   bool operator ==(Object other) {
@@ -148,7 +169,9 @@ class CreditEntry {
         other.reason == reason &&
         other.actorUsername == actorUsername &&
         other.createdAtUtc == createdAtUtc &&
-        other.offsetsEntryId == offsetsEntryId;
+        other.offsetsEntryId == offsetsEntryId &&
+        other.balanceAfter == balanceAfter &&
+        other.totalAfter == totalAfter;
   }
 
   @override
@@ -164,5 +187,7 @@ class CreditEntry {
     actorUsername,
     createdAtUtc,
     offsetsEntryId,
+    balanceAfter,
+    totalAfter,
   );
 }

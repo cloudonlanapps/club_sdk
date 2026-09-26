@@ -32,6 +32,7 @@ void main() {
     const leaverName = 'test_credit_leaver';
     const mixedName = 'test_credit_mixed';
     const trialName = 'test_credit_trial';
+    const ledgerName = 'test_credit_ledger';
 
     setUpAll(() async {
       admin = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -51,6 +52,7 @@ void main() {
         leaverName,
         mixedName,
         trialName,
+        ledgerName,
       ]) {
         await registerAndApprove(
           client: admin,
@@ -657,6 +659,90 @@ void main() {
           expect(enrollment.status, EnrollmentStatus.removed);
           expect(enrollment.withdrawnAtUtc, isNotNull);
         }
+      },
+    );
+
+    test(
+      'Issue 22: each statement line carries the running balance, in '
+      'either order',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        final programme = await createMarkableProgramme('ledger');
+        final account = await admin.credits.openAccount(
+          membername: ledgerName,
+          credits: 10,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(120),
+          reason: 'season package',
+          eventId: programme.id,
+        );
+        await admin.enrollments.assign(programme.id, ledgerName);
+
+        Future<void> mark(AttendanceStatus status) async {
+          final report = await admin.attendance.markAttendance(
+            programme.id,
+            programme.startTimeUtc,
+            [AttendanceMarkRecord(membername: ledgerName, status: status)],
+          );
+          expect(report.marked.map((m) => m.membername), [ledgerName]);
+        }
+
+        await mark(AttendanceStatus.present); // charge
+        await admin.attendance.clearAttendance(
+          programme.id,
+          ledgerName,
+          programme.startTimeUtc,
+        ); // refund
+        await mark(AttendanceStatus.late); // charge again
+
+        final oldestFirst = await admin.credits.listEntries(
+          accountId: account.accountId,
+          order: EntryOrder.oldestFirst,
+        );
+        expect(oldestFirst.items.map((e) => e.entryType), [
+          CreditEntryType.grant,
+          CreditEntryType.sessionDeduction,
+          CreditEntryType.sessionRefund,
+          CreditEntryType.sessionDeduction,
+        ]);
+        expect(oldestFirst.items.map((e) => e.balanceAfter), [10, 9, 10, 9]);
+        expect(
+          oldestFirst.items.map((e) => e.totalAfter),
+          [10, 9, 10, 9],
+          reason: 'the member holds this one account only',
+        );
+
+        final newestFirst = await admin.credits.listEntries(
+          accountId: account.accountId,
+          order: EntryOrder.newestFirst,
+        );
+        expect(
+          newestFirst.items.map((e) => e.id),
+          oldestFirst.items.map((e) => e.id).toList().reversed,
+        );
+        expect(newestFirst.items.map((e) => e.balanceAfter), [9, 10, 9, 10]);
+
+        final charges = await admin.credits.listEntries(
+          accountId: account.accountId,
+          entryType: CreditEntryType.sessionDeduction,
+        );
+        expect(
+          charges.items.map((e) => e.balanceAfter),
+          [9, 9],
+          reason: 'running figures do not depend on the filter',
+        );
+
+        final ledgerMember = await createRemoteSecureClient(baseUrl: baseUrl);
+        await ledgerMember.auth.login(ledgerName, 'password123');
+        addTearDown(ledgerMember.auth.logout);
+        expect((await ledgerMember.auth.getCurrentUser()).username, ledgerName);
+        final statement = await ledgerMember.myCredits.listMyEntries(
+          ledgerName,
+          order: EntryOrder.newestFirst,
+        );
+        expect(statement.items.map((e) => e.balanceAfter), [9, 10, 9, 10]);
+        expect(statement.items.map((e) => e.totalAfter), [9, 10, 9, 10]);
       },
     );
 
