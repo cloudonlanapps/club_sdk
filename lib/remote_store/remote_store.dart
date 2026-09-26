@@ -18,7 +18,14 @@ typedef UrlTransformer = String Function(String url);
 /// The server returns 401 both for an expired token and for a failed login
 /// (`routers/auth.py`). Refreshing helps only the former; retrying the latter
 /// re-sends the same rejected credentials and doubles the failed-login count.
-const _unrefreshable = {'INVALID_CREDENTIALS', 'ACCOUNT_BLOCKED'};
+/// A refused refresh token is final too: when `onTokenExpired` refreshes
+/// through this same store, retrying it would re-enter the callback without
+/// end (#36).
+const _unrefreshable = {
+  'INVALID_CREDENTIALS',
+  'ACCOUNT_BLOCKED',
+  'INVALID_REFRESH_TOKEN',
+};
 
 /// HTTP client wrapper for remote API communication.
 ///
