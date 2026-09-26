@@ -97,6 +97,9 @@ abstract interface class MediaSource {
   ///
   /// Use [ownerType] to restrict to one owner, [tag] to restrict to one
   /// tag, [mediaType] to restrict to one media type, or any combination.
+  /// Evaluation media appear in an unfiltered search, but the server does
+  /// not accept [MediaLinkOwnerType.evaluation] as the filter (422
+  /// `INVALID_OWNER_TYPE`).
   Future<PaginatedList<MediaLinkCrossEntry>> searchLinks({
     MediaLinkOwnerType? ownerType,
     String? tag,

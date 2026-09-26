@@ -308,13 +308,24 @@ void main() {
         );
 
         // The change revokes every token issued before it (#31), including
-        // this session's: the old token no longer authenticates, so even
-        // logging out with it is refused.
+        // this session's: the old token no longer authenticates. The server
+        // refuses logout with it too, but logout still signs the client out
+        // locally (#45).
         final revoked = isA<ServerException>()
             .having((e) => e.statusCode, 'statusCode', 401)
             .having((e) => e.code, 'code', 'INVALID_TOKEN');
         await expectLater(client.auth.getCurrentUser(), throwsA(revoked));
-        await expectLater(client.auth.logout(), throwsA(revoked));
+        await client.auth.logout();
+        await expectLater(
+          client.auth.getCurrentUser(),
+          throwsA(
+            isA<ServerException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              401,
+            ),
+          ),
+        );
 
         // The old password is refused; the new one logs in.
         await expectLater(
