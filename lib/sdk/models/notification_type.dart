@@ -35,7 +35,8 @@ abstract final class NotificationType {
 
   // ── Credits (#374) ──────────────────────────────────────────────────────
   /// A terminated programme's bound credit was released to a general
-  /// account. Payload: the account and the programme it came from.
+  /// account. Payload `data`: `eventId`, `eventTitle` and `credits` (the
+  /// amount released); it names no account.
   static const creditReleased = 'credit.released';
 
   // ── Enrollment ──────────────────────────────────────────────────────────
@@ -45,6 +46,12 @@ abstract final class NotificationType {
   static const enrollmentClosed = 'enrollment.closed';
   static const enrollmentOpened = 'enrollment.opened';
   static const enrollmentRsvp = 'enrollment.rsvp';
+
+  /// A mark used up a trial member's credit, so the server withdrew them
+  /// from the programme (#30). Payload `data`: `eventId`, `eventTitle`,
+  /// `eventType`, `enrolledAtUtc`, `withdrawnAtUtc`. The enrollment's
+  /// `withdrawalReason` is `Enrollment.trialCreditExhaustedReason`.
+  static const enrollmentTrialEnded = 'enrollment.trial_ended';
 
   // ── Evaluations (#302) ──────────────────────────────────────────────────
   static const evaluationPublished = 'evaluation.published';
@@ -117,6 +124,7 @@ abstract final class NotificationType {
     enrollmentClosed,
     enrollmentOpened,
     enrollmentRsvp,
+    enrollmentTrialEnded,
     evaluationPublished,
     evaluationTransferred,
     evaluationWithdrawn,

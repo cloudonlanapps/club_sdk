@@ -34,6 +34,16 @@ void main() {
       expect(NotificationType.isKnown('future.type'), isFalse);
     });
 
+    test('Issue 30: enrollment.trial_ended is a known type', () {
+      expect(NotificationType.enrollmentTrialEnded, 'enrollment.trial_ended');
+      expect(NotificationType.all, contains('enrollment.trial_ended'));
+      expect(NotificationType.isKnown('enrollment.trial_ended'), isTrue);
+    });
+
+    test('Issue 30: the trial-ended withdrawal reason is named', () {
+      expect(Enrollment.trialCreditExhaustedReason, 'trialCreditExhausted');
+    });
+
     test(
       'Issue 31: an unknown type still round-trips through AppNotification',
       () {
