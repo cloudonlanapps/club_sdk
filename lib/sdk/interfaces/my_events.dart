@@ -42,6 +42,10 @@ abstract interface class MyEventsSource {
   Future<Enrollment> getMyEnrollment(String username, int eventId);
 
   /// Accepts an invitation to an event.
+  ///
+  /// Where the credit system is on, accepting a programme invitation
+  /// without usable credit throws `ServerException(422,
+  /// INSUFFICIENT_CREDIT)` and the invitation stays open.
   Future<void> acceptInvite(String username, int eventId);
 
   /// Declines an invitation to an event.
