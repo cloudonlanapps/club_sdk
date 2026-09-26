@@ -14,7 +14,9 @@ void main() {
   group('Issue 48: clearing coaches on updateEvent', () {
     late SecureClient sudo;
     late int venueId;
-    var nextDay = 480;
+    // Inside the server's 52-week scheduling horizon, clear of the days the
+    // other suites use.
+    var nextDay = 300;
 
     const coachA = 'test_i48_coach_a';
     const coachB = 'test_i48_coach_b';
