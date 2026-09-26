@@ -28,6 +28,9 @@ void main() {
     const memberName = 'test_credit_member';
     const otherName = 'test_credit_other';
     const inviteeName = 'test_credit_invitee';
+    const lapsedName = 'test_credit_lapsed';
+    const leaverName = 'test_credit_leaver';
+    const mixedName = 'test_credit_mixed';
 
     setUpAll(() async {
       admin = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -39,7 +42,14 @@ void main() {
       await admin.auth.login(sudoUsername, sudoPassword);
       creditsOn = (await stackCapabilities(admin)).creditSystem;
 
-      for (final name in [memberName, otherName, inviteeName]) {
+      for (final name in [
+        memberName,
+        otherName,
+        inviteeName,
+        lapsedName,
+        leaverName,
+        mixedName,
+      ]) {
         await registerAndApprove(
           client: admin,
           adminUsername: sudoUsername,
@@ -454,6 +464,109 @@ void main() {
         );
         final roster = await admin.credits.listEventCredits(programmeId);
         expect(roster.items.map((r) => r.membername), contains(inviteeName));
+      },
+    );
+
+    test(
+      'Issue 20: an expired bound account is blocked yet still bound',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        // The server refuses a window that has already closed, so open one
+        // that closes a few seconds from now and let it lapse.
+        final closesAt = DateTime.now().toUtc().add(const Duration(seconds: 3));
+        await admin.credits.openAccount(
+          membername: lapsedName,
+          credits: 5,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: closesAt,
+          reason: 'a package about to lapse',
+          eventId: programmeId,
+        );
+        await admin.enrollments.assign(programmeId, lapsedName);
+        await Future<void>.delayed(
+          closesAt.difference(DateTime.now().toUtc()) +
+              const Duration(seconds: 1),
+        );
+
+        final roster = await admin.credits.listEventCredits(programmeId);
+        final row = roster.items.firstWhere((r) => r.membername == lapsedName);
+        expect(row.usableCredits, 0);
+        expect(row.blocked, isTrue);
+        expect(
+          row.boundCredits,
+          5,
+          reason: 'expired credit cannot pay, but a departure must settle it',
+        );
+
+        final blocked = await admin.credits.listEventCredits(
+          programmeId,
+          filter: RosterCreditFilter.blocked,
+        );
+        expect(blocked.items.map((r) => r.membername), contains(lapsedName));
+        expect(blocked.items.every((r) => r.blocked), isTrue);
+      },
+    );
+
+    test(
+      'Issue 20: a member who asked to withdraw stays on the roster',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        await admin.credits.openAccount(
+          membername: leaverName,
+          credits: 6,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(120),
+          reason: 'season package',
+          eventId: programmeId,
+        );
+        await admin.enrollments.assign(programmeId, leaverName);
+        final leaver = await createRemoteSecureClient(baseUrl: baseUrl);
+        await leaver.auth.login(leaverName, 'password123');
+        addTearDown(leaver.auth.logout);
+        expect((await leaver.auth.getCurrentUser()).username, leaverName);
+
+        await leaver.myEvents.withdraw(leaverName, programmeId);
+        expect(
+          await admin.enrollments.getEnrollmentStatus(programmeId, leaverName),
+          EnrollmentStatus.withdrawRequested,
+        );
+
+        final roster = await admin.credits.listEventCredits(programmeId);
+        final row = roster.items.firstWhere((r) => r.membername == leaverName);
+        expect(row.usableCredits, 6);
+        expect(row.boundCredits, 6);
+        expect(row.blocked, isFalse);
+      },
+    );
+
+    test(
+      'Issue 20: general credit is usable but never bound',
+      () async {
+        if (skipUnless(enabled: creditsOn, module: 'credit system')) return;
+
+        await admin.credits.openAccount(
+          membername: mixedName,
+          credits: 4,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(120),
+          reason: 'programme package',
+          eventId: programmeId,
+        );
+        await admin.credits.openAccount(
+          membername: mixedName,
+          credits: 20,
+          validFromUtc: dayAt(-1),
+          validUntilUtc: dayAt(120),
+          reason: 'general credit',
+        );
+        await admin.enrollments.assign(programmeId, mixedName);
+
+        final roster = await admin.credits.listEventCredits(programmeId);
+        final row = roster.items.firstWhere((r) => r.membername == mixedName);
+        expect(row.usableCredits, 24);
+        expect(row.boundCredits, 4, reason: 'only the programme share');
       },
     );
 

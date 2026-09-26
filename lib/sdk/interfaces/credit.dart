@@ -6,6 +6,7 @@ import '../models/credit_entry_type.dart';
 import '../models/credit_transfer_result.dart';
 import '../models/member_credit_status.dart';
 import '../models/pagination.dart';
+import '../models/roster_credit_filter.dart';
 
 /// Staff-side credit operations (`/credits`, #14).
 ///
@@ -115,12 +116,19 @@ abstract interface class CreditSource {
     int limit = 50,
   });
 
-  /// Who on programme [eventId] can be marked: one row per enrolled member
-  /// with their usable credit, the account that would pay, and whether they
-  /// are blocked. Members who are only invited are not on it.
+  /// Who on programme [eventId] can be marked, and whose departure needs a
+  /// `CreditDisposition`: one row per enrolled member with their usable
+  /// and bound credit, the account that would pay, and whether they are
+  /// blocked.
+  ///
+  /// Enrolled includes members who asked to withdraw
+  /// (`EnrollmentStatus.withdrawRequested`): until the withdrawal is
+  /// approved they can still be marked and charged. Members who are only
+  /// invited are not on it. [filter] narrows the rows;
+  /// [RosterCreditFilter.expiringSoon] uses [expiringBeforeUtc].
   Future<PaginatedList<MemberCreditStatus>> listEventCredits(
     int eventId, {
-    CreditAccountState? state,
+    RosterCreditFilter? filter,
     DateTime? expiringBeforeUtc,
     int offset = 0,
     int limit = 50,

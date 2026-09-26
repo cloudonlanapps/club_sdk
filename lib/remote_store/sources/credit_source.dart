@@ -7,6 +7,7 @@ import '../../sdk/models/credit_entry_type.dart';
 import '../../sdk/models/credit_transfer_result.dart';
 import '../../sdk/models/member_credit_status.dart';
 import '../../sdk/models/pagination.dart';
+import '../../sdk/models/roster_credit_filter.dart';
 import '../endpoints/endpoints.dart';
 import '../remote_store.dart';
 
@@ -160,7 +161,7 @@ class RemoteCreditSource implements CreditSource {
   @override
   Future<PaginatedList<MemberCreditStatus>> listEventCredits(
     int eventId, {
-    CreditAccountState? state,
+    RosterCreditFilter? filter,
     DateTime? expiringBeforeUtc,
     int offset = 0,
     int limit = 50,
@@ -168,7 +169,7 @@ class RemoteCreditSource implements CreditSource {
     final response = await _store.get(
       endpoints.credits.eventCredits(eventId),
       queryParams: {
-        if (state != null) 'state': state.wireName,
+        if (filter != null) 'state': filter.wireName,
         if (expiringBeforeUtc != null)
           'expiringBeforeUtc': expiringBeforeUtc.millisecondsSinceEpoch
               .toString(),

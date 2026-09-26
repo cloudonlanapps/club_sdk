@@ -158,6 +158,7 @@ export 'sdk/models/public_profile.dart'
 export 'sdk/models/public_venue.dart' show PublicVenue;
 export 'sdk/models/refused_attendance.dart' show RefusedAttendance;
 export 'sdk/models/role.dart' show Role;
+export 'sdk/models/roster_credit_filter.dart' show RosterCreditFilter;
 export 'sdk/models/rrule_config.dart' show RruleConfig;
 export 'sdk/models/staff_listing_row.dart' show StaffListingRow;
 export 'sdk/models/system_preference.dart' show SystemPreference;
