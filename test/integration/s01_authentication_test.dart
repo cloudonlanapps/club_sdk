@@ -307,14 +307,35 @@ void main() {
           newPassword: 'newPassword456',
         );
 
-        await client.auth.logout();
+        // The change revokes every token issued before it (#31), including
+        // this session's: the old token no longer authenticates, so even
+        // logging out with it is refused.
+        final revoked = isA<ServerException>()
+            .having((e) => e.statusCode, 'statusCode', 401)
+            .having((e) => e.code, 'code', 'INVALID_TOKEN');
+        await expectLater(client.auth.getCurrentUser(), throwsA(revoked));
+        await expectLater(client.auth.logout(), throwsA(revoked));
 
-        // Login with new password should work
+        // The old password is refused; the new one logs in.
+        await expectLater(
+          client.auth.login('test_change_pass_110', 'oldPassword123'),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statusCode', 401)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.invalidCredentials,
+                ),
+          ),
+        );
         final token = await client.auth.login(
           'test_change_pass_110',
           'newPassword456',
         );
         expect(token.accessToken, isNotEmpty);
+        final user = await client.auth.getCurrentUser();
+        expect(user.username, 'test_change_pass_110');
       });
 
       test('throws on incorrect current password', () async {
