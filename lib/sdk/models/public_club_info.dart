@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import 'club_identity.dart';
 import 'media_ref.dart';
 
 const _mapEquality = DeepCollectionEquality();
@@ -44,6 +45,9 @@ class PublicClubInfo {
 
   /// Website media slot to the media filling it.
   final Map<String, MediaRef> siteMedia;
+
+  /// [clubInfo] read as the typed [ClubIdentity] (#90).
+  ClubIdentity get identity => ClubIdentity.fromMap(clubInfo);
 
   PublicClubInfo copyWith({
     Map<String, dynamic>? clubInfo,

@@ -1,4 +1,5 @@
 import '../../sdk/interfaces/admin.dart';
+import '../../sdk/models/club_identity.dart';
 import '../../sdk/models/staff_listing_row.dart';
 import '../../sdk/models/system_preference.dart';
 import '../endpoints/endpoints.dart';
@@ -33,6 +34,30 @@ class RemoteAdminSource implements AdminSource {
       body: {'value': value},
     );
     return SystemPreference.fromMap(response);
+  }
+
+  @override
+  Future<ClubIdentity> getClubIdentity() async {
+    final preference = await getPreference(ClubIdentity.preferenceKey);
+    return clubIdentityOf(preference);
+  }
+
+  @override
+  Future<ClubIdentity> setClubIdentity(ClubIdentity identity) async {
+    final preference = await setPreference(
+      ClubIdentity.preferenceKey,
+      identity.toMap(),
+    );
+    return clubIdentityOf(preference);
+  }
+
+  /// Reads a `club_info` preference; a value that is not a map (a key never
+  /// written) reads as an empty identity.
+  ClubIdentity clubIdentityOf(SystemPreference preference) {
+    final value = preference.value;
+    return value is Map
+        ? ClubIdentity.fromMap(Map<String, dynamic>.from(value))
+        : const ClubIdentity();
   }
 
   @override
