@@ -76,6 +76,21 @@ void main() {
       },
     );
 
+    test(
+      'club_server#517: a link change on a deleted owner maps to OWNER_DELETED',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'OWNER_DELETED',
+            'message': 'Owner is deleted',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.ownerDeleted);
+      },
+    );
+
     test('accepts top-level error wrapper', () {
       final exc = mapHttpError(422, const {
         'error': {

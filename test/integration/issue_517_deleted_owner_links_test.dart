@@ -9,10 +9,8 @@ import '../utils/test_png.dart';
 
 /// club_server#517: the media links of a soft-deleted group, venue or event
 /// stay readable, each marked `ownerDeleted`, and are read-only: adding,
-/// changing or removing one answers 422.
-///
-/// The field name `ownerDeleted` is the SDK's reading of the issue; the
-/// server has not published it yet.
+/// changing or removing one answers 422 `OWNER_DELETED`. The reverse lookup
+/// and the cross-owner search carry the same `ownerDeleted` marker.
 void main() {
   group('club_server#517: links on a soft-deleted owner', () {
     late SecureClient sudoClient;
@@ -27,6 +25,7 @@ void main() {
             Future<int> Function(String name) create,
             Future<void> Function(int id) softDelete,
             OwnerMediaSource<int> Function() links,
+            MediaLinkOwnerType ownerType,
           })
         >{
           'group': (
@@ -34,6 +33,7 @@ void main() {
                 (await sudoClient.groups.createGroup(name: name)).id,
             softDelete: (id) => sudoClient.groups.deleteGroup(id),
             links: () => sudoClient.groupMedia,
+            ownerType: MediaLinkOwnerType.group,
           ),
           'venue': (
             create: (name) async => (await sudoClient.venues.createVenue(
@@ -42,6 +42,7 @@ void main() {
             )).id,
             softDelete: (id) async => sudoClient.venues.deleteVenue(id),
             links: () => sudoClient.venueMedia,
+            ownerType: MediaLinkOwnerType.venue,
           ),
           'event': (
             create: (name) async => (await sudoClient.events.createEvent(
@@ -57,6 +58,7 @@ void main() {
             )).id,
             softDelete: (id) async => sudoClient.events.deleteEvent(id),
             links: () => sudoClient.eventMedia,
+            ownerType: MediaLinkOwnerType.event,
           ),
         };
 
@@ -71,8 +73,10 @@ void main() {
       return media;
     }
 
-    Matcher refused422() => throwsA(
-      isA<ServerException>().having((e) => e.statusCode, 'statusCode', 422),
+    Matcher refusedOwnerDeleted() => throwsA(
+      isA<ServerException>()
+          .having((e) => e.statusCode, 'statusCode', 422)
+          .having((e) => e.code, 'code', SdkErrorCode.ownerDeleted),
     );
 
     setUpAll(() async {
@@ -127,16 +131,37 @@ void main() {
           expect(grouped[tag]!.single.ownerDeleted, isTrue);
         });
 
-        test('adding a link is refused with 422', () async {
+        test('the reverse lookup marks the link ownerDeleted', () async {
+          final entries = await sudoClient.media.getLinks(linked.uuid);
+          final entry = entries.singleWhere(
+            (e) => e.ownerType == owner.ownerType && e.ownerId == '$ownerId',
+          );
+          expect(entry.ownerDeleted, isTrue);
+        });
+
+        test('the cross-owner search marks the link ownerDeleted', () async {
+          final page = await sudoClient.media.searchLinks(
+            ownerType: owner.ownerType,
+            tag: tag,
+            limit: 100,
+          );
+          final entry = page.items.singleWhere(
+            (e) => e.mediaUuid == linked.uuid,
+          );
+          expect(entry.ownerId, '$ownerId');
+          expect(entry.ownerDeleted, isTrue);
+        });
+
+        test('adding a link is refused with 422 OWNER_DELETED', () async {
           await expectLater(
             owner.links().attach(ownerId, tag: tag, mediaUuid: spare.uuid),
-            refused422(),
+            refusedOwnerDeleted(),
           );
           final links = await owner.links().listByTag(ownerId, tag);
           expect(links.map((l) => l.mediaUuid), [linked.uuid]);
         });
 
-        test('changing a link is refused with 422', () async {
+        test('changing a link is refused with 422 OWNER_DELETED', () async {
           await expectLater(
             owner.links().updateMetadata(
               ownerId,
@@ -144,20 +169,20 @@ void main() {
               mediaUuid: linked.uuid,
               metadata: 'after',
             ),
-            refused422(),
+            refusedOwnerDeleted(),
           );
           final links = await owner.links().listByTag(ownerId, tag);
           expect(links.single.metadata, 'before');
         });
 
-        test('removing a link is refused with 422', () async {
+        test('removing a link is refused with 422 OWNER_DELETED', () async {
           await expectLater(
             owner.links().detach(ownerId, tag, linked.uuid),
-            refused422(),
+            refusedOwnerDeleted(),
           );
           await expectLater(
             owner.links().detachTag(ownerId, tag),
-            refused422(),
+            refusedOwnerDeleted(),
           );
           final links = await owner.links().listByTag(ownerId, tag);
           expect(links.map((l) => l.mediaUuid), [linked.uuid]);

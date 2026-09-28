@@ -130,6 +130,9 @@ abstract final class SdkErrorCode {
   // Upload of an image or PDF the converter rejects (club_server#521): no
   // media item is created. Not the download-time `CONVERSION_FAILED`.
   static const mediaConversionFailed = 'MEDIA_CONVERSION_FAILED';
+  // Adding, changing or removing a media link on a soft-deleted group, venue
+  // or event (club_server#517): its links are read-only.
+  static const ownerDeleted = 'OWNER_DELETED';
   // Single-occurrence reschedule with an all-null body (#113). The event-level
   // /reschedule rejects an empty body at the schema layer (VALIDATION_ERROR).
   static const nothingToReschedule = 'NOTHING_TO_RESCHEDULE';

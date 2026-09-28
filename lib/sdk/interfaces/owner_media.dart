@@ -10,7 +10,9 @@ import '../models/media_link.dart';
 ///
 /// A soft-deleted group, venue or event keeps its links readable, each
 /// marked [MediaLink.ownerDeleted], and read-only: [attach],
-/// [updateMetadata], [detach] and [detachTag] answer 422 (club_server#517).
+/// [updateMetadata], [detach] and [detachTag] answer 422 `OWNER_DELETED`
+/// (club_server#517). The reverse lookup and the cross-owner search carry the
+/// same marker on their entries.
 abstract interface class OwnerMediaSource<OwnerId> {
   /// Tag-grouped list of all media linked to [ownerId].
   ///

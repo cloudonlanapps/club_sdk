@@ -99,6 +99,9 @@ abstract interface class MediaSource {
   Future<List<Map<String, dynamic>>> getLinksRaw(String uuid);
 
   /// Reverse lookup: every link row referencing this media, typed.
+  ///
+  /// A link whose owner is soft-deleted is included, marked
+  /// [MediaLinkReverseEntry.ownerDeleted] (club_server#517).
   Future<List<MediaLinkReverseEntry>> getLinks(String uuid);
 
   /// Cross-owner search across all link tables. Admin/coach only.
@@ -108,6 +111,9 @@ abstract interface class MediaSource {
   /// Evaluation media appear in an unfiltered search, but the server does
   /// not accept [MediaLinkOwnerType.evaluation] as the filter (422
   /// `INVALID_OWNER_TYPE`).
+  ///
+  /// A link whose owner is soft-deleted is marked
+  /// [MediaLinkCrossEntry.ownerDeleted] (club_server#517).
   Future<PaginatedList<MediaLinkCrossEntry>> searchLinks({
     MediaLinkOwnerType? ownerType,
     String? tag,
