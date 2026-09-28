@@ -1,4 +1,3 @@
-import '../../sdk/exceptions/exceptions.dart';
 import '../../sdk/interfaces/auth.dart';
 import '../../sdk/models/auth_token.dart';
 import '../../sdk/models/gender.dart';
@@ -11,6 +10,10 @@ class RemoteAuthSource implements AuthSource {
   RemoteAuthSource(this._store);
 
   final RemoteStore _store;
+
+  /// The refresh token of this session, from the latest [login] or
+  /// [refreshToken], sent on [logout] so the server revokes it too.
+  String? _sessionRefreshToken;
 
   @override
   Future<UserInfo> register({
@@ -58,20 +61,21 @@ class RemoteAuthSource implements AuthSource {
     );
     final token = AuthToken.fromMap(response);
     _store.authToken = token.accessToken;
+    _sessionRefreshToken = token.refreshToken;
     return token;
   }
 
   @override
-  Future<void> logout() async {
+  Future<void> logout({String? refreshToken}) async {
+    final sessionRefresh = refreshToken ?? _sessionRefreshToken;
     try {
-      await _store.postVoid(endpoints.auth.logout);
-    } on ServerException catch (e) {
-      // The server refuses logout for a user who is not active (403
-      // ACCOUNT_NOT_ACTIVE) or whose token is already dead (401). Either way
-      // the caller asked to sign out, which is done locally below (#45).
-      if (e.statusCode != 401 && e.statusCode != 403) rethrow;
+      await _store.postVoid(
+        endpoints.auth.logout,
+        body: sessionRefresh == null ? null : {'refreshToken': sessionRefresh},
+      );
     } finally {
       _store.authToken = null;
+      _sessionRefreshToken = null;
     }
   }
 
@@ -94,6 +98,7 @@ class RemoteAuthSource implements AuthSource {
     );
     final token = AuthToken.fromMap(response);
     _store.authToken = token.accessToken;
+    _sessionRefreshToken = token.refreshToken ?? refreshToken;
     return token;
   }
 

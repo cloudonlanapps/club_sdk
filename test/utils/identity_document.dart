@@ -59,8 +59,7 @@ Future<void> submitForReviewIfRequired({
 }) async {
   if (registered.status == UserStatus.registered) {
     // login() replaces the current session, so no explicit logout is needed
-    // here. A registered user cannot logout (server returns 403
-    // ACCOUNT_NOT_ACTIVE), so we just swap sessions in-place.
+    // here: sessions are swapped in place.
     await client.auth.login(registered.username, password);
     await attachIdentityDocument(client, registered.username);
     await client.users.submitForReview();

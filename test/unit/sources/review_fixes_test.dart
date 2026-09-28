@@ -56,22 +56,29 @@ void main() {
   };
 
   group('Issue 45: logout always signs the client out locally', () {
+    // Any logged-in user may log out whatever their status
+    // (club_server#510), so a refusal is no longer expected and is not
+    // swallowed: it throws, after the token is cleared.
     for (final (status, code) in [
       (403, 'ACCOUNT_NOT_ACTIVE'),
       (401, 'INVALID_TOKEN'),
+      (500, 'INTERNAL_ERROR'),
     ]) {
-      test('a $status $code refusal clears the token and does not '
-          'throw', () async {
+      test('a $status $code refusal clears the token and throws', () async {
         final store = storeWith((_) => error(status, code))..authToken = 'tok';
 
-        await RemoteAuthSource(store).logout();
-
+        await expectLater(
+          RemoteAuthSource(store).logout(),
+          throwsA(
+            isA<ServerException>().having((e) => e.code, 'code', code),
+          ),
+        );
         expect(store.authToken, isNull);
         expect(requests, hasLength(1));
       });
     }
 
-    test('any other failure clears the token and still throws', () async {
+    test('a refusal still clears the token', () async {
       final store = storeWith((_) => error(500, 'INTERNAL_ERROR'))
         ..authToken = 'tok';
 

@@ -32,12 +32,19 @@ abstract interface class AuthSource {
   /// require a bearer token.
   Future<bool> isUsernameAvailable(String username);
 
-  /// Logout the current user.
+  /// Logout the current user, ending this session only (club_server#510).
   ///
-  /// Always signs the client out locally. A 401 or 403 from the server (a
-  /// registered or pending user, or an already expired token) is not an
-  /// error; any other failure still throws, after the token is cleared.
-  Future<void> logout();
+  /// The server revokes the access token presented and the refresh token
+  /// issued with it; other sessions of the same user keep working. Any
+  /// logged-in user may log out, whatever their status.
+  ///
+  /// The session's refresh token is sent in the body: [refreshToken] if
+  /// given (an app that restored a saved session), otherwise the one from
+  /// this client's latest [login] or [refreshToken] call.
+  ///
+  /// Always signs the client out locally: the token is cleared even when
+  /// the server refuses, and the refusal is then rethrown.
+  Future<void> logout({String? refreshToken});
 
   /// Request password reset for the given email.
   Future<void> resetPassword(String email);
@@ -50,6 +57,7 @@ abstract interface class AuthSource {
 
   /// Change the current user's password.
   ///
+  /// Any logged-in user may, whatever their status (club_server#510).
   /// Requires verification of the current password before updating.
   /// Throws `InvalidCredentialsException` if currentPassword is incorrect.
   /// Throws `NotAuthenticatedException` if no user is logged in.
