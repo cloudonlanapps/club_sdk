@@ -3,6 +3,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/identity_document.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -142,13 +143,15 @@ void main() {
 
         expect(user.username, 'test_new_user_201');
         expect(user.email, 'test_newuser_201@test.com');
-        expect(user.status, UserStatus.pending);
+        // An admin-created user is active at once (club_server#522).
+        expect(user.status, UserStatus.active);
 
         // Double-verify via query
         final fetched = await client.users.getUserPrivate('test_new_user_201');
         expect(fetched.username, 'test_new_user_201');
         expect(fetched.firstName, 'New');
         expect(fetched.lastName, 'User');
+        expect(fetched.status, UserStatus.active);
       });
     });
 
@@ -164,7 +167,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_unblock_user_202');
         await client.users.blockUser('test_unblock_user_202');
 
         final unblocked = await client.users.unblockUser(
@@ -184,7 +186,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_reactivate_user_202');
         await client.users.markLeft('test_reactivate_user_202');
 
         final reactivated = await client.users.reactivateUser(
@@ -206,7 +207,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_role_user_203a');
 
         final updated = await client.users.assignRole(
           'test_role_user_203a',
@@ -230,7 +230,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_role_user_203b');
         await client.users.assignRole('test_role_user_203b', 'coach');
 
         final updated = await client.users.removeRole(
@@ -482,7 +481,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_delete_user_216');
 
         await client.users.deleteUser('test_delete_user_216');
 
@@ -521,7 +519,6 @@ void main() {
             dateOfBirthUtc: DateTime.utc(2000),
             gender: Gender.male,
           );
-          await client.users.approveUser('test_restore_user_216');
           await client.users.deleteUser('test_restore_user_216');
 
           // Confirm user is in deleted list before restore
@@ -566,7 +563,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_left_user_216');
 
         final left = await client.users.markLeft('test_left_user_216');
         expect(left.status, UserStatus.left);
@@ -575,15 +571,28 @@ void main() {
 
     group('2.17: Approve User', () {
       test('transitions pending to active', () async {
-        await client.users.createUser(
+        // Only self-registration yields a pending user: an admin-created
+        // one is active at once (club_server#522).
+        final registered = await client.auth.register(
           username: 'test_approve_user_217',
           email: 'test_approveuser_217@test.com',
-          passwordHash: 'hash123',
+          password: 'password123',
           firstName: 'Approve',
           lastName: 'User',
           phone: '0000000000',
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
+        );
+        await submitForReviewIfRequired(
+          client: client,
+          registered: registered,
+          password: 'password123',
+          adminUsername: sudoUsername,
+          adminPassword: sudoPassword,
+        );
+        expect(
+          (await client.users.getUserInfo('test_approve_user_217')).status,
+          UserStatus.pending,
         );
 
         final approved = await client.users.approveUser(
@@ -609,7 +618,6 @@ void main() {
           dateOfBirthUtc: DateTime.utc(2000),
           gender: Gender.male,
         );
-        await client.users.approveUser('test_block_user_218');
 
         final blocked = await client.users.blockUser('test_block_user_218');
         expect(blocked.status, UserStatus.blocked);

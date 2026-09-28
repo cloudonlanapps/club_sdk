@@ -98,7 +98,6 @@ class RemoteUserSource implements UserSource {
     String? achievements,
     String? emergencyContact,
     String? medicalNotes,
-    UserStatus status = UserStatus.pending,
     Address? address,
     bool isGuest = false,
   }) async {
@@ -118,7 +117,6 @@ class RemoteUserSource implements UserSource {
         'achievements': ?achievements,
         'emergencyContact': ?emergencyContact,
         'medicalInfo': ?medicalNotes,
-        'status': status.name,
         if (address != null) 'address': address.toMap(),
         'isGuest': isGuest,
       },

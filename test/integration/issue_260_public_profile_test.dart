@@ -48,7 +48,6 @@ void main() {
         bio: 'Loves hockey.',
         achievements: 'National champion.',
       );
-      await admin.users.approveUser(surfaced);
       await admin.users.assignRole(surfaced, 'coach');
       final coachClient = await createRemoteSecureClient(baseUrl: baseUrl);
       await coachClient.auth.login(surfaced, 'hash123');
@@ -70,7 +69,6 @@ void main() {
         firstName: 'Hidden',
         lastName: 'Coach',
       );
-      await admin.users.approveUser(hidden);
       await admin.users.assignRole(hidden, 'coach');
     });
 

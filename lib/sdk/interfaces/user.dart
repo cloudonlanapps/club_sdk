@@ -47,6 +47,11 @@ abstract interface class UserSource {
 
   /// Create a new user with the provided details.
   ///
+  /// An admin-created user is always `active` (club_server#522): creation
+  /// does not take a status, so it cannot skip the lifecycle by starting a
+  /// user `pending`, `blocked` or `left`. A user who should wait for
+  /// approval registers through `AuthSource.register` instead.
+  ///
   /// [isGuest] marks a guest account (club_server#332, #24): the server
   /// writes the staff-listing row as a guest and publishes the profile on
   /// the admin's authority, since a guest never logs in to consent. Not a
@@ -65,7 +70,6 @@ abstract interface class UserSource {
     String? achievements,
     String? emergencyContact,
     String? medicalNotes,
-    UserStatus status = UserStatus.pending,
     Address? address,
     bool isGuest = false,
   });
