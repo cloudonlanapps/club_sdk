@@ -176,9 +176,15 @@ abstract interface class UserSource {
   // ── Role Management ────────────────────────────────────────────────────────
 
   /// Assign a role to the user.
+  ///
+  /// [role] is a `Role` name in snake_case. `super_admin` is refused with
+  /// 422 (club_server#514): super admin changes only by
+  /// [transferSuperAdmin].
   Future<UserInfo> assignRole(String username, String role);
 
   /// Remove a role from the user.
+  ///
+  /// `super_admin` is refused with 422, as for [assignRole].
   Future<UserInfo> removeRole(String username, String role);
 
   // ── Super Admin ────────────────────────────────────────────────────────────

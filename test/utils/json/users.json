@@ -5,7 +5,7 @@
     "password": "password123",
     "name": "Super Admin",
     "status": "active",
-    "roles": ["super_admin"],
+    "roles": ["admin"],
     "profile": { "firstName": "Super", "lastName": "Admin" }
   },
   {
