@@ -10,10 +10,12 @@ import '../utils/test_client.dart';
 
 /// club_server#510: logout revokes the session it is called with.
 ///
-/// After logout, that session's access token and refresh token are both
-/// refused (401); another session of the same user keeps working. Any
-/// logged-in user may log out and change their own password whatever their
-/// status, so a registered and a pending user can too.
+/// Both tokens of a login carry its session id. After logout, that
+/// session's access token is refused with 401 `INVALID_TOKEN` and its
+/// refresh token with 401 `INVALID_REFRESH_TOKEN`; another session of the
+/// same user keeps working. Any logged-in user may log out and change their
+/// own password whatever their status, so a registered and a pending user
+/// can too.
 void main() {
   group('club_server#510: logout', () {
     late SecureClient admin;
@@ -49,9 +51,7 @@ void main() {
       );
       await expectLater(
         withAccess.auth.getCurrentUser(),
-        throwsA(
-          isA<ServerException>().having((e) => e.statusCode, 'statusCode', 401),
-        ),
+        refused(SdkErrorCode.invalidToken),
       );
       final bare = await createRemoteSecureClient(baseUrl: baseUrl);
       await expectLater(

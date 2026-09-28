@@ -38,17 +38,15 @@ abstract interface class AuthSource {
 
   /// Logout the current user, ending this session only (club_server#510).
   ///
-  /// The server revokes the access token presented and the refresh token
-  /// issued with it; other sessions of the same user keep working. Any
-  /// logged-in user may log out, whatever their status.
-  ///
-  /// The session's refresh token is sent in the body: [refreshToken] if
-  /// given (an app that restored a saved session), otherwise the one from
-  /// this client's latest [login] or [refreshToken] call.
+  /// Both tokens of a login carry that login's session id; logout revokes
+  /// the session, so its access token is then refused with 401
+  /// `INVALID_TOKEN` and its refresh token with 401 `INVALID_REFRESH_TOKEN`.
+  /// Other sessions of the same user keep working. Any logged-in user may
+  /// log out, whatever their status.
   ///
   /// Always signs the client out locally: the token is cleared even when
   /// the server refuses, and the refusal is then rethrown.
-  Future<void> logout({String? refreshToken});
+  Future<void> logout();
 
   /// Request password reset for the given email.
   ///

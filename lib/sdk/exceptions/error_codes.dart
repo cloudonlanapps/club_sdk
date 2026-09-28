@@ -41,6 +41,9 @@ abstract final class SdkErrorCode {
   static const tokenExpired = 'TOKEN_EXPIRED';
   static const accountBlocked = 'ACCOUNT_BLOCKED';
   static const accountPending = 'ACCOUNT_PENDING';
+  // An access token that fails to decode, or whose session was revoked by
+  // logout (club_server#510). Refreshing may help only in the first case.
+  static const invalidToken = 'INVALID_TOKEN';
   static const invalidRefreshToken = 'INVALID_REFRESH_TOKEN';
   // A signed-in member who has left the club (status `left`).
   static const accountLeft = 'ACCOUNT_LEFT';

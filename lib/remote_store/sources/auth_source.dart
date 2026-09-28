@@ -11,10 +11,6 @@ class RemoteAuthSource implements AuthSource {
 
   final RemoteStore _store;
 
-  /// The refresh token of this session, from the latest [login] or
-  /// [refreshToken], sent on [logout] so the server revokes it too.
-  String? _sessionRefreshToken;
-
   @override
   Future<UserInfo> register({
     required String username,
@@ -61,21 +57,15 @@ class RemoteAuthSource implements AuthSource {
     );
     final token = AuthToken.fromMap(response);
     _store.authToken = token.accessToken;
-    _sessionRefreshToken = token.refreshToken;
     return token;
   }
 
   @override
-  Future<void> logout({String? refreshToken}) async {
-    final sessionRefresh = refreshToken ?? _sessionRefreshToken;
+  Future<void> logout() async {
     try {
-      await _store.postVoid(
-        endpoints.auth.logout,
-        body: sessionRefresh == null ? null : {'refreshToken': sessionRefresh},
-      );
+      await _store.postVoid(endpoints.auth.logout);
     } finally {
       _store.authToken = null;
-      _sessionRefreshToken = null;
     }
   }
 
@@ -98,7 +88,6 @@ class RemoteAuthSource implements AuthSource {
     );
     final token = AuthToken.fromMap(response);
     _store.authToken = token.accessToken;
-    _sessionRefreshToken = token.refreshToken ?? refreshToken;
     return token;
   }
 
