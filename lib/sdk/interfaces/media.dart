@@ -57,6 +57,10 @@ abstract interface class MediaSource {
 
   /// Update mutable fields on a media record. Currently only [accessRoles]
   /// is editable.
+  ///
+  /// Only the uploader, an admin or the super admin may change it, whatever
+  /// its access roles (club_server#503). Anyone else gets 403 if they can
+  /// view the item and 404 if they cannot.
   Future<Media> patch(int id, {required List<String> accessRoles});
 
   /// Download a media artifact by UUID.
@@ -112,14 +116,18 @@ abstract interface class MediaSource {
     int limit,
   });
 
-  /// Soft-delete a media record. Owner or admin/coach. Files on disk are
-  /// preserved.
+  /// Soft-delete a media record. Files on disk are preserved.
+  ///
+  /// Only the uploader, an admin or the super admin, whatever its access
+  /// roles (club_server#503). Anyone else gets 403 if they can view the item
+  /// and 404 if they cannot.
   ///
   /// Returns a 409 `MEDIA_IN_USE` `ServerException` (with `details.links`
   /// populated) if any owner currently links to this media.
   Future<void> softDelete(int id);
 
-  /// Restore a soft-deleted media record. Owner or admin/coach.
+  /// Restore a soft-deleted media record. Only the uploader, an admin or the
+  /// super admin (club_server#503).
   ///
   /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Media> restore(int id);
