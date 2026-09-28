@@ -98,9 +98,12 @@ abstract interface class UserSource {
 
   /// Permanently delete a user and all their data.
   /// Only super admin can perform this operation.
+  /// 422 `HARD_DELETE_NEEDS_SOFT_DELETE` if it has not been soft-deleted
+  /// first.
   Future<void> hardDeleteUser(String username);
 
   /// Restore a soft-deleted user.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<UserPrivate> restoreUser(String username);
 
   // ── Login Lifecycle ────────────────────────────────────────────────────────

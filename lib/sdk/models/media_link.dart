@@ -43,6 +43,7 @@ class MediaLink {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     this.metadata,
+    this.ownerDeleted = false,
   });
 
   factory MediaLink.fromMap(Map<String, dynamic> map) {
@@ -50,6 +51,7 @@ class MediaLink {
       tag: map['tag'] as String,
       metadata: map['metadata'] as String?,
       media: MediaRef.fromMap(map['media'] as Map<String, dynamic>),
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -73,6 +75,12 @@ class MediaLink {
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
+  /// Whether the owner (group, venue or event) is soft-deleted
+  /// (club_server#517). Its links stay readable but are read-only: adding,
+  /// changing or removing one answers 422 `OWNER_DELETED`. False when the
+  /// server omits it.
+  final bool ownerDeleted;
+
   /// The uuid of the linked media. Shorthand for `media.uuid`.
   String get mediaUuid => media.uuid;
 
@@ -82,11 +90,13 @@ class MediaLink {
     'media': media.toMap(),
     'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
     'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
+    'ownerDeleted': ownerDeleted,
   };
 
   @override
   String toString() =>
-      'MediaLink(tag: $tag, media: $media, metadata: $metadata)';
+      'MediaLink(tag: $tag, media: $media, metadata: $metadata, '
+      'ownerDeleted: $ownerDeleted)';
 
   @override
   bool operator ==(Object other) =>
@@ -96,11 +106,18 @@ class MediaLink {
           other.metadata == metadata &&
           other.media == media &&
           other.createdAtUtc == createdAtUtc &&
-          other.updatedAtUtc == updatedAtUtc;
+          other.updatedAtUtc == updatedAtUtc &&
+          other.ownerDeleted == ownerDeleted;
 
   @override
-  int get hashCode =>
-      Object.hash(tag, metadata, media, createdAtUtc, updatedAtUtc);
+  int get hashCode => Object.hash(
+    tag,
+    metadata,
+    media,
+    createdAtUtc,
+    updatedAtUtc,
+    ownerDeleted,
+  );
 }
 
 /// One row from `GET /v1/media/by_id/{uuid}/links` (reverse lookup).
@@ -116,6 +133,7 @@ class MediaLinkReverseEntry {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     this.metadata,
+    this.ownerDeleted = false,
   });
 
   factory MediaLinkReverseEntry.fromMap(Map<String, dynamic> map) {
@@ -124,6 +142,7 @@ class MediaLinkReverseEntry {
       ownerId: map['ownerId'].toString(),
       tag: map['tag'] as String,
       metadata: map['metadata'] as String?,
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -144,9 +163,14 @@ class MediaLinkReverseEntry {
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
+  /// Whether the owner is soft-deleted (club_server#517), as on
+  /// [MediaLink.ownerDeleted]. False when the server omits it.
+  final bool ownerDeleted;
+
   @override
   String toString() =>
-      'MediaLinkReverseEntry(${ownerType.wire}:$ownerId, tag: $tag)';
+      'MediaLinkReverseEntry(${ownerType.wire}:$ownerId, tag: $tag, '
+      'ownerDeleted: $ownerDeleted)';
 
   @override
   bool operator ==(Object other) =>
@@ -157,7 +181,8 @@ class MediaLinkReverseEntry {
           other.tag == tag &&
           other.metadata == metadata &&
           other.createdAtUtc == createdAtUtc &&
-          other.updatedAtUtc == updatedAtUtc;
+          other.updatedAtUtc == updatedAtUtc &&
+          other.ownerDeleted == ownerDeleted;
 
   @override
   int get hashCode => Object.hash(
@@ -167,6 +192,7 @@ class MediaLinkReverseEntry {
     metadata,
     createdAtUtc,
     updatedAtUtc,
+    ownerDeleted,
   );
 }
 
@@ -181,6 +207,7 @@ class MediaLinkCrossEntry {
     required this.mediaType,
     required this.createdAtUtc,
     this.metadata,
+    this.ownerDeleted = false,
   });
 
   factory MediaLinkCrossEntry.fromMap(Map<String, dynamic> map) {
@@ -191,6 +218,7 @@ class MediaLinkCrossEntry {
       tag: map['tag'] as String,
       metadata: map['metadata'] as String?,
       mediaType: map['mediaType'] as String,
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -206,10 +234,14 @@ class MediaLinkCrossEntry {
   final String mediaType;
   final DateTime createdAtUtc;
 
+  /// Whether the owner is soft-deleted (club_server#517), as on
+  /// [MediaLink.ownerDeleted]. False when the server omits it.
+  final bool ownerDeleted;
+
   @override
   String toString() =>
       'MediaLinkCrossEntry(${ownerType.wire}:$ownerId, tag: $tag, '
-      'media: $mediaUuid)';
+      'media: $mediaUuid, ownerDeleted: $ownerDeleted)';
 
   @override
   bool operator ==(Object other) =>
@@ -221,7 +253,8 @@ class MediaLinkCrossEntry {
           other.tag == tag &&
           other.metadata == metadata &&
           other.mediaType == mediaType &&
-          other.createdAtUtc == createdAtUtc;
+          other.createdAtUtc == createdAtUtc &&
+          other.ownerDeleted == ownerDeleted;
 
   @override
   int get hashCode => Object.hash(
@@ -232,5 +265,6 @@ class MediaLinkCrossEntry {
     metadata,
     mediaType,
     createdAtUtc,
+    ownerDeleted,
   );
 }

@@ -49,6 +49,7 @@ abstract interface class VenueSource {
   Future<Venue> deleteVenue(int id);
 
   /// Restore a soft-deleted venue.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Venue> restoreVenue(int id);
 
   /// Permanently delete a venue.

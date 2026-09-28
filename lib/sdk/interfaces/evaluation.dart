@@ -74,6 +74,8 @@ abstract interface class EvaluationSource {
   Future<EvaluationStaffView> deleteEvaluation(int id);
 
   /// Permanently delete a soft-deleted evaluation (super-admin only).
+  /// 422 `HARD_DELETE_NEEDS_SOFT_DELETE` if it has not been soft-deleted
+  /// first.
   Future<void> hardDeleteEvaluation(int id);
 
   /// Restore a soft-deleted evaluation.
@@ -141,9 +143,12 @@ abstract interface class EvaluationSource {
   Future<EvaluationTemplate> deleteTemplate(int id);
 
   /// Permanently delete a soft-deleted template (super-admin only).
+  /// 422 `HARD_DELETE_NEEDS_SOFT_DELETE` if it has not been soft-deleted
+  /// first.
   Future<void> hardDeleteTemplate(int id);
 
   /// Restore a soft-deleted template.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<EvaluationTemplate> restoreTemplate(int id);
 
   /// Create a draft for [subjectUsername] seeded with the template's

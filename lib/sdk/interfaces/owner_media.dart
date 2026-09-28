@@ -7,6 +7,12 @@ import '../models/media_link.dart';
 /// expose the same CRUD shape
 /// (only the owner-ID type varies). This interface captures the common
 /// surface; concrete facades extend it with typed owner-ID method names.
+///
+/// A soft-deleted group, venue or event keeps its links readable, each
+/// marked [MediaLink.ownerDeleted], and read-only: [attach],
+/// [updateMetadata], [detach] and [detachTag] answer 422 `OWNER_DELETED`
+/// (club_server#517). The reverse lookup and the cross-owner search carry the
+/// same marker on their entries.
 abstract interface class OwnerMediaSource<OwnerId> {
   /// Tag-grouped list of all media linked to [ownerId].
   ///

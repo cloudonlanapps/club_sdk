@@ -63,10 +63,13 @@ abstract interface class GroupSource {
   Future<void> deleteGroup(int id);
 
   /// Restore a soft-deleted group.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Group> restoreGroup(int id);
 
   /// Permanently delete a group and all its data.
   /// Only super admin can perform this operation.
+  /// 422 `HARD_DELETE_NEEDS_SOFT_DELETE` if it has not been soft-deleted
+  /// first.
   Future<void> hardDeleteGroup(int id);
 
   /// Add a user to a group.

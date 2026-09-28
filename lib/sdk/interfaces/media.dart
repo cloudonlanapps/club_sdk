@@ -36,6 +36,10 @@ abstract interface class MediaSource {
   ///   `['admin', 'coach']`, etc. When omitted the server defaults to
   ///   `['public']`.
   /// - [encrypt] applies to images / pdf only; videos refuse encryption.
+  ///
+  /// An image or PDF the converter rejects (a corrupt file) answers 422
+  /// `MEDIA_CONVERSION_FAILED` and no media item is created
+  /// (club_server#521). The upload is not retried.
   Future<Media> upload({
     required List<int> fileBytes,
     required String filename,
@@ -53,6 +57,10 @@ abstract interface class MediaSource {
 
   /// Update mutable fields on a media record. Currently only [accessRoles]
   /// is editable.
+  ///
+  /// Only the uploader, an admin or the super admin may change it, whatever
+  /// its access roles (club_server#503). Anyone else gets 403 if they can
+  /// view the item and 404 if they cannot.
   Future<Media> patch(int id, {required List<String> accessRoles});
 
   /// Download a media artifact by UUID.
@@ -91,6 +99,9 @@ abstract interface class MediaSource {
   Future<List<Map<String, dynamic>>> getLinksRaw(String uuid);
 
   /// Reverse lookup: every link row referencing this media, typed.
+  ///
+  /// A link whose owner is soft-deleted is included, marked
+  /// [MediaLinkReverseEntry.ownerDeleted] (club_server#517).
   Future<List<MediaLinkReverseEntry>> getLinks(String uuid);
 
   /// Cross-owner search across all link tables. Admin/coach only.
@@ -100,6 +111,9 @@ abstract interface class MediaSource {
   /// Evaluation media appear in an unfiltered search, but the server does
   /// not accept [MediaLinkOwnerType.evaluation] as the filter (422
   /// `INVALID_OWNER_TYPE`).
+  ///
+  /// A link whose owner is soft-deleted is marked
+  /// [MediaLinkCrossEntry.ownerDeleted] (club_server#517).
   Future<PaginatedList<MediaLinkCrossEntry>> searchLinks({
     MediaLinkOwnerType? ownerType,
     String? tag,
@@ -108,19 +122,25 @@ abstract interface class MediaSource {
     int limit,
   });
 
-  /// Soft-delete a media record. Owner or admin/coach. Files on disk are
-  /// preserved.
+  /// Soft-delete a media record. Files on disk are preserved.
+  ///
+  /// Only the uploader, an admin or the super admin, whatever its access
+  /// roles (club_server#503). Anyone else gets 403 if they can view the item
+  /// and 404 if they cannot.
   ///
   /// Returns a 409 `MEDIA_IN_USE` `ServerException` (with `details.links`
   /// populated) if any owner currently links to this media.
   Future<void> softDelete(int id);
 
-  /// Restore a soft-deleted media record. Owner or admin/coach.
+  /// Restore a soft-deleted media record. Only the uploader, an admin or the
+  /// super admin (club_server#503).
+  ///
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Media> restore(int id);
 
   /// Permanently delete a soft-deleted media record. Super admin only.
   ///
-  /// Returns a 409 `MEDIA_NOT_DELETED` `ServerException` if the record has
-  /// not been soft-deleted first.
+  /// Returns a 422 `HARD_DELETE_NEEDS_SOFT_DELETE` `ServerException` if the
+  /// record has not been soft-deleted first.
   Future<void> hardDelete(int id);
 }
