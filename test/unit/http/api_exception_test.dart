@@ -116,6 +116,38 @@ void main() {
       },
     );
 
+    test(
+      'club_server#519: a credit account for the super admin maps to '
+      'SUPER_ADMIN_CANNOT_HOLD_CREDIT',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'SUPER_ADMIN_CANNOT_HOLD_CREDIT',
+            'message': 'The super admin cannot hold credit',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.superAdminCannotHoldCredit);
+      },
+    );
+
+    test(
+      'club_server#511: a direct notice to a user who may not receive it '
+      'maps to RECIPIENT_NOT_DELIVERABLE',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'RECIPIENT_NOT_DELIVERABLE',
+            'message': 'The recipient may not receive this notification',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.recipientNotDeliverable);
+      },
+    );
+
     test('accepts top-level error wrapper', () {
       final exc = mapHttpError(422, const {
         'error': {

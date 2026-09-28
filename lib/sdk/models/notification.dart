@@ -329,13 +329,12 @@ class AppNotification {
       createdAtUtc.hashCode;
 }
 
-/// User preferences for notification channels.
+/// The caller's notification channel preferences.
 ///
-/// Uses `username` as FK to `users.username`.
+/// The server answers for the signed-in user and names no user.
 @immutable
 class NotificationPref {
   const NotificationPref({
-    required this.username,
     required this.emailEnabled,
     required this.pushEnabled,
     required this.smsEnabled,
@@ -343,7 +342,6 @@ class NotificationPref {
 
   factory NotificationPref.fromMap(Map<String, dynamic> map) {
     return NotificationPref(
-      username: map['username'] as String? ?? '',
       emailEnabled: map['emailEnabled'] as bool? ?? true,
       pushEnabled: map['pushEnabled'] as bool? ?? true,
       smsEnabled: map['smsEnabled'] as bool? ?? false,
@@ -353,20 +351,16 @@ class NotificationPref {
   factory NotificationPref.fromJson(String source) =>
       NotificationPref.fromMap(json.decode(source) as Map<String, dynamic>);
 
-  /// FK to users.username - the user's username.
-  final String username;
   final bool emailEnabled;
   final bool pushEnabled;
   final bool smsEnabled;
 
   NotificationPref copyWith({
-    String? username,
     bool? emailEnabled,
     bool? pushEnabled,
     bool? smsEnabled,
   }) {
     return NotificationPref(
-      username: username ?? this.username,
       emailEnabled: emailEnabled ?? this.emailEnabled,
       pushEnabled: pushEnabled ?? this.pushEnabled,
       smsEnabled: smsEnabled ?? this.smsEnabled,
@@ -375,7 +369,6 @@ class NotificationPref {
 
   Map<String, dynamic> toMap() {
     return {
-      'username': username,
       'emailEnabled': emailEnabled,
       'pushEnabled': pushEnabled,
       'smsEnabled': smsEnabled,
@@ -386,7 +379,7 @@ class NotificationPref {
 
   @override
   String toString() {
-    return 'NotificationPref(username: $username, emailEnabled: $emailEnabled, '
+    return 'NotificationPref(emailEnabled: $emailEnabled, '
         'pushEnabled: $pushEnabled, smsEnabled: $smsEnabled)';
   }
 
@@ -395,7 +388,6 @@ class NotificationPref {
     if (identical(this, other)) return true;
 
     return other is NotificationPref &&
-        other.username == username &&
         other.emailEnabled == emailEnabled &&
         other.pushEnabled == pushEnabled &&
         other.smsEnabled == smsEnabled;
@@ -403,8 +395,5 @@ class NotificationPref {
 
   @override
   int get hashCode =>
-      username.hashCode ^
-      emailEnabled.hashCode ^
-      pushEnabled.hashCode ^
-      smsEnabled.hashCode;
+      emailEnabled.hashCode ^ pushEnabled.hashCode ^ smsEnabled.hashCode;
 }

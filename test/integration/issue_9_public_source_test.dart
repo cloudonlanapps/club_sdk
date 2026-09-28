@@ -43,12 +43,11 @@ void main() {
         endTimeUtc: start.add(const Duration(hours: 1)),
         rrule: 'FREQ=DAILY;COUNT=2',
       );
-      try {
-        originalClubInfo = (await admin.admin.getPreference('club_info')).value;
-        hadClubInfo = true;
-      } on ServerException catch (e) {
-        if (e.statusCode != 404) rethrow;
-      }
+      // A key never written reads with no updatedAtUtc (club_server#518);
+      // only a value someone wrote is put back.
+      final original = await admin.admin.getPreference('club_info');
+      hadClubInfo = original.updatedAtUtc != null;
+      originalClubInfo = original.value;
       await admin.admin.setPreference('club_info', {'name': clubName});
 
       public = createRemotePublicSource(baseUrl: baseUrl);

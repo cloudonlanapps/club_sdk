@@ -44,7 +44,7 @@ void main() {
       final read = await client.admin.getPreference(key);
       expect(read.key, key);
       expect(read.value, original);
-      expect(read.updatedAtUtc.isUtc, isTrue);
+      expect(read.updatedAtUtc!.isUtc, isTrue);
     });
 
     test(

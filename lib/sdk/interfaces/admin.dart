@@ -12,6 +12,11 @@ abstract interface class AdminSource {
   Future<List<SystemPreference>> listPreferences();
 
   /// Reads one preference by key.
+  ///
+  /// A key that was never written reads with no
+  /// [SystemPreference.updatedAtUtc]: its value is the server's default for
+  /// that key (e.g. `notification_info_retention_days` → 90), or `null` when
+  /// the server has none (club_server#518).
   Future<SystemPreference> getPreference(String key);
 
   /// Writes one preference. [value] is opaque JSON; its shape depends on the

@@ -11,7 +11,7 @@ class SystemPreference {
   const SystemPreference({
     required this.key,
     required this.value,
-    required this.updatedAtUtc,
+    this.updatedAtUtc,
     this.updatedBy,
   });
 
@@ -19,10 +19,12 @@ class SystemPreference {
     return SystemPreference(
       key: map['key'] as String,
       value: map['value'],
-      updatedAtUtc: DateTime.fromMillisecondsSinceEpoch(
-        map['updatedAtUtc'] as int,
-        isUtc: true,
-      ),
+      updatedAtUtc: map['updatedAtUtc'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              map['updatedAtUtc'] as int,
+              isUtc: true,
+            ),
       updatedBy: map['updatedBy'] as String?,
     );
   }
@@ -36,8 +38,10 @@ class SystemPreference {
   /// Stored value. Opaque JSON — shape depends on [key].
   final Object? value;
 
-  /// When the preference was last written.
-  final DateTime updatedAtUtc;
+  /// When the preference was last written, or `null` for one never written:
+  /// the server then reports its default for [key] (or an empty value) and
+  /// invents no timestamp.
+  final DateTime? updatedAtUtc;
 
   /// Username of the admin who last wrote it, if recorded.
   final String? updatedBy;
@@ -45,13 +49,13 @@ class SystemPreference {
   SystemPreference copyWith({
     String? key,
     Object? Function()? value,
-    DateTime? updatedAtUtc,
+    DateTime? Function()? updatedAtUtc,
     String? Function()? updatedBy,
   }) {
     return SystemPreference(
       key: key ?? this.key,
       value: value != null ? value() : this.value,
-      updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
+      updatedAtUtc: updatedAtUtc != null ? updatedAtUtc() : this.updatedAtUtc,
       updatedBy: updatedBy != null ? updatedBy() : this.updatedBy,
     );
   }
@@ -60,7 +64,7 @@ class SystemPreference {
     return {
       'key': key,
       'value': value,
-      'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
+      'updatedAtUtc': updatedAtUtc?.millisecondsSinceEpoch,
       'updatedBy': updatedBy,
     };
   }
