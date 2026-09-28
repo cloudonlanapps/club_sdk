@@ -98,6 +98,9 @@ abstract interface class UserSource {
   });
 
   /// Soft delete a user.
+  ///
+  /// 422 `ALREADY_DELETED` if the user is already soft-deleted; 404
+  /// `USER_NOT_FOUND` if there is no such user (club_server#523).
   Future<void> deleteUser(String username);
 
   /// Permanently delete a user and all their data.
@@ -153,6 +156,8 @@ abstract interface class UserSource {
   /// - 403 `INSUFFICIENT_PERMISSION` if [username] is not the caller.
   /// - 409 `NO_ACTIVE_REVIEW_REQUEST` if no active review row exists.
   /// - 409 `INVALID_STATE` if caller status is not `registered`.
+  /// - 422 if [dateOfBirthUtc] is not a UTC midnight, as for registration
+  ///   and profile updates (club_server#506).
   Future<UserPrivate> reapply(
     String username, {
     String? firstName,
@@ -167,7 +172,11 @@ abstract interface class UserSource {
   /// Unblock a user.
   Future<UserInfo> unblockUser(String username);
 
-  /// Mark a user as left.
+  /// Mark a user as left (admin only).
+  ///
+  /// Only an `active` user can be marked as left (club_server#513): any other
+  /// status is refused with 422 `INVALID_STATE` and left unchanged, so
+  /// [reactivateUser] never makes active a user who was not approved.
   Future<UserInfo> markLeft(String username);
 
   /// Reactivate a user who previously left.

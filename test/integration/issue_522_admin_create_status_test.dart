@@ -88,6 +88,8 @@ void main() {
         phone: '0000000522',
         dateOfBirthUtc: DateTime.utc(1995),
         gender: Gender.male,
+        firstName: 'Default',
+        lastName: 'Status',
       );
       expect(created.status, UserStatus.active);
       final readback = await admin.users.getUserPrivate('test_i522_default');
