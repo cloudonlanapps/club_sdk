@@ -77,11 +77,13 @@ void main() {
             dateOfBirthUtc: DateTime.utc(1996, 3, 10, 13, 30),
           ),
           throwsA(
-            isA<ServerException>().having(
-              (e) => e.statusCode,
-              'statusCode',
-              422,
-            ),
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statusCode', 422)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.invalidDobNotUtcMidnight,
+                ),
           ),
         );
         expect((await user.auth.getCurrentUser()).dateOfBirthUtc, original);

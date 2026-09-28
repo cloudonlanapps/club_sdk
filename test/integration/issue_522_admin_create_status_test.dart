@@ -33,7 +33,9 @@ void main() {
         );
 
     Matcher throws422() => throwsA(
-      isA<ServerException>().having((e) => e.statusCode, 'statusCode', 422),
+      isA<ServerException>()
+          .having((e) => e.statusCode, 'statusCode', 422)
+          .having((e) => e.code, 'code', SdkErrorCode.validationError),
     );
 
     Future<void> expectNoUser(String username) => expectLater(

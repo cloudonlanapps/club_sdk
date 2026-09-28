@@ -7,6 +7,9 @@ abstract final class SdkErrorCode {
   // 400 Bad Request
   // ═══════════════════════════════════════════════════════════════════════════
   static const validationError = 'VALIDATION_ERROR';
+  // A date of birth that is not 00:00:00 UTC, on registration, profile
+  // update and reapply (club_server#506). Sent with status 422.
+  static const invalidDobNotUtcMidnight = 'INVALID_DOB_NOT_UTC_MIDNIGHT';
   // Series reschedule on a programme (use the /future split). The conflict
   // endpoints accept every type and no longer send this (#16).
   static const eventTypeNotSupported = 'EVENT_TYPE_NOT_SUPPORTED';

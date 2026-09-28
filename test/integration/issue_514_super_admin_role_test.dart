@@ -18,7 +18,9 @@ void main() {
     const coach = 'test_i514_coach';
 
     Matcher throws422() => throwsA(
-      isA<ServerException>().having((e) => e.statusCode, 'statusCode', 422),
+      isA<ServerException>()
+          .having((e) => e.statusCode, 'statusCode', 422)
+          .having((e) => e.code, 'code', SdkErrorCode.validationError),
     );
 
     Future<void> register(String username) => registerAndApprove(
