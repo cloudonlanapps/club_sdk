@@ -41,8 +41,10 @@ abstract interface class CreditSource {
   ///
   /// [membername] may be any existing user, whatever their account status
   /// (registered, pending, active, blocked or left), so credit can be
-  /// recorded before approval. An unknown username throws
-  /// `ServerException(404, USER_NOT_FOUND)`.
+  /// recorded before approval — except the super admin, a housekeeping
+  /// account that never holds credit:
+  /// `ServerException(422, SUPER_ADMIN_CANNOT_HOLD_CREDIT)` and no account is
+  /// opened. An unknown username throws `ServerException(404, USER_NOT_FOUND)`.
   Future<CreditAccount> openAccount({
     required String membername,
     required int credits,

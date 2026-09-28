@@ -223,6 +223,9 @@ abstract final class SdkErrorCode {
   // camp or one-off.
   static const creditDispositionNotApplicable =
       'CREDIT_DISPOSITION_NOT_APPLICABLE';
+  // Opening a credit account for the super admin, a housekeeping account
+  // that never holds credit (club_server#519).
+  static const superAdminCannotHoldCredit = 'SUPER_ADMIN_CANNOT_HOLD_CREDIT';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 503 Service Unavailable — optional module off on this deployment.
