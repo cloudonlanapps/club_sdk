@@ -111,18 +111,22 @@ abstract final class SdkErrorCode {
   // v2 media link tables (#162): duplicate (tag, mediaUuid) attach.
   static const mediaLinkExists = 'MEDIA_LINK_EXISTS';
 
-  // v2 media (#161): hard-delete conflicts.
+  // v2 media (#161): delete conflicts.
   // `MEDIA_IN_USE`: soft-delete refused because links still reference the
   // media. The full link list is in `ServerException.details['links']`.
   static const mediaInUse = 'MEDIA_IN_USE';
-  // `MEDIA_NOT_DELETED`: hard-delete refused because the record was not
-  // soft-deleted first.
-  static const mediaNotDeleted = 'MEDIA_NOT_DELETED';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 422 Unprocessable Entity
   // ═══════════════════════════════════════════════════════════════════════════
   static const invalidState = 'INVALID_STATE';
+  // Hard delete of an item that was not soft-deleted first — group, user,
+  // template, evaluation, media item or event (club_server#526). Replaces
+  // `MEDIA_NOT_DELETED` and the per-endpoint `NOT_DELETED` / `INVALID_STATE`.
+  static const hardDeleteNeedsSoftDelete = 'HARD_DELETE_NEEDS_SOFT_DELETE';
+  // Restore of an item that is not deleted — event, user, venue, group,
+  // template or media item (club_server#526, #520). Replaces `NOT_DELETED`.
+  static const nothingToRestore = 'NOTHING_TO_RESTORE';
   // Single-occurrence reschedule with an all-null body (#113). The event-level
   // /reschedule rejects an empty body at the schema layer (VALIDATION_ERROR).
   static const nothingToReschedule = 'NOTHING_TO_RESCHEDULE';
@@ -161,7 +165,6 @@ abstract final class SdkErrorCode {
   static const alreadyLeft = 'ALREADY_LEFT';
   static const notBlocked = 'NOT_BLOCKED';
   static const notCancelled = 'NOT_CANCELLED';
-  static const notDeleted = 'NOT_DELETED';
   static const notLeft = 'NOT_LEFT';
   static const conversionFailed = 'CONVERSION_FAILED';
   static const conversionInProgress = 'CONVERSION_IN_PROGRESS';

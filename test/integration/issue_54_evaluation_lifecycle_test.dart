@@ -148,15 +148,27 @@ void main() {
         expect(gone.items.map((e) => e.id), isNot(contains(id)));
       });
 
-      // Discovery: unlike users, venues, groups and events, the server
-      // hard-deletes an evaluation that was never soft-deleted.
-      test(
-        '54.03: hard-delete of an active evaluation is refused',
-        () {},
-        skip:
-            'club_server hard-deletes an active evaluation (no soft-delete '
-            'first); not enforced as of 2026-09-26',
-      );
+      // club_server#526: refused like every other hard delete of a live
+      // item (it used to hard-delete an evaluation never soft-deleted).
+      test('54.03: hard-delete of an active evaluation is refused with 422 '
+          'HARD_DELETE_NEEDS_SOFT_DELETE', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await expectLater(
+          sudo.evaluations.hardDeleteEvaluation(id),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'status', 422)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.hardDeleteNeedsSoftDelete,
+                ),
+          ),
+        );
+        final still = await sudo.evaluations.getEvaluation(id);
+        expect(still.deletedAtUtc, isNull);
+      });
 
       test('54.04: a regular admin cannot hard-delete', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
@@ -221,14 +233,26 @@ void main() {
         expect(gone.items.map((t) => t.id), isNot(contains(id)));
       });
 
-      // Discovery: as for evaluations, an active template is hard-deleted.
-      test(
-        '54.13: hard-delete of an active template is refused',
-        () {},
-        skip:
-            'club_server hard-deletes an active template (no soft-delete '
-            'first); not enforced as of 2026-09-26',
-      );
+      // club_server#526: as for evaluations.
+      test('54.13: hard-delete of an active template is refused with 422 '
+          'HARD_DELETE_NEEDS_SOFT_DELETE', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await expectLater(
+          sudo.evaluations.hardDeleteTemplate(id),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'status', 422)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.hardDeleteNeedsSoftDelete,
+                ),
+          ),
+        );
+        final still = await sudo.evaluations.getTemplate(id);
+        expect(still.deletedAtUtc, isNull);
+      });
 
       test('54.14: a regular admin cannot hard-delete', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;

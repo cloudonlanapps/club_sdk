@@ -45,6 +45,37 @@ void main() {
       expect(exc.details, isNull);
     });
 
+    test(
+      'club_server#526: a hard delete of a live item maps to '
+      'HARD_DELETE_NEEDS_SOFT_DELETE',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'HARD_DELETE_NEEDS_SOFT_DELETE',
+            'message': 'Soft-delete it first',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.hardDeleteNeedsSoftDelete);
+      },
+    );
+
+    test(
+      'club_server#526: a restore of a live item maps to NOTHING_TO_RESTORE',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'NOTHING_TO_RESTORE',
+            'message': 'Not deleted',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.nothingToRestore);
+      },
+    );
+
     test('accepts top-level error wrapper', () {
       final exc = mapHttpError(422, const {
         'error': {

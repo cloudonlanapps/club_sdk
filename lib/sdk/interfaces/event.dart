@@ -352,10 +352,13 @@ abstract interface class EventSource {
   Future<Event> deleteEvent(int eventId);
 
   /// Restores a soft-deleted event.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Event> restoreEvent(int eventId);
 
   /// Permanently deletes an event and all its data.
   /// Only super admin can perform this operation.
+  /// 422 `HARD_DELETE_NEEDS_SOFT_DELETE` if it has not been soft-deleted
+  /// first.
   Future<void> hardDeleteEvent(int eventId);
 
   /// Users who can be assigned to or invited to this event.

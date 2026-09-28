@@ -116,11 +116,13 @@ abstract interface class MediaSource {
   Future<void> softDelete(int id);
 
   /// Restore a soft-deleted media record. Owner or admin/coach.
+  ///
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
   Future<Media> restore(int id);
 
   /// Permanently delete a soft-deleted media record. Super admin only.
   ///
-  /// Returns a 409 `MEDIA_NOT_DELETED` `ServerException` if the record has
-  /// not been soft-deleted first.
+  /// Returns a 422 `HARD_DELETE_NEEDS_SOFT_DELETE` `ServerException` if the
+  /// record has not been soft-deleted first.
   Future<void> hardDelete(int id);
 }

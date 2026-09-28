@@ -774,7 +774,8 @@ void main() {
       });
 
       test(
-        'hardDeleteGroup on non-soft-deleted group returns NOT_DELETED',
+        'hardDeleteGroup on non-soft-deleted group returns '
+        'HARD_DELETE_NEEDS_SOFT_DELETE (club_server#526)',
         () async {
           final group = await client.groups.createGroup(
             name: 'test_Hard Not Deleted 413g',
@@ -785,7 +786,11 @@ void main() {
             throwsA(
               isA<ServerException>()
                   .having((e) => e.statusCode, 'statusCode', 422)
-                  .having((e) => e.code, 'code', SdkErrorCode.notDeleted),
+                  .having(
+                    (e) => e.code,
+                    'code',
+                    SdkErrorCode.hardDeleteNeedsSoftDelete,
+                  ),
             ),
           );
         },

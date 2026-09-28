@@ -171,8 +171,8 @@ void main() {
     );
 
     test(
-      'Issue 549: hard-delete on a non-soft-deleted record returns '
-      'MEDIA_NOT_DELETED',
+      'Issue 549: hard-delete on a non-soft-deleted record returns 422 '
+      'HARD_DELETE_NEEDS_SOFT_DELETE (club_server#526)',
       () async {
         final media = await uploadImage(
           filename: 'issue_549_hard_not_deleted.png',
@@ -181,11 +181,13 @@ void main() {
           await expectLater(
             () => adminClient.media.hardDelete(media.id),
             throwsA(
-              isA<ServerException>().having(
-                (e) => e.code,
-                'code',
-                SdkErrorCode.mediaNotDeleted,
-              ),
+              isA<ServerException>()
+                  .having((e) => e.statusCode, 'statusCode', 422)
+                  .having(
+                    (e) => e.code,
+                    'code',
+                    SdkErrorCode.hardDeleteNeedsSoftDelete,
+                  ),
             ),
           );
         } finally {
