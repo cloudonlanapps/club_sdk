@@ -32,7 +32,6 @@ void main() {
           gender: Gender.male,
           firstName: 'Visiting',
           lastName: 'Coach',
-          status: UserStatus.active,
           isGuest: true,
         );
         expect(created.isGuest, isTrue);

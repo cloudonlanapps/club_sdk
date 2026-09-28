@@ -61,6 +61,20 @@ void main() {
       expect(body.keys, isNot(contains('last_name')));
     });
 
+    test('club_server#522: createUser sends no status, so the server creates '
+        'an active user', () async {
+      final h = harness();
+      await h.source.createUser(
+        username: 'u1',
+        email: 'u1@example.test',
+        passwordHash: 'hash',
+        phone: '0000000000',
+        dateOfBirthUtc: DateTime.utc(2000),
+        gender: Gender.male,
+      );
+      expect(bodyOf(h.requests.single).keys, isNot(contains('status')));
+    });
+
     test('Issue 26: reapply sends camelCase name keys', () async {
       final h = harness();
       await h.source.reapply(

@@ -20,11 +20,15 @@ abstract interface class AuthSource {
   });
 
   /// Login with username and password.
+  ///
+  /// A blocked user is refused with 401 `ACCOUNT_BLOCKED` and a user who has
+  /// left with 401 `ACCOUNT_LEFT` (club_server#507); no token is stored.
   Future<AuthToken> login(String username, String password);
 
   /// Public, unauthenticated check: is `username` still available?
   ///
-  /// Returns `true` if no active user is registered with this username
+  /// Returns `true` if no user holds this username, soft-deleted users
+  /// included (club_server#505) so that it agrees with `register`'s 409,
   /// and the value passes basic format validation server-side, `false`
   /// otherwise. Intended for inline registration-form feedback so the
   /// caller can short-circuit a doomed POST `/auth/register`. Hits
@@ -32,14 +36,22 @@ abstract interface class AuthSource {
   /// require a bearer token.
   Future<bool> isUsernameAvailable(String username);
 
-  /// Logout the current user.
+  /// Logout the current user, ending this session only (club_server#510).
   ///
-  /// Always signs the client out locally. A 401 or 403 from the server (a
-  /// registered or pending user, or an already expired token) is not an
-  /// error; any other failure still throws, after the token is cleared.
+  /// Both tokens of a login carry that login's session id; logout revokes
+  /// the session, so its access token is then refused with 401
+  /// `INVALID_TOKEN` and its refresh token with 401 `INVALID_REFRESH_TOKEN`.
+  /// Other sessions of the same user keep working. Any logged-in user may
+  /// log out, whatever their status.
+  ///
+  /// Always signs the client out locally: the token is cleared even when
+  /// the server refuses, and the refusal is then rethrown.
   Future<void> logout();
 
   /// Request password reset for the given email.
+  ///
+  /// The address is matched ignoring case (club_server#508). The server
+  /// answers alike whether or not an account exists.
   Future<void> resetPassword(String email);
 
   /// Get the currently authenticated user's private profile.
@@ -50,6 +62,7 @@ abstract interface class AuthSource {
 
   /// Change the current user's password.
   ///
+  /// Any logged-in user may, whatever their status (club_server#510).
   /// Requires verification of the current password before updating.
   /// Throws `InvalidCredentialsException` if currentPassword is incorrect.
   /// Throws `NotAuthenticatedException` if no user is logged in.

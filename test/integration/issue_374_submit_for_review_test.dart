@@ -203,8 +203,8 @@ void main() {
             ),
           ),
         );
-        // Issue 45: the server refuses logout for a pending user (403
-        // ACCOUNT_NOT_ACTIVE), but the client is signed out all the same.
+        // A pending user can log out (club_server#510), and the client is
+        // signed out afterwards.
         await userClient.auth.logout();
         await expectLater(
           userClient.auth.getCurrentUser(),

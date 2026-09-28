@@ -91,6 +91,31 @@ void main() {
       },
     );
 
+    test('club_server#510: a revoked access token maps to INVALID_TOKEN', () {
+      final exc = mapHttpError(401, const {
+        'detail': {'code': 'INVALID_TOKEN', 'message': 'Session revoked'},
+      });
+      expect(exc, isA<ServerException>());
+      expect(exc.statusCode, 401);
+      expect(exc.code, SdkErrorCode.invalidToken);
+    });
+
+    test(
+      'a date of birth that is not a UTC midnight maps to '
+      'INVALID_DOB_NOT_UTC_MIDNIGHT',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'INVALID_DOB_NOT_UTC_MIDNIGHT',
+            'message': 'dateOfBirthUtc must be at 00:00:00 UTC',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.invalidDobNotUtcMidnight);
+      },
+    );
+
     test('accepts top-level error wrapper', () {
       final exc = mapHttpError(422, const {
         'error': {

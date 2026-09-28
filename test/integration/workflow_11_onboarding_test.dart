@@ -11,9 +11,10 @@ import '../utils/test_client.dart';
 /// identity verification on (`just test`) and one with it off
 /// (`just test-modules`).
 ///
-/// Accounts an admin creates never touch identity verification: they start
-/// `pending` and an admin approves them, on either stack. Roles are a
-/// separate admin action on an existing user, not a step of onboarding.
+/// Accounts an admin creates never touch identity verification: they are
+/// `active` at once, on either stack, and ask no admin for approval
+/// (club_server#522). Roles are a separate admin action on an existing user,
+/// not a step of onboarding.
 /// Self-registration is where the stacks differ: with verification on the
 /// user waits at `registered` until they attach a document and submit, and
 /// only then are admins asked; with it off they are `pending` at once.
@@ -43,14 +44,12 @@ void main() {
       gender: Gender.female,
     );
 
-    /// An admin-created account, approved, with [roles] assigned one by one.
-    Future<UserInfo> staff(String username, List<String> roles) async {
+    /// An admin-created account, with [roles] assigned one by one.
+    Future<void> staff(String username, List<String> roles) async {
       await adminCreate(username);
-      var user = await admin.users.approveUser(username);
       for (final role in roles) {
-        user = await admin.users.assignRole(username, role);
+        await admin.users.assignRole(username, role);
       }
-      return user;
     }
 
     Future<UserInfo> register(String username) => admin.auth.register(
@@ -62,6 +61,21 @@ void main() {
       gender: Gender.male,
       dateOfBirthUtc: DateTime.utc(1995, 6, 15),
     );
+
+    /// A self-registered account taken to `pending`, ready for approval. The
+    /// admin session is active again when it returns.
+    Future<void> pending(String username) async {
+      final registered = await register(username);
+      await submitForReviewIfRequired(
+        client: admin,
+        registered: registered,
+        password: password,
+        adminUsername: sudoUsername,
+        adminPassword: sudoPassword,
+      );
+      final readback = await admin.users.getUserInfo(username);
+      expect(readback.status, UserStatus.pending);
+    }
 
     /// The highest notification id in the admin's inbox, so a case counts
     /// only the approval requests it caused.
@@ -113,22 +127,20 @@ void main() {
     });
 
     group('11.01: accounts an admin creates', () {
-      test('start pending and ask no admin for approval', () async {
+      test('are active at once and ask no admin for approval', () async {
         final before = await inboxHighWater();
         final user = await adminCreate('test_w11_created');
-        expect(user.status, UserStatus.pending);
+        expect(user.status, UserStatus.active);
         final readback = await admin.users.getUserPrivate(user.username);
-        expect(readback.status, UserStatus.pending);
+        expect(readback.status, UserStatus.active);
         expect(await approvalsFor(user.username, after: before), isEmpty);
       });
 
-      test('are approved with no identity document, whatever the stack '
+      test('log in at once with no identity document, whatever the stack '
           'requires of self-registration', () async {
         await adminCreate('test_w11_nodoc');
-        final approved = await admin.users.approveUser('test_w11_nodoc');
-        expect(approved.status, UserStatus.active);
-        final readback = await admin.users.getUserPrivate('test_w11_nodoc');
-        expect(readback.status, UserStatus.active);
+        final self = await loginAs('test_w11_nodoc');
+        expect((await self.auth.getCurrentUser()).status, UserStatus.active);
       });
     });
 
@@ -143,7 +155,7 @@ void main() {
 
       test('admin1 can approve a pending user', () async {
         final admin1 = await loginAs('test_w11_admin1');
-        await adminCreate('test_w11_by_admin1');
+        await pending('test_w11_by_admin1');
         final approved = await admin1.users.approveUser('test_w11_by_admin1');
         expect(approved.status, UserStatus.active);
       });
@@ -158,7 +170,7 @@ void main() {
 
       test('coach1 cannot approve a user', () async {
         final coach1 = await loginAs('test_w11_coach1');
-        await adminCreate('test_w11_by_coach1');
+        await pending('test_w11_by_coach1');
         await expectLater(
           coach1.users.approveUser('test_w11_by_coach1'),
           refusedWith(403),
@@ -186,7 +198,7 @@ void main() {
         expect(readback.roles.isAdmin, isFalse);
         expect(readback.roles.isCoach, isFalse);
         final user0 = await loginAs('test_w11_user0');
-        await adminCreate('test_w11_by_user0');
+        await pending('test_w11_by_user0');
         await expectLater(
           user0.users.approveUser('test_w11_by_user0'),
           refusedWith(403),

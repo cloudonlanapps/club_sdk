@@ -47,6 +47,11 @@ abstract interface class UserSource {
 
   /// Create a new user with the provided details.
   ///
+  /// An admin-created user is always `active` (club_server#522): creation
+  /// does not take a status, so it cannot skip the lifecycle by starting a
+  /// user `pending`, `blocked` or `left`. A user who should wait for
+  /// approval registers through `AuthSource.register` instead.
+  ///
   /// [isGuest] marks a guest account (club_server#332, #24): the server
   /// writes the staff-listing row as a guest and publishes the profile on
   /// the admin's authority, since a guest never logs in to consent. Not a
@@ -65,7 +70,6 @@ abstract interface class UserSource {
     String? achievements,
     String? emergencyContact,
     String? medicalNotes,
-    UserStatus status = UserStatus.pending,
     Address? address,
     bool isGuest = false,
   });
@@ -94,6 +98,9 @@ abstract interface class UserSource {
   });
 
   /// Soft delete a user.
+  ///
+  /// 422 `ALREADY_DELETED` if the user is already soft-deleted; 404
+  /// `USER_NOT_FOUND` if there is no such user (club_server#523).
   Future<void> deleteUser(String username);
 
   /// Permanently delete a user and all their data.
@@ -149,6 +156,8 @@ abstract interface class UserSource {
   /// - 403 `INSUFFICIENT_PERMISSION` if [username] is not the caller.
   /// - 409 `NO_ACTIVE_REVIEW_REQUEST` if no active review row exists.
   /// - 409 `INVALID_STATE` if caller status is not `registered`.
+  /// - 422 if [dateOfBirthUtc] is not a UTC midnight, as for registration
+  ///   and profile updates (club_server#506).
   Future<UserPrivate> reapply(
     String username, {
     String? firstName,
@@ -163,7 +172,11 @@ abstract interface class UserSource {
   /// Unblock a user.
   Future<UserInfo> unblockUser(String username);
 
-  /// Mark a user as left.
+  /// Mark a user as left (admin only).
+  ///
+  /// Only an `active` user can be marked as left (club_server#513): any other
+  /// status is refused with 422 `INVALID_STATE` and left unchanged, so
+  /// [reactivateUser] never makes active a user who was not approved.
   Future<UserInfo> markLeft(String username);
 
   /// Reactivate a user who previously left.
@@ -172,9 +185,15 @@ abstract interface class UserSource {
   // ── Role Management ────────────────────────────────────────────────────────
 
   /// Assign a role to the user.
+  ///
+  /// [role] is a `Role` name in snake_case. `super_admin` is refused with
+  /// 422 (club_server#514): super admin changes only by
+  /// [transferSuperAdmin].
   Future<UserInfo> assignRole(String username, String role);
 
   /// Remove a role from the user.
+  ///
+  /// `super_admin` is refused with 422, as for [assignRole].
   Future<UserInfo> removeRole(String username, String role);
 
   // ── Super Admin ────────────────────────────────────────────────────────────
