@@ -513,7 +513,6 @@ void main() {
 
   group('NotificationPref', () {
     const pref = NotificationPref(
-      username: 'user-1',
       emailEnabled: true,
       pushEnabled: true,
       smsEnabled: false,
@@ -521,7 +520,6 @@ void main() {
 
     test('two instances with same values are equal', () {
       const samePref = NotificationPref(
-        username: 'user-1',
         emailEnabled: true,
         pushEnabled: true,
         smsEnabled: false,
@@ -532,7 +530,6 @@ void main() {
 
     test('two instances with different values are not equal', () {
       const differentPref = NotificationPref(
-        username: 'user-2',
         emailEnabled: false,
         pushEnabled: false,
         smsEnabled: true,
@@ -543,7 +540,6 @@ void main() {
 
     test('equal instances have same hashCode', () {
       const samePref = NotificationPref(
-        username: 'user-1',
         emailEnabled: true,
         pushEnabled: true,
         smsEnabled: false,
@@ -554,13 +550,13 @@ void main() {
 
     test('copyWith creates new instance with changed field', () {
       final updated = pref.copyWith(smsEnabled: true);
-      expect(updated.username, pref.username);
+      expect(updated.emailEnabled, pref.emailEnabled);
       expect(updated.smsEnabled, isTrue);
     });
 
     test('toMap produces correct map structure', () {
       final map = pref.toMap();
-      expect(map['username'], 'user-1');
+      expect(map.keys, {'emailEnabled', 'pushEnabled', 'smsEnabled'});
       expect(map['emailEnabled'], true);
       expect(map['pushEnabled'], true);
       expect(map['smsEnabled'], false);
@@ -583,8 +579,24 @@ void main() {
       expect(fromJson, pref);
     });
 
+    test('parses the server response, which names no user', () {
+      final fromMap = NotificationPref.fromMap(const {
+        'emailEnabled': false,
+        'pushEnabled': true,
+        'smsEnabled': true,
+      });
+      expect(
+        fromMap,
+        const NotificationPref(
+          emailEnabled: false,
+          pushEnabled: true,
+          smsEnabled: true,
+        ),
+      );
+    });
+
     test('fromMap uses defaults when fields missing', () {
-      final fromMap = NotificationPref.fromMap(const {'username': 'user-1'});
+      final fromMap = NotificationPref.fromMap(const {});
       expect(fromMap.emailEnabled, true);
       expect(fromMap.pushEnabled, true);
       expect(fromMap.smsEnabled, false);

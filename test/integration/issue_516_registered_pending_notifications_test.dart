@@ -129,7 +129,15 @@ void main() {
         test('reads their preferences', () async {
           if (skipped()) return;
           final prefs = await clients[username]!.notifications.getPreferences();
-          expect(prefs.username, username);
+          // Never written: the server's defaults.
+          expect(
+            prefs,
+            const NotificationPref(
+              emailEnabled: true,
+              pushEnabled: true,
+              smsEnabled: false,
+            ),
+          );
         });
 
         test('sets their preferences', () async {
