@@ -67,8 +67,22 @@ void main() {
       return media;
     }
 
+    /// 403 carries `INSUFFICIENT_PERMISSION`; a 404 hides that the item
+    /// exists, so its code is not asserted.
     Matcher refusedWith(int status) => throwsA(
-      isA<ServerException>().having((e) => e.statusCode, 'statusCode', status),
+      status == 403
+          ? isA<ServerException>()
+                .having((e) => e.statusCode, 'statusCode', 403)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.insufficientPermission,
+                )
+          : isA<ServerException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              status,
+            ),
     );
 
     setUpAll(() async {

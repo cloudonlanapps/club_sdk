@@ -471,19 +471,25 @@ void main() {
         await sudo.media.searchLinks(limit: 100);
       });
 
-      test('54.43 (#42): the server does not filter searchLinks by the '
-          'evaluation owner (422 INVALID_OWNER_TYPE)', () async {
-        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+      test(
+        '54.43 (#42): searchLinks filters by the evaluation owner',
+        () async {
+          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        await expectLater(
-          sudo.media.searchLinks(ownerType: MediaLinkOwnerType.evaluation),
-          throwsA(
-            isA<ServerException>()
-                .having((e) => e.statusCode, 'status', 422)
-                .having((e) => e.code, 'code', 'INVALID_OWNER_TYPE'),
-          ),
-        );
-      });
+          final page = await sudo.media.searchLinks(
+            ownerType: MediaLinkOwnerType.evaluation,
+            limit: 100,
+          );
+          expect(
+            page.items.map((l) => l.ownerType).toSet(),
+            {MediaLinkOwnerType.evaluation},
+          );
+          expect(
+            page.items.map((l) => l.mediaUuid),
+            containsAll([shared.uuid, private.uuid]),
+          );
+        },
+      );
 
       test('54.44: listMyEvaluationMedia is 404 before publication', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;

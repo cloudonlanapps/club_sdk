@@ -21,10 +21,14 @@ void main() {
       ...utf8.encode('test_i521 this is not an image'),
     ];
 
-    /// Named and typed as a PDF, but no PDF: Ghostscript fails on it. (A
-    /// `%PDF` header over garbage is not enough — Ghostscript exits 0 on it
-    /// and renders nothing.)
+    /// Named and typed as a PDF, but no PDF: Ghostscript fails on it.
     final corruptPdf = utf8.encode('test_i521 this is not a PDF at all');
+
+    /// A `%PDF` header over garbage: Ghostscript exits 0 on it and renders
+    /// no poster, which the server also counts as a failed conversion.
+    final headerOnlyPdf = utf8.encode(
+      '%PDF-1.4\ntest_i521 garbage after a valid header',
+    );
 
     Future<bool> listed(String filename) async {
       final mine = await sudoClient.media.listMyFiles(limit: 100);
@@ -74,6 +78,21 @@ void main() {
       await expectLater(
         sudoClient.media.upload(
           fileBytes: corruptPdf,
+          filename: filename,
+          contentType: 'application/pdf',
+        ),
+        conversionFailed(),
+      );
+      expect(await listed(filename), isFalse);
+    });
+
+    test('a PDF header over garbage answers 422 MEDIA_CONVERSION_FAILED and '
+        'is not listed', () async {
+      const filename = 'test_i521_header_only.pdf';
+
+      await expectLater(
+        sudoClient.media.upload(
+          fileBytes: headerOnlyPdf,
           filename: filename,
           contentType: 'application/pdf',
         ),

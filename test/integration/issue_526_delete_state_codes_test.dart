@@ -14,10 +14,10 @@ import '../utils/test_png.dart';
 ///
 /// - Hard delete of an item that was not soft-deleted first → 422
 ///   `HARD_DELETE_NEEDS_SOFT_DELETE` — group, user, template, evaluation,
-///   media item and event. The item still exists afterwards.
+///   media item, event and venue. The item still exists afterwards.
 /// - Restore of an item that is not deleted → 422 `NOTHING_TO_RESTORE` —
-///   event, user, venue, group, template and media item. The item is still
-///   live afterwards.
+///   event, user, venue, group, template, evaluation and media item. The
+///   item is still live afterwards.
 ///
 /// Templates and evaluations need the evaluations module: those cases skip
 /// on the default stack. Run the whole file with
@@ -204,6 +204,15 @@ void main() {
         final still = await sudo.events.getEvent(eventId);
         expect(still.deletedAtUtc, isNull);
       });
+
+      test('526.07: a venue is refused and still exists', () async {
+        await expectLater(
+          sudo.venues.hardDeleteVenue(venueId),
+          hardDeleteNeedsSoftDelete,
+        );
+        final still = await sudo.venues.getVenue(venueId);
+        expect(still.deletedAtUtc, isNull);
+      });
     });
 
     group('restore of a live item', () {
@@ -258,6 +267,17 @@ void main() {
           nothingToRestore,
         );
         final still = await sudo.evaluations.getTemplate(templateId!);
+        expect(still.deletedAtUtc, isNull);
+      });
+
+      test('526.16: an evaluation is refused and stays live', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await expectLater(
+          sudo.evaluations.restoreEvaluation(evaluationId!),
+          nothingToRestore,
+        );
+        final still = await sudo.evaluations.getEvaluation(evaluationId!);
         expect(still.deletedAtUtc, isNull);
       });
 
