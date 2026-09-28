@@ -70,6 +70,10 @@ abstract final class SdkErrorCode {
   // event's schedules (club_server#423, #3).
   static const scheduleNotFound = 'SCHEDULE_NOT_FOUND';
   static const notificationNotFound = 'NOTIFICATION_NOT_FOUND';
+  // A direct notification to a user who may not receive it: one who has left,
+  // or a blocked user for anything but an account notice (club_server#511,
+  // #512). Sent with status 422.
+  static const recipientNotDeliverable = 'RECIPIENT_NOT_DELIVERABLE';
   static const linkNotFound = 'LINK_NOT_FOUND';
   static const attendanceNotFound = 'ATTENDANCE_NOT_FOUND';
   static const fileNotFound = 'FILE_NOT_FOUND';

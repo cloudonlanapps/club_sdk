@@ -44,6 +44,11 @@ abstract interface class NotificationSource {
   /// [payload] follows the server's `{v, type, data}` envelope and carries all
   /// display content. [pendingActionType] / [pendingActionId] mark the row as
   /// server for sorting / dismissal heuristics.
+  ///
+  /// A user who has left receives nothing, and a blocked user receives only
+  /// account notices (block, role and password changes and the like): any
+  /// other notice to them is refused with 422
+  /// `RECIPIENT_NOT_DELIVERABLE` (club_server#511, #512).
   Future<AppNotification> createNotification({
     required String username,
     required String type,
