@@ -43,6 +43,7 @@ class MediaLink {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     this.metadata,
+    this.ownerDeleted = false,
   });
 
   factory MediaLink.fromMap(Map<String, dynamic> map) {
@@ -50,6 +51,7 @@ class MediaLink {
       tag: map['tag'] as String,
       metadata: map['metadata'] as String?,
       media: MediaRef.fromMap(map['media'] as Map<String, dynamic>),
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -73,6 +75,11 @@ class MediaLink {
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
+  /// Whether the owner (group, venue or event) is soft-deleted
+  /// (club_server#517). Its links stay readable but are read-only: adding,
+  /// changing or removing one answers 422. False when the server omits it.
+  final bool ownerDeleted;
+
   /// The uuid of the linked media. Shorthand for `media.uuid`.
   String get mediaUuid => media.uuid;
 
@@ -82,11 +89,13 @@ class MediaLink {
     'media': media.toMap(),
     'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
     'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
+    'ownerDeleted': ownerDeleted,
   };
 
   @override
   String toString() =>
-      'MediaLink(tag: $tag, media: $media, metadata: $metadata)';
+      'MediaLink(tag: $tag, media: $media, metadata: $metadata, '
+      'ownerDeleted: $ownerDeleted)';
 
   @override
   bool operator ==(Object other) =>
@@ -96,11 +105,18 @@ class MediaLink {
           other.metadata == metadata &&
           other.media == media &&
           other.createdAtUtc == createdAtUtc &&
-          other.updatedAtUtc == updatedAtUtc;
+          other.updatedAtUtc == updatedAtUtc &&
+          other.ownerDeleted == ownerDeleted;
 
   @override
-  int get hashCode =>
-      Object.hash(tag, metadata, media, createdAtUtc, updatedAtUtc);
+  int get hashCode => Object.hash(
+    tag,
+    metadata,
+    media,
+    createdAtUtc,
+    updatedAtUtc,
+    ownerDeleted,
+  );
 }
 
 /// One row from `GET /v1/media/by_id/{uuid}/links` (reverse lookup).
