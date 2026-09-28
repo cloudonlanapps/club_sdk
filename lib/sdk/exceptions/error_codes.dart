@@ -127,6 +127,9 @@ abstract final class SdkErrorCode {
   // Restore of an item that is not deleted — event, user, venue, group,
   // template or media item (club_server#526, #520). Replaces `NOT_DELETED`.
   static const nothingToRestore = 'NOTHING_TO_RESTORE';
+  // Upload of an image or PDF the converter rejects (club_server#521): no
+  // media item is created. Not the download-time `CONVERSION_FAILED`.
+  static const mediaConversionFailed = 'MEDIA_CONVERSION_FAILED';
   // Single-occurrence reschedule with an all-null body (#113). The event-level
   // /reschedule rejects an empty body at the schema layer (VALIDATION_ERROR).
   static const nothingToReschedule = 'NOTHING_TO_RESCHEDULE';

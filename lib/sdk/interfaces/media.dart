@@ -36,6 +36,10 @@ abstract interface class MediaSource {
   ///   `['admin', 'coach']`, etc. When omitted the server defaults to
   ///   `['public']`.
   /// - [encrypt] applies to images / pdf only; videos refuse encryption.
+  ///
+  /// An image or PDF the converter rejects (a corrupt file) answers 422
+  /// `MEDIA_CONVERSION_FAILED` and no media item is created
+  /// (club_server#521). The upload is not retried.
   Future<Media> upload({
     required List<int> fileBytes,
     required String filename,
