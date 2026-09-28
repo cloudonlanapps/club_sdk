@@ -70,6 +70,8 @@ export 'sdk/models/broadcast.dart'
         BroadcastStatus;
 export 'sdk/models/bulk_members_result.dart' show BulkMembersResult;
 export 'sdk/models/capabilities.dart' show Capabilities;
+export 'sdk/models/club_contact_details.dart' show ClubContactDetails;
+export 'sdk/models/club_identity.dart' show ClubIdentity;
 export 'sdk/models/club_membership.dart' show ClubMembership;
 export 'sdk/models/conflict_report.dart'
     show ConflictReport, EventConflictItem, OccurrencePair;
@@ -125,6 +127,7 @@ export 'sdk/models/group_member.dart' show GroupMember;
 export 'sdk/models/inquiry.dart' show Inquiry;
 export 'sdk/models/inquiry_kind.dart' show InquiryKind;
 export 'sdk/models/join_request.dart' show JoinRequest, JoinRequestStatus;
+export 'sdk/models/localized_text.dart' show LocalizedText;
 export 'sdk/models/marked_attendance.dart' show MarkedAttendance;
 export 'sdk/models/media.dart' show Media;
 export 'sdk/models/media_link.dart'

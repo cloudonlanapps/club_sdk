@@ -1,3 +1,4 @@
+import '../models/club_identity.dart';
 import '../models/staff_listing_row.dart';
 import '../models/system_preference.dart';
 
@@ -22,6 +23,17 @@ abstract interface class AdminSource {
   /// Writes one preference. [value] is opaque JSON; its shape depends on the
   /// key.
   Future<SystemPreference> setPreference(String key, Object? value);
+
+  /// Reads the club's identity, the `club_info` preference, typed (#90).
+  ///
+  /// A deployment that never wrote it reads as an empty [ClubIdentity].
+  Future<ClubIdentity> getClubIdentity();
+
+  /// Writes the club's identity as the `club_info` preference and returns
+  /// what the server stored. The whole document is replaced, including
+  /// [ClubIdentity.extra], so start from [getClubIdentity] to keep keys this
+  /// model does not read.
+  Future<ClubIdentity> setClubIdentity(ClubIdentity identity);
 
   /// The whole staff listing: every coach who has consented to the staff
   /// page, with their curation (admin only).
