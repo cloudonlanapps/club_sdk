@@ -7,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import '../sdk/exceptions/error_codes.dart';
 import '../sdk/exceptions/exceptions.dart';
 import 'http/api_exception.dart';
+import 'http/default_http_client.dart';
 
 /// Callback type for transforming URLs in API responses.
 ///
@@ -42,7 +43,8 @@ const Set<String> _featureOffCodes = {
 /// HTTP client wrapper for remote API communication.
 ///
 /// Handles authentication headers, JSON serialization, error mapping,
-/// request timeouts, retry logic for 5xx errors, and automatic token refresh.
+/// request timeouts, retry logic (safe requests on 5xx, timeouts and
+/// connection failures), and automatic token refresh.
 class RemoteStore {
   RemoteStore({
     required this.baseUrl,
@@ -54,7 +56,7 @@ class RemoteStore {
     this.urlTransformer,
     this.onServerReachable,
     this.onServerUnreachable,
-  }) : _httpClient = client ?? http.Client();
+  }) : _httpClient = client ?? createDefaultHttpClient();
 
   /// The base URL for all API requests (e.g., 'https://api.myexampleclub.com/v1')
   final String baseUrl;
@@ -480,11 +482,22 @@ class RemoteStore {
         // Retries exhausted and still no response → server is unreachable.
         onServerUnreachable?.call();
         rethrow;
+      } on http.ClientException {
+        // A connection-level failure: refused, reset, or a request written
+        // onto a keep-alive connection the server had just closed ("Broken
+        // pipe", #92). A safe request is retried like a timeout; any other
+        // is not, since the server may have seen it.
+        if (attempt < retries) {
+          attempt++;
+          await backoff();
+          continue;
+        }
+        onServerUnreachable?.call();
+        rethrow;
       } on Exception {
-        // Connection-level failures (SocketException, connection refused,
-        // http.ClientException) never produced a response → unreachable.
-        // A body that does not decode arrives as a ServerException above,
-        // and an Error is a bug, not an outage (#44).
+        // Other connection-level failures (SocketException) never produced
+        // a response → unreachable. A body that does not decode arrives as a
+        // ServerException above, and an Error is a bug, not an outage (#44).
         onServerUnreachable?.call();
         rethrow;
       }
