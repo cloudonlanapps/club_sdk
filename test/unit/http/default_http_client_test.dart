@@ -53,4 +53,43 @@ void main() {
       expect(requests.single.url.path, '/v1/health');
     });
   });
+
+  group('Issue 94: http.runWithClient', () {
+    test('Issue 94: inside runWithClient the default client is the zone '
+        'client', () async {
+      final zoneClient = MockClient(
+        (_) async => http.Response('{"from":"zone"}', 200),
+      );
+      final client = http.runWithClient(
+        createDefaultHttpClient,
+        () => zoneClient,
+      );
+      expect(identical(client, zoneClient), isTrue);
+    });
+
+    test('Issue 94: a RemoteStore built inside runWithClient sends through '
+        'the zone client', () async {
+      final requests = <http.Request>[];
+      final result = await http.runWithClient(
+        () => RemoteStore(baseUrl: 'https://example.test/v1').get('/me'),
+        () => MockClient((request) async {
+          requests.add(request);
+          return http.Response(
+            '{"from":"zone"}',
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      expect(result, {'from': 'zone'});
+      expect(requests.single.url.path, '/v1/me');
+    });
+
+    test('Issue 94: outside a zone override the default client is the '
+        'configured IOClient', () {
+      final client = createDefaultHttpClient();
+      expect(client, isA<IOClient>());
+      client.close();
+    });
+  });
 }
