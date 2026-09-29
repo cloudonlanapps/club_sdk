@@ -75,13 +75,6 @@ export 'sdk/models/club_identity.dart' show ClubIdentity;
 export 'sdk/models/club_membership.dart' show ClubMembership;
 export 'sdk/models/conflict_report.dart'
     show ConflictReport, EventConflictItem, OccurrencePair;
-export 'sdk/models/contact_info.dart'
-    show
-        ContactFormLabels,
-        ContactInfoLabels,
-        ContactMapLabels,
-        ContactPageLabels,
-        ContactSubjectOptions;
 export 'sdk/models/credit_account.dart' show CreditAccount;
 export 'sdk/models/credit_account_kind.dart' show CreditAccountKind;
 export 'sdk/models/credit_account_state.dart' show CreditAccountState;
@@ -111,8 +104,6 @@ export 'sdk/models/evaluation_staff_view.dart' show EvaluationStaffView;
 export 'sdk/models/evaluation_status.dart' show EvaluationStatus;
 export 'sdk/models/evaluation_template.dart' show EvaluationTemplate;
 export 'sdk/models/event.dart' show Event;
-export 'sdk/models/event_detail_gallery_labels.dart'
-    show EventDetailGalleryLabels;
 export 'sdk/models/event_input.dart' show EventInput;
 export 'sdk/models/event_marketing.dart' show EventMarketing;
 export 'sdk/models/event_marketing_basic.dart' show EventMarketingBasic;
