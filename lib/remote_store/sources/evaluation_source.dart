@@ -1,11 +1,12 @@
 import '../../sdk/interfaces/evaluation.dart';
-import '../../sdk/models/evaluation_category.dart';
-import '../../sdk/models/evaluation_scope.dart';
-import '../../sdk/models/evaluation_scope_type.dart';
-import '../../sdk/models/evaluation_score_input.dart';
+import '../../sdk/models/evaluation_answer_input.dart';
+import '../../sdk/models/evaluation_item_type.dart';
+import '../../sdk/models/evaluation_layout_entry.dart';
 import '../../sdk/models/evaluation_staff_view.dart';
 import '../../sdk/models/evaluation_status.dart';
 import '../../sdk/models/evaluation_template.dart';
+import '../../sdk/models/evaluation_template_item.dart';
+import '../../sdk/models/evaluation_template_item_hit.dart';
 import '../../sdk/models/pagination.dart';
 import '../endpoints/endpoints.dart';
 import '../remote_store.dart';
@@ -21,24 +22,20 @@ class RemoteEvaluationSource implements EvaluationSource {
 
   @override
   Future<EvaluationStaffView> createEvaluation({
-    required String subjectUsername,
     required int templateId,
-    required EvaluationScope scope,
-    String? authorUsername,
-    List<EvaluationScoreInput>? scores,
-    String? comment,
-    String? coachNote,
+    required String createdFor,
+    int? eventId,
+    DateTime? periodStartUtc,
+    DateTime? periodEndUtc,
   }) async {
     final response = await _store.post(
       endpoints.evaluations.list,
       body: <String, dynamic>{
-        'subjectUsername': subjectUsername,
         'templateId': templateId,
-        'scope': scope.toMap(),
-        'authorUsername': ?authorUsername,
-        if (scores != null) 'scores': scores.map((s) => s.toMap()).toList(),
-        'comment': ?comment,
-        'coachNote': ?coachNote,
+        'createdFor': createdFor,
+        'eventId': ?eventId,
+        'periodStartUtc': ?periodStartUtc?.millisecondsSinceEpoch,
+        'periodEndUtc': ?periodEndUtc?.millisecondsSinceEpoch,
       },
     );
     return EvaluationStaffView.fromMap(response);
@@ -53,10 +50,9 @@ class RemoteEvaluationSource implements EvaluationSource {
   @override
   Future<PaginatedList<EvaluationStaffView>> listEvaluations({
     EvaluationStatus? status,
-    String? subjectUsername,
-    String? authorUsername,
-    EvaluationScopeType? scopeType,
+    String? createdFor,
     int? eventId,
+    bool? general,
     int offset = 0,
     int limit = 20,
   }) async {
@@ -66,10 +62,9 @@ class RemoteEvaluationSource implements EvaluationSource {
         'offset': offset.toString(),
         'limit': limit.toString(),
         'status': ?status?.wireName,
-        'subjectUsername': ?subjectUsername,
-        'authorUsername': ?authorUsername,
-        'scopeType': ?scopeType?.wireName,
+        'createdFor': ?createdFor,
         'eventId': ?eventId?.toString(),
+        'general': ?general?.toString(),
       },
     );
     return PaginatedList.fromMap(response, EvaluationStaffView.fromMap);
@@ -91,20 +86,43 @@ class RemoteEvaluationSource implements EvaluationSource {
   }
 
   @override
-  Future<EvaluationStaffView> updateEvaluation(
+  Future<EvaluationStaffView> updateEvaluationPeriod(
     int id, {
-    List<EvaluationScoreInput>? scores,
-    String? comment,
-    String? coachNote,
+    required DateTime? periodStartUtc,
+    required DateTime? periodEndUtc,
   }) async {
     final response = await _store.patch(
       endpoints.evaluations.byId(id),
       body: <String, dynamic>{
-        if (scores != null) 'scores': scores.map((s) => s.toMap()).toList(),
-        'comment': ?comment,
-        'coachNote': ?coachNote,
+        'periodStartUtc': periodStartUtc?.millisecondsSinceEpoch,
+        'periodEndUtc': periodEndUtc?.millisecondsSinceEpoch,
       },
     );
+    return EvaluationStaffView.fromMap(response);
+  }
+
+  @override
+  Future<EvaluationStaffView> putAnswer(
+    int id,
+    int itemId,
+    EvaluationAnswerInput answer,
+  ) async {
+    final response = await _store.put(
+      endpoints.evaluations.answer(id, itemId),
+      body: answer.toMap(),
+    );
+    return EvaluationStaffView.fromMap(response);
+  }
+
+  @override
+  Future<EvaluationStaffView> clearAnswer(int id, int itemId) async {
+    final path = endpoints.evaluations.answer(id, itemId);
+    final response = await _store.delete(path);
+    if (response == null) {
+      throw StateError(
+        'DELETE $path returned no body; expected the evaluation',
+      );
+    }
     return EvaluationStaffView.fromMap(response);
   }
 
@@ -146,16 +164,16 @@ class RemoteEvaluationSource implements EvaluationSource {
       _postView(endpoints.evaluations.revert(id));
 
   @override
-  Future<EvaluationStaffView> transferEvaluation(
-    int id, {
-    required String newAuthorUsername,
-  }) async {
-    final response = await _store.post(
+  Future<void> transferEvaluation(int id, {required String owner}) async {
+    await _store.post(
       endpoints.evaluations.transfer(id),
-      body: <String, dynamic>{'newAuthorUsername': newAuthorUsername},
+      body: <String, dynamic>{'owner': owner},
     );
-    return EvaluationStaffView.fromMap(response);
   }
+
+  @override
+  Future<List<int>> previewMemberCopy(int id) =>
+      _store.downloadBytes(endpoints.evaluations.pdf(id));
 
   @override
   Future<PaginatedList<EvaluationTemplate>> listTemplates({
@@ -196,17 +214,13 @@ class RemoteEvaluationSource implements EvaluationSource {
   @override
   Future<EvaluationTemplate> createTemplate({
     required String name,
-    required List<EvaluationScopeType> scopes,
-    required List<EvaluationCategory> categories,
-    String? description,
+    required List<EvaluationLayoutEntry<EvaluationTemplateItem>> layout,
   }) async {
     final response = await _store.post(
       endpoints.evaluations.templates,
       body: <String, dynamic>{
         'name': name,
-        'description': ?description,
-        'scopes': scopes.map((s) => s.wireName).toList(),
-        'categories': categories.map((c) => c.toInputMap()).toList(),
+        'layout': layout.map((e) => e.toWire((i) => i.toMap())).toList(),
       },
     );
     return EvaluationTemplate.fromMap(response);
@@ -216,21 +230,72 @@ class RemoteEvaluationSource implements EvaluationSource {
   Future<EvaluationTemplate> updateTemplate(
     int id, {
     String? name,
-    String? description,
-    List<EvaluationScopeType>? scopes,
-    List<EvaluationCategory>? categories,
+    List<EvaluationLayoutEntry<int>>? layout,
   }) async {
     final response = await _store.patch(
       endpoints.evaluations.template(id),
       body: <String, dynamic>{
         'name': ?name,
-        'description': ?description,
-        if (scopes != null) 'scopes': scopes.map((s) => s.wireName).toList(),
-        if (categories != null)
-          'categories': categories.map((c) => c.toInputMap()).toList(),
+        if (layout != null)
+          'layout': layout.map((e) => e.toWire((itemId) => itemId)).toList(),
       },
     );
     return EvaluationTemplate.fromMap(response);
+  }
+
+  @override
+  Future<EvaluationTemplate> addItem(
+    int templateId,
+    EvaluationTemplateItem item, {
+    String? section,
+  }) async {
+    final response = await _store.post(
+      endpoints.evaluations.templateItems(templateId),
+      body: <String, dynamic>{'item': item.toMap(), 'section': ?section},
+    );
+    return EvaluationTemplate.fromMap(response);
+  }
+
+  @override
+  Future<EvaluationTemplate> replaceItem(
+    int templateId,
+    int itemId,
+    EvaluationTemplateItem item,
+  ) async {
+    final response = await _store.put(
+      endpoints.evaluations.templateItem(templateId, itemId),
+      body: item.toMap(),
+    );
+    return EvaluationTemplate.fromMap(response);
+  }
+
+  @override
+  Future<EvaluationTemplate> removeItem(int templateId, int itemId) async {
+    final path = endpoints.evaluations.templateItem(templateId, itemId);
+    final response = await _store.delete(path);
+    if (response == null) {
+      throw StateError('DELETE $path returned no body; expected the template');
+    }
+    return EvaluationTemplate.fromMap(response);
+  }
+
+  @override
+  Future<PaginatedList<EvaluationTemplateItemHit>> searchItems({
+    String? search,
+    EvaluationItemType? type,
+    int offset = 0,
+    int limit = 20,
+  }) async {
+    final response = await _store.get(
+      endpoints.evaluations.itemSearch,
+      queryParams: <String, String>{
+        'offset': offset.toString(),
+        'limit': limit.toString(),
+        'search': ?search,
+        'type': ?type?.wireName,
+      },
+    );
+    return PaginatedList.fromMap(response, EvaluationTemplateItemHit.fromMap);
   }
 
   @override
@@ -255,24 +320,4 @@ class RemoteEvaluationSource implements EvaluationSource {
       EvaluationTemplate.fromMap(
         await _store.post(endpoints.evaluations.templateRestore(id)),
       );
-
-  @override
-  Future<EvaluationStaffView> applyTemplate(
-    int templateId, {
-    required String subjectUsername,
-    required EvaluationScope scope,
-    String? comment,
-    String? coachNote,
-  }) async {
-    final response = await _store.post(
-      endpoints.evaluations.templateApply(templateId),
-      body: <String, dynamic>{
-        'subjectUsername': subjectUsername,
-        'scope': scope.toMap(),
-        'comment': ?comment,
-        'coachNote': ?coachNote,
-      },
-    );
-    return EvaluationStaffView.fromMap(response);
-  }
 }

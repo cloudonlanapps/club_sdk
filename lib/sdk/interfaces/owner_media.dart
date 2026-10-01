@@ -62,9 +62,13 @@ abstract interface class GroupMediaSource implements OwnerMediaSource<int> {}
 /// Per-venue media. Owner ID is the venue id (int).
 abstract interface class VenueMediaSource implements OwnerMediaSource<int> {}
 
-/// Per-evaluation media (`/evaluations/by_id/{id}/media`, R55–R56c).
-/// Owner ID is the evaluation id (int). Links are private to staff unless
-/// their tag begins `shared_`, which the subject sees once the evaluation
-/// is published (`MyEvaluationsSource.listMyEvaluationMedia`).
+/// Per-evaluation media (`/evaluations/by_id/{id}/media`, R55–R56c,
+/// club_server#535). Owner ID is the evaluation id (int); only the
+/// effective owner reads or writes it, and writes need a draft (422
+/// `INVALID_STATE`). Media is evidence for one answer: its tag is the
+/// item's id (`EvaluationMediaTags.evidence`), and only an image, a video
+/// or a PDF on a question that allows evidence is accepted (422
+/// `INVALID_EVIDENCE`). The member sees evidence on public items once the
+/// evaluation is published (`MyEvaluationsSource.listMyEvaluationMedia`).
 abstract interface class EvaluationMediaSource
     implements OwnerMediaSource<int> {}
