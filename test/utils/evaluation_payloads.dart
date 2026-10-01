@@ -124,6 +124,7 @@ Map<String, dynamic> templatePayload() => {
     },
   ],
   'items': [infoItemPayload(), ratingItemPayload(), yesNoItemPayload()],
+  'inUse': false,
   'createdAtUtc': 1000,
   'updatedAtUtc': 2000,
   'deletedAtUtc': null,

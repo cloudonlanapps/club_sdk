@@ -23,10 +23,12 @@ void main() {
     late SecureClient coach;
     late SecureClient otherCoach;
     late SecureClient member;
+    late SecureClient otherMember;
     late bool evaluationsOn;
     late EvaluationTemplate template;
 
     const memberName = 'test_i54_member';
+    const otherMemberName = 'test_i54_other';
     const coachName = 'test_i54_coach';
     const otherCoachName = 'test_i54_coach2';
     const adminName = 'test_i54_admin';
@@ -67,7 +69,13 @@ void main() {
       await sudo.auth.login(sudoUsername, sudoPassword);
       evaluationsOn = (await stackCapabilities(sudo)).evaluations;
 
-      for (final name in [memberName, coachName, otherCoachName, adminName]) {
+      for (final name in [
+        memberName,
+        otherMemberName,
+        coachName,
+        otherCoachName,
+        adminName,
+      ]) {
         await registerAndApprove(
           client: sudo,
           adminUsername: sudoUsername,
@@ -90,6 +98,7 @@ void main() {
       coach = await loginAs(coachName);
       otherCoach = await loginAs(otherCoachName);
       member = await loginAs(memberName);
+      otherMember = await loginAs(otherMemberName);
 
       if (evaluationsOn) {
         template = await newTemplate('main');
@@ -97,7 +106,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      for (final c in [member, otherCoach, coach, admin, sudo]) {
+      for (final c in [otherMember, member, otherCoach, coach, admin, sudo]) {
         await c.auth.logout();
       }
     });
@@ -658,6 +667,120 @@ void main() {
         final view = await member.myEvaluations.getMyEvaluation(memberName, id);
         expect(view.answers.map((a) => a.itemId), [ratingId]);
         expect(view.answers.single.evidence.single.mediaUuid, clip.uuid);
+      });
+    });
+
+    group('uploaded evidence', () {
+      late int ratingId;
+
+      Future<EvaluationStaffView> uploadTo(
+        SecureClient by,
+        int id,
+        int itemId, {
+        List<int> bytes = testPngBytes,
+        String filename = 'test_i54_upload.png',
+        String? contentType = 'image/png',
+      }) => by.evaluations.uploadEvidence(
+        id,
+        itemId,
+        bytes: bytes,
+        filename: filename,
+        contentType: contentType,
+      );
+
+      setUpAll(() async {
+        if (!evaluationsOn) return;
+        ratingId = itemIdOf(template, EvaluationItemType.rating);
+      });
+
+      test('54.50: an upload is stored as evidence the member downloads '
+          'once published, and another member cannot', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        final uploaded = await uploadTo(coach, id, ratingId);
+        expect(uploaded.id, id);
+        final evidence = uploaded.answerFor(ratingId)!.evidence.single;
+        expect(evidence.metadata, 'test_i54_upload.png');
+        final uuid = evidence.mediaUuid;
+
+        final read = await coach.evaluations.getEvaluation(id);
+        expect(read.answerFor(ratingId)!.evidence.single.mediaUuid, uuid);
+        final grouped = await coach.evaluationMedia.listGrouped(id);
+        expect(
+          grouped[EvaluationMediaTags.evidence(ratingId)]!.map(
+            (l) => l.mediaUuid,
+          ),
+          [uuid],
+        );
+
+        await coach.evaluations.putAnswer(
+          id,
+          ratingId,
+          const EvaluationAnswerInput(valueNum: 3),
+        );
+        await coach.evaluations.saveEvaluation(id);
+        final published = await coach.evaluations.publishEvaluation(id);
+        expect(published.status, EvaluationStatus.published);
+
+        final media = await member.myEvaluations.listMyEvaluationMedia(
+          memberName,
+          id,
+        );
+        expect(
+          media[EvaluationMediaTags.evidence(ratingId)]!.single.mediaUuid,
+          uuid,
+        );
+        expect(await member.media.download(uuid), testPngBytes);
+        expect(await otherCoach.media.download(uuid), testPngBytes);
+        await expectLater(
+          otherMember.media.download(uuid),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 'status', 403),
+          ),
+        );
+      });
+
+      test('54.51: an upload is refused where the item takes no '
+          'evidence', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        await expectLater(
+          uploadTo(coach, id, itemIdOf(template, EvaluationItemType.yesNo)),
+          throwsCode(422, SdkErrorCode.invalidEvidence),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
+      });
+
+      test('54.52: an upload is refused on a saved evaluation', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        await coach.evaluations.putAnswer(
+          id,
+          ratingId,
+          const EvaluationAnswerInput(valueNum: 3),
+        );
+        final saved = await coach.evaluations.saveEvaluation(id);
+        expect(saved.status, EvaluationStatus.saved);
+
+        await expectLater(
+          uploadTo(coach, id, ratingId),
+          throwsCode(422, SdkErrorCode.invalidState),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
+      });
+
+      test('54.53: only the owner uploads; another coach gets a 404', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        await expectLater(
+          uploadTo(otherCoach, id, ratingId),
+          throwsCode(404, SdkErrorCode.evaluationNotFound),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
       });
     });
   });

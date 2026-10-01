@@ -265,6 +265,31 @@ void main() {
 
         await coach.evaluations.deleteEvaluation(e.id);
       });
+
+      test('15.05: a template says whether it is in use, a soft-deleted '
+          'evaluation included', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final fresh = await admin.evaluations.createTemplate(
+          name: 'test_i15_in_use',
+          layout: standardLayout(),
+        );
+        expect(fresh.inUse, isFalse);
+        expect((await coach.evaluations.getTemplate(fresh.id)).inUse, isFalse);
+
+        final e = await coach.evaluations.createEvaluation(
+          templateId: fresh.id,
+          createdFor: memberName,
+        );
+        expect((await admin.evaluations.getTemplate(fresh.id)).inUse, isTrue);
+        expect((await coach.evaluations.getTemplate(fresh.id)).inUse, isTrue);
+        final listed = await admin.evaluations.listTemplates(limit: 100);
+        expect(listed.items.singleWhere((t) => t.id == fresh.id).inUse, isTrue);
+
+        final deleted = await coach.evaluations.deleteEvaluation(e.id);
+        expect(deleted.deletedAtUtc, isNotNull);
+        expect((await admin.evaluations.getTemplate(fresh.id)).inUse, isTrue);
+      });
     });
 
     group('creating and owning', () {

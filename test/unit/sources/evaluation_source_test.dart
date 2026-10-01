@@ -236,6 +236,85 @@ void main() {
     });
   });
 
+  group('Issue 98: RemoteEvaluationSource.uploadEvidence', () {
+    Matcher throwsCode(int status, String code) => throwsA(
+      isA<ServerException>()
+          .having((e) => e.statusCode, 'statusCode', status)
+          .having((e) => e.code, 'code', code),
+    );
+
+    http.Response errorResponse(int status, String code) => jsonResponse({
+      'detail': {'code': code, 'message': code},
+    }, status);
+
+    test('POSTs the file as multipart field "file" to the item and reads '
+        'the evaluation', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload(), 201));
+
+      final view = await h.source.uploadEvidence(
+        21,
+        11,
+        bytes: const [1, 2, 3, 4],
+        filename: 'clip.png',
+        contentType: 'image/png',
+      );
+
+      final r = h.requests.single;
+      expect(r.method, 'POST');
+      expect(r.url.path, '/v1/evaluations/by_id/21/evidence/11');
+      expect(r.headers['content-type'], startsWith('multipart/form-data'));
+      final body = latin1.decode(r.bodyBytes);
+      expect(body, contains('name="file"; filename="clip.png"'));
+      expect(body.toLowerCase(), contains('content-type: image/png'));
+      expect(body, contains(latin1.decode(const [1, 2, 3, 4])));
+      expect(view.id, 21);
+      expect(view.answerFor(11)?.evidence.single.mediaUuid, 'm1');
+    });
+
+    test('sends no content type when none is given', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload(), 201));
+
+      await h.source.uploadEvidence(
+        21,
+        11,
+        bytes: const [1],
+        filename: 'notes.pdf',
+      );
+
+      final body = latin1.decode(h.requests.single.bodyBytes);
+      expect(body, contains('filename="notes.pdf"'));
+      expect(
+        body.toLowerCase(),
+        isNot(contains('content-type: application/pdf')),
+      );
+    });
+
+    final errors = <(int, String)>[
+      (422, SdkErrorCode.invalidEvidence),
+      (422, SdkErrorCode.invalidState),
+      (404, SdkErrorCode.evaluationNotFound),
+      (413, SdkErrorCode.fileTooLarge),
+    ];
+    for (final (status, code) in errors) {
+      test('a $status $code surfaces as a ServerException and is sent '
+          'once', () async {
+        final h = evaluationHarness((_) => errorResponse(status, code));
+
+        await expectLater(
+          h.source.uploadEvidence(
+            21,
+            11,
+            bytes: const [1],
+            filename: 'clip.png',
+            contentType: 'image/png',
+          ),
+          throwsCode(status, code),
+        );
+        expect(h.requests, hasLength(1));
+      });
+    }
+  });
+
   group('Issue 98: RemoteEvaluationSource templates', () {
     test(
       'createTemplate sends name and the layout with items inline',

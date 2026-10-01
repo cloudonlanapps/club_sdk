@@ -21,6 +21,30 @@ void main() {
       expect(template.deletedAtUtc, isNull);
     });
 
+    test('fromMap reads inUse', () {
+      expect(template.inUse, isFalse);
+      final used = EvaluationTemplate.fromMap(
+        templatePayload()..['inUse'] = true,
+      );
+      expect(used.inUse, isTrue);
+      expect(used.toMap()['inUse'], isTrue);
+    });
+
+    test('fromMap treats a missing inUse as not in use', () {
+      final payload = templatePayload()..remove('inUse');
+      expect(EvaluationTemplate.fromMap(payload).inUse, isFalse);
+    });
+
+    test('inUse takes part in copyWith, equality and toString', () {
+      final used = template.copyWith(inUse: true);
+      expect(used.inUse, isTrue);
+      expect(used.copyWith().inUse, isTrue);
+      expect(used, isNot(template));
+      expect(used.hashCode, isNot(template.hashCode));
+      expect(used.copyWith(inUse: false), template);
+      expect(used.toString(), contains('inUse: true'));
+    });
+
     test('itemById finds an item, or null', () {
       expect(template.itemById(13), isA<EvaluationYesNoItem>());
       expect(template.itemById(99), isNull);

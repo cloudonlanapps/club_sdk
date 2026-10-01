@@ -10,6 +10,9 @@ void main() {
       expect(ep.answer(21, 11), '/evaluations/by_id/21/answers/11');
     });
     test('pdf', () => expect(ep.pdf(21), '/evaluations/by_id/21/pdf'));
+    test('evidence', () {
+      expect(ep.evidence(21, 11), '/evaluations/by_id/21/evidence/11');
+    });
     test('transfer', () {
       expect(ep.transfer(21), '/evaluations/by_id/21/transfer');
     });
