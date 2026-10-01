@@ -90,6 +90,27 @@ abstract interface class EvaluationSource {
   /// Clear the answer to item [itemId] of a draft, detaching its evidence.
   Future<EvaluationStaffView> clearAnswer(int id, int itemId);
 
+  /// Upload [bytes] as evidence for item [itemId] of a draft, in one step,
+  /// and return the evaluation with it attached (club_server#535, R56d).
+  ///
+  /// The file is stored as a media item uploaded on behalf of the member
+  /// the evaluation is about, with access roles `self`, `coach` and
+  /// `admin`: the member and staff can download it, nobody else can, and it
+  /// is never public. It is linked under the item's id with [filename] as
+  /// its metadata. Only the effective owner may upload (404
+  /// `EVALUATION_NOT_FOUND` otherwise). An item that is not a question
+  /// taking evidence, or a file that is not an image, a video or a PDF, is
+  /// 422 `INVALID_EVIDENCE`; an evaluation that is not a draft is 422
+  /// `INVALID_STATE`; a file over the server's limit is 413
+  /// `FILE_TOO_LARGE`.
+  Future<EvaluationStaffView> uploadEvidence(
+    int id,
+    int itemId, {
+    required List<int> bytes,
+    required String filename,
+    String? contentType,
+  });
+
   /// Soft-delete a draft; returns the deleted row. Saved or published
   /// evaluations must be reverted to draft first (422 `INVALID_STATE`).
   Future<EvaluationStaffView> deleteEvaluation(int id);

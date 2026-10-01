@@ -12,7 +12,8 @@ import 'evaluation_template_item.dart';
 /// against. [layout] names each item id exactly once, at the top level or
 /// in a section; [items] come in layout order. While any evaluation uses
 /// the template its items and layout are frozen (422 `TEMPLATE_IN_USE`);
-/// renaming stays allowed. [deletedAtUtc] is set only on soft-deleted rows.
+/// renaming stays allowed; [inUse] says so up front (R27a). [deletedAtUtc]
+/// is set only on soft-deleted rows.
 @immutable
 class EvaluationTemplate {
   const EvaluationTemplate({
@@ -21,6 +22,7 @@ class EvaluationTemplate {
     required this.createdBy,
     required this.layout,
     required this.items,
+    required this.inUse,
     required this.createdAtUtc,
     required this.updatedAtUtc,
     this.deletedAtUtc,
@@ -35,6 +37,7 @@ class EvaluationTemplate {
       items: ((map['items'] as List?) ?? const <dynamic>[])
           .map((e) => EvaluationTemplateItem.fromMap(e as Map<String, dynamic>))
           .toList(growable: false),
+      inUse: map['inUse'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -66,6 +69,10 @@ class EvaluationTemplate {
 
   /// Every item, in layout order.
   final List<EvaluationTemplateItem> items;
+
+  /// Whether any evaluation, soft-deleted included, is written against the
+  /// template: its items and layout are then frozen (club_server#535, R27a).
+  final bool inUse;
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
@@ -86,6 +93,7 @@ class EvaluationTemplate {
     String? createdBy,
     List<EvaluationLayoutEntry<int>>? layout,
     List<EvaluationTemplateItem>? items,
+    bool? inUse,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
     DateTime? Function()? deletedAtUtc,
@@ -96,6 +104,7 @@ class EvaluationTemplate {
       createdBy: createdBy ?? this.createdBy,
       layout: layout ?? this.layout,
       items: items ?? this.items,
+      inUse: inUse ?? this.inUse,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
       deletedAtUtc: deletedAtUtc != null ? deletedAtUtc() : this.deletedAtUtc,
@@ -109,6 +118,7 @@ class EvaluationTemplate {
       'createdBy': createdBy,
       'layout': layout.map((e) => e.toWire((id) => id)).toList(),
       'items': items.map((i) => i.toMap()).toList(),
+      'inUse': inUse,
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
       'deletedAtUtc': deletedAtUtc?.millisecondsSinceEpoch,
@@ -120,7 +130,7 @@ class EvaluationTemplate {
   @override
   String toString() =>
       'EvaluationTemplate(id: $id, name: $name, items: ${items.length}, '
-      'deletedAtUtc: $deletedAtUtc)';
+      'inUse: $inUse, deletedAtUtc: $deletedAtUtc)';
 
   @override
   bool operator ==(Object other) {
@@ -131,6 +141,7 @@ class EvaluationTemplate {
         other.createdBy == createdBy &&
         evaluationLayoutEquality.equals(other.layout, layout) &&
         evaluationLayoutEquality.equals(other.items, items) &&
+        other.inUse == inUse &&
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.deletedAtUtc == deletedAtUtc;
@@ -143,6 +154,7 @@ class EvaluationTemplate {
     createdBy,
     evaluationLayoutEquality.hash(layout),
     evaluationLayoutEquality.hash(items),
+    inUse,
     createdAtUtc,
     updatedAtUtc,
     deletedAtUtc,

@@ -127,6 +127,23 @@ class RemoteEvaluationSource implements EvaluationSource {
   }
 
   @override
+  Future<EvaluationStaffView> uploadEvidence(
+    int id,
+    int itemId, {
+    required List<int> bytes,
+    required String filename,
+    String? contentType,
+  }) async {
+    final response = await _store.uploadMultipart(
+      endpoints.evaluations.evidence(id, itemId),
+      fileBytes: bytes,
+      filename: filename,
+      contentType: contentType,
+    );
+    return EvaluationStaffView.fromMap(response);
+  }
+
+  @override
   Future<EvaluationStaffView> deleteEvaluation(int id) async {
     final response = await _store.delete(endpoints.evaluations.byId(id));
     if (response == null) {

@@ -18,6 +18,8 @@ class EvaluationEndpoints {
   String transfer(int id) => '/evaluations/by_id/$id/transfer';
   String pdf(int id) => '/evaluations/by_id/$id/pdf';
   String answer(int id, int itemId) => '/evaluations/by_id/$id/answers/$itemId';
+  String evidence(int id, int itemId) =>
+      '/evaluations/by_id/$id/evidence/$itemId';
 
   String get templates => '/evaluations/templates';
   String get templatesDeleted => '/evaluations/templates/deleted';
