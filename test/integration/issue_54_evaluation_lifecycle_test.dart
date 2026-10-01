@@ -54,10 +54,19 @@ void main() {
           layout: standardLayout(),
         );
 
-    Future<EvaluationStaffView> draft() => coach.evaluations.createEvaluation(
-      templateId: template.id,
-      createdFor: memberName,
-    );
+    // One coach holds one live review per member, template and period
+    // (R7), and a period ends in the past (R4): each draft gets its own
+    // one-day period, counted on from a fixed past date.
+    var days = 0;
+    Future<EvaluationStaffView> draft() {
+      final day = DateTime.utc(2025).add(Duration(days: days++));
+      return coach.evaluations.createEvaluation(
+        templateId: template.id,
+        createdFor: memberName,
+        periodStartUtc: day,
+        periodEndUtc: day,
+      );
+    }
 
     setUpAll(() async {
       sudo = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -394,24 +403,38 @@ void main() {
         expect((await admin.evaluations.getTemplate(t.id)).layout, reversed);
       });
 
-      test('54.27: a coach cannot edit items', () async {
+      test('54.27: a coach edits items; a member cannot', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
+        final t = await newTemplate('coach_edit');
+        final added = await coach.evaluations.addItem(
+          t.id,
+          const EvaluationQaItem(question: 'By a coach'),
+        );
+        expect(added.items, hasLength(t.items.length + 1));
+        expect(added.items.last, isA<EvaluationQaItem>());
+        final removed = await coach.evaluations.removeItem(
+          t.id,
+          added.items.last.id!,
+        );
+        expect(removed.items, t.items);
+
         await expectLater(
-          coach.evaluations.addItem(
-            template.id,
-            const EvaluationQaItem(question: 'By a coach'),
+          member.evaluations.addItem(
+            t.id,
+            const EvaluationQaItem(question: 'By a member'),
           ),
           throwsA(
             isA<ServerException>().having((e) => e.statusCode, 's', 403),
           ),
         );
         await expectLater(
-          coach.evaluations.removeItem(template.id, template.items.last.id!),
+          member.evaluations.removeItem(t.id, t.items.last.id!),
           throwsA(
             isA<ServerException>().having((e) => e.statusCode, 's', 403),
           ),
         );
+        expect((await admin.evaluations.getTemplate(t.id)).items, t.items);
       });
     });
 

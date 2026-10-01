@@ -41,6 +41,16 @@ Map<String, dynamic> page(List<Map<String, dynamic>> items) => {
   'limit': 20,
 };
 
+Matcher throwsCode(int status, String code) => throwsA(
+  isA<ServerException>()
+      .having((e) => e.statusCode, 'statusCode', status)
+      .having((e) => e.code, 'code', code),
+);
+
+http.Response errorResponse(int status, String code) => jsonResponse({
+  'detail': {'code': code, 'message': code},
+}, status);
+
 void main() {
   group('Issue 98: RemoteEvaluationSource evaluations', () {
     test('createEvaluation sends template, member, event and period', () async {
@@ -117,13 +127,15 @@ void main() {
       });
     });
 
-    test('updateEvaluationPeriod sends both bounds', () async {
+    test('updateEvaluation sends both bounds', () async {
       final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
 
-      await h.source.updateEvaluationPeriod(
+      await h.source.updateEvaluation(
         21,
-        periodStartUtc: DateTime.fromMillisecondsSinceEpoch(3000, isUtc: true),
-        periodEndUtc: DateTime.fromMillisecondsSinceEpoch(4000, isUtc: true),
+        periodStartUtc: () =>
+            DateTime.fromMillisecondsSinceEpoch(3000, isUtc: true),
+        periodEndUtc: () =>
+            DateTime.fromMillisecondsSinceEpoch(4000, isUtc: true),
       );
 
       final r = h.requests.single;
@@ -132,23 +144,108 @@ void main() {
       expect(bodyOf(r), {'periodStartUtc': 3000, 'periodEndUtc': 4000});
     });
 
-    test(
-      'updateEvaluationPeriod clears the period with explicit nulls',
-      () async {
-        final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
+    test('updateEvaluation clears the period with explicit nulls', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
 
-        await h.source.updateEvaluationPeriod(
-          21,
-          periodStartUtc: null,
-          periodEndUtc: null,
+      await h.source.updateEvaluation(
+        21,
+        periodStartUtc: () => null,
+        periodEndUtc: () => null,
+      );
+
+      expect(bodyOf(h.requests.single), {
+        'periodStartUtc': null,
+        'periodEndUtc': null,
+      });
+    });
+
+    test('updateEvaluation sends the event alone, leaving the period '
+        'out', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
+
+      await h.source.updateEvaluation(21, eventId: () => 9);
+
+      final r = h.requests.single;
+      expect(r.method, 'PATCH');
+      expect(r.url.path, '/v1/evaluations/by_id/21');
+      expect(bodyOf(r), {'eventId': 9});
+    });
+
+    test('updateEvaluation makes a draft general with an explicit null '
+        'event', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
+
+      await h.source.updateEvaluation(21, eventId: () => null);
+
+      expect(bodyOf(h.requests.single), {'eventId': null});
+    });
+
+    test('updateEvaluation sends the event and the period together', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
+
+      final view = await h.source.updateEvaluation(
+        21,
+        eventId: () => 9,
+        periodStartUtc: () =>
+            DateTime.fromMillisecondsSinceEpoch(3000, isUtc: true),
+        periodEndUtc: () =>
+            DateTime.fromMillisecondsSinceEpoch(3000, isUtc: true),
+      );
+
+      expect(bodyOf(h.requests.single), {
+        'eventId': 9,
+        'periodStartUtc': 3000,
+        'periodEndUtc': 3000,
+      });
+      expect(view.id, 21);
+    });
+
+    test('updateEvaluation with nothing to change sends an empty '
+        'body', () async {
+      final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
+
+      await h.source.updateEvaluation(21);
+
+      expect(bodyOf(h.requests.single), isEmpty);
+    });
+
+    for (final code in [
+      SdkErrorCode.periodInFuture,
+      SdkErrorCode.duplicateEvaluation,
+      SdkErrorCode.notEligible,
+    ]) {
+      test('updateEvaluation surfaces a 422 $code as a ServerException '
+          'with its code', () async {
+        final h = evaluationHarness((_) => errorResponse(422, code));
+
+        await expectLater(
+          h.source.updateEvaluation(21, eventId: () => 9),
+          throwsCode(422, code),
         );
+      });
+    }
 
-        expect(bodyOf(h.requests.single), {
-          'periodStartUtc': null,
-          'periodEndUtc': null,
-        });
-      },
-    );
+    test('createEvaluation surfaces a 422 DUPLICATE_EVALUATION', () async {
+      final h = evaluationHarness(
+        (_) => errorResponse(422, SdkErrorCode.duplicateEvaluation),
+      );
+
+      await expectLater(
+        h.source.createEvaluation(templateId: 5, createdFor: 'member1'),
+        throwsCode(422, 'DUPLICATE_EVALUATION'),
+      );
+    });
+
+    test('transferEvaluation surfaces a 422 DUPLICATE_EVALUATION', () async {
+      final h = evaluationHarness(
+        (_) => errorResponse(422, SdkErrorCode.duplicateEvaluation),
+      );
+
+      await expectLater(
+        h.source.transferEvaluation(21, owner: 'coach2'),
+        throwsCode(422, 'DUPLICATE_EVALUATION'),
+      );
+    });
 
     test('putAnswer PUTs the answer to the item', () async {
       final h = evaluationHarness((_) => jsonResponse(staffViewPayload()));
@@ -237,16 +334,6 @@ void main() {
   });
 
   group('Issue 98: RemoteEvaluationSource.uploadEvidence', () {
-    Matcher throwsCode(int status, String code) => throwsA(
-      isA<ServerException>()
-          .having((e) => e.statusCode, 'statusCode', status)
-          .having((e) => e.code, 'code', code),
-    );
-
-    http.Response errorResponse(int status, String code) => jsonResponse({
-      'detail': {'code': code, 'message': code},
-    }, status);
-
     test('POSTs the file as multipart field "file" to the item and reads '
         'the evaluation', () async {
       final h = evaluationHarness((_) => jsonResponse(staffViewPayload(), 201));
@@ -415,6 +502,24 @@ void main() {
       expect(r.method, 'DELETE');
       expect(r.url.path, '/v1/evaluations/templates/by_id/5/items/11');
       expect(template.id, 5);
+    });
+
+    test('createTemplate surfaces a 422 TEMPLATE_NAME_TAKEN', () async {
+      final h = evaluationHarness(
+        (_) => errorResponse(422, SdkErrorCode.templateNameTaken),
+      );
+
+      await expectLater(
+        h.source.createTemplate(
+          name: 'Term review',
+          layout: [
+            EvaluationLayoutItem(
+              EvaluationTemplateItem.fromMap(ratingItemPayload()),
+            ),
+          ],
+        ),
+        throwsCode(422, 'TEMPLATE_NAME_TAKEN'),
+      );
     });
 
     test('searchItems sends the text and type', () async {

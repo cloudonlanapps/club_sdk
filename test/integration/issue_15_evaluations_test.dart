@@ -17,6 +17,9 @@ import '../utils/test_client.dart';
 /// evaluation exists only for its effective owner; the member then reads it
 /// without its private items.
 ///
+/// A coach holds one live review per member, template and period (R7), so
+/// `draft` gives each evaluation its own one-day period in the past.
+///
 /// Runs against both stacks: `just test` (module off) asserts the 503,
 /// `just test-modules issue_15_evaluations_test.dart` the behaviour.
 void main() {
@@ -57,11 +60,25 @@ void main() {
       return client;
     }
 
-    Future<EvaluationStaffView> draft({String createdFor = memberName}) =>
-        coach.evaluations.createEvaluation(
-          templateId: template.id,
-          createdFor: createdFor,
-        );
+    // A review period ends in the past (R4), and one coach holds one live
+    // review per member, template and period (R7): each draft gets its own
+    // one-day period, counted back from a fixed past date.
+    var days = 0;
+    DateTime nextDay() => DateTime.utc(2025).add(Duration(days: days++));
+
+    Future<EvaluationStaffView> draft({
+      String createdFor = memberName,
+      SecureClient? by,
+      DateTime? day,
+    }) {
+      final d = day ?? nextDay();
+      return (by ?? coach).evaluations.createEvaluation(
+        templateId: template.id,
+        createdFor: createdFor,
+        periodStartUtc: d,
+        periodEndUtc: d,
+      );
+    }
 
     /// A draft with its one required question answered, ready to save.
     Future<EvaluationStaffView> completeDraft() async {
@@ -206,18 +223,46 @@ void main() {
         );
       });
 
-      test('15.03: a coach reads templates but cannot write them', () async {
+      test('15.03: a coach writes templates; a member cannot', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
+        final byCoach = await coach.evaluations.createTemplate(
+          name: 'test_i15_by_coach',
+          layout: standardLayout(),
+        );
+        expect(byCoach.createdBy, coachName);
+        final renamed = await coach.evaluations.updateTemplate(
+          byCoach.id,
+          name: 'test_i15_by_coach_renamed',
+        );
+        expect(renamed.name, 'test_i15_by_coach_renamed');
+        final added = await coach.evaluations.addItem(
+          byCoach.id,
+          const EvaluationQaItem(question: 'Added by a coach'),
+        );
+        expect(added.items, hasLength(byCoach.items.length + 1));
+        final deleted = await coach.evaluations.deleteTemplate(byCoach.id);
+        expect(deleted.deletedAtUtc, isNotNull);
+        final gone = await coach.evaluations.listDeletedTemplates(limit: 100);
+        expect(gone.items.map((t) => t.id), contains(byCoach.id));
+        final restored = await coach.evaluations.restoreTemplate(byCoach.id);
+        expect(restored.deletedAtUtc, isNull);
+        expect(
+          (await admin.evaluations.getTemplate(byCoach.id)).name,
+          'test_i15_by_coach_renamed',
+        );
+
         await expectLater(
-          coach.evaluations.createTemplate(
-            name: 'test_i15_by_coach',
+          member.evaluations.createTemplate(
+            name: 'test_i15_by_member',
             layout: standardLayout(),
           ),
-          throwsCode(403, SdkErrorCode.insufficientPermission),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 's', 403),
+          ),
         );
         await expectLater(
-          coach.evaluations.updateTemplate(template.id, name: 'x'),
+          member.evaluations.updateTemplate(template.id, name: 'x'),
           throwsA(
             isA<ServerException>().having((e) => e.statusCode, 's', 403),
           ),
@@ -226,6 +271,49 @@ void main() {
           (await admin.evaluations.getTemplate(template.id)).name,
           'test_i15_template',
         );
+      });
+
+      test('15.06: a live template name is unique, ignoring case and '
+          'surrounding spaces', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await expectLater(
+          coach.evaluations.createTemplate(
+            name: '  TEST_I15_Template ',
+            layout: standardLayout(),
+          ),
+          throwsCode(422, SdkErrorCode.templateNameTaken),
+        );
+
+        final other = await coach.evaluations.createTemplate(
+          name: 'test_i15_unique',
+          layout: standardLayout(),
+        );
+        await expectLater(
+          coach.evaluations.updateTemplate(other.id, name: 'Test_I15_Template'),
+          throwsCode(422, SdkErrorCode.templateNameTaken),
+        );
+        expect(
+          (await coach.evaluations.getTemplate(other.id)).name,
+          'test_i15_unique',
+        );
+
+        // A soft-deleted template holds no name, so restoring it after its
+        // name is reused is refused.
+        await coach.evaluations.deleteTemplate(other.id);
+        final reused = await coach.evaluations.createTemplate(
+          name: 'TEST_I15_UNIQUE',
+          layout: standardLayout(),
+        );
+        expect(reused.name, 'TEST_I15_UNIQUE');
+        await expectLater(
+          coach.evaluations.restoreTemplate(other.id),
+          throwsCode(422, SdkErrorCode.templateNameTaken),
+        );
+        final deleted = await coach.evaluations.listDeletedTemplates(
+          limit: 100,
+        );
+        expect(deleted.items.map((t) => t.id), contains(other.id));
       });
 
       test('15.04: a template in use keeps its items but may be '
@@ -389,6 +477,100 @@ void main() {
       });
     });
 
+    group('periods and duplicates', () {
+      test('15.15: a period ending in the future is refused', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final tomorrow = DateTime.now().toUtc().add(const Duration(days: 1));
+        await expectLater(
+          coach.evaluations.createEvaluation(
+            templateId: template.id,
+            createdFor: memberName,
+            periodStartUtc: DateTime.utc(2025, 12),
+            periodEndUtc: tomorrow,
+          ),
+          throwsCode(422, SdkErrorCode.periodInFuture),
+        );
+
+        final e = await draft();
+        await expectLater(
+          coach.evaluations.updateEvaluation(
+            e.id,
+            periodStartUtc: () => DateTime.utc(2025, 12),
+            periodEndUtc: () => tomorrow,
+          ),
+          throwsCode(422, SdkErrorCode.periodInFuture),
+        );
+        expect(
+          (await coach.evaluations.getEvaluation(e.id)).periodEndUtc,
+          e.periodEndUtc,
+        );
+      });
+
+      test('15.16: a one-day period is accepted; an end before the start '
+          'is not', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final day = nextDay();
+        final e = await draft(day: day);
+        expect(e.periodStartUtc, day);
+        expect(e.periodEndUtc, day);
+
+        await expectLater(
+          coach.evaluations.createEvaluation(
+            templateId: template.id,
+            createdFor: memberName,
+            periodStartUtc: nextDay(),
+            periodEndUtc: day,
+          ),
+          throwsCode(422, SdkErrorCode.validationError),
+        );
+      });
+
+      test('15.17: a coach holds one live review per member, template and '
+          'period', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final day = nextDay();
+        final first = await draft(day: day);
+        await expectLater(
+          draft(day: day),
+          throwsCode(422, SdkErrorCode.duplicateEvaluation),
+        );
+
+        // Another member, another coach or another period is another key.
+        final forOther = await draft(createdFor: otherMemberName, day: day);
+        expect(forOther.periodStartUtc, day);
+        final byOther = await draft(by: otherCoach, day: day);
+        expect(byOther.createdBy, otherCoachName);
+        final later = await draft();
+
+        // Moving a draft onto the key of a live one is refused.
+        await expectLater(
+          coach.evaluations.updateEvaluation(
+            later.id,
+            periodStartUtc: () => day,
+            periodEndUtc: () => day,
+          ),
+          throwsCode(422, SdkErrorCode.duplicateEvaluation),
+        );
+        expect(
+          (await coach.evaluations.getEvaluation(later.id)).periodStartUtc,
+          later.periodStartUtc,
+        );
+
+        // A soft-deleted review frees its key, and restoring it while its
+        // twin is live is refused.
+        await coach.evaluations.deleteEvaluation(first.id);
+        final twin = await draft(day: day);
+        expect(twin.periodStartUtc, day);
+        await expectLater(
+          coach.evaluations.restoreEvaluation(first.id),
+          throwsCode(422, SdkErrorCode.duplicateEvaluation),
+        );
+      });
+    });
+
     group('answers', () {
       test('15.20: every kind of question takes its answer', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
@@ -539,10 +721,10 @@ void main() {
           final e = await draft();
           final start = DateTime.utc(2026, 1, 1);
           final end = DateTime.utc(2026, 3, 31);
-          final set = await coach.evaluations.updateEvaluationPeriod(
+          final set = await coach.evaluations.updateEvaluation(
             e.id,
-            periodStartUtc: start,
-            periodEndUtc: end,
+            periodStartUtc: () => start,
+            periodEndUtc: () => end,
           );
           expect(set.periodStartUtc, start);
           expect(set.periodEndUtc, end);
@@ -552,21 +734,25 @@ void main() {
           );
 
           await expectLater(
-            coach.evaluations.updateEvaluationPeriod(
+            coach.evaluations.updateEvaluation(
               e.id,
-              periodStartUtc: start,
-              periodEndUtc: null,
+              periodStartUtc: () => start,
+              periodEndUtc: () => null,
             ),
             throwsCode(422, SdkErrorCode.validationError),
           );
 
-          final cleared = await coach.evaluations.updateEvaluationPeriod(
+          final cleared = await coach.evaluations.updateEvaluation(
             e.id,
-            periodStartUtc: null,
-            periodEndUtc: null,
+            periodStartUtc: () => null,
+            periodEndUtc: () => null,
           );
           expect(cleared.periodStartUtc, isNull);
           expect(cleared.periodEndUtc, isNull);
+
+          // The no-period review of this member and template is one key
+          // (R7); free it for the event-scoped tests.
+          await coach.evaluations.deleteEvaluation(e.id);
         },
       );
     });
@@ -611,11 +797,7 @@ void main() {
           throwsCode(422, SdkErrorCode.invalidState),
         );
         await expectLater(
-          coach.evaluations.updateEvaluationPeriod(
-            e.id,
-            periodStartUtc: null,
-            periodEndUtc: null,
-          ),
+          coach.evaluations.updateEvaluation(e.id, eventId: () => null),
           throwsCode(422, SdkErrorCode.invalidState),
         );
 
@@ -685,6 +867,24 @@ void main() {
           throwsCode(422, SdkErrorCode.notEligible),
         );
         expect((await coach.evaluations.getEvaluation(e.id)).owner, isNull);
+      });
+
+      test('15.44: a coach who holds the twin cannot receive it', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final day = nextDay();
+        final e = await draft(day: day);
+        final held = await draft(by: otherCoach, day: day);
+        expect(held.effectiveOwner, otherCoachName);
+
+        await expectLater(
+          coach.evaluations.transferEvaluation(e.id, owner: otherCoachName),
+          throwsCode(422, SdkErrorCode.duplicateEvaluation),
+        );
+        expect(
+          (await coach.evaluations.getEvaluation(e.id)).effectiveOwner,
+          coachName,
+        );
       });
 
       test('15.43: a published evaluation cannot be transferred', () async {
@@ -912,6 +1112,103 @@ void main() {
           ),
           throwsCode(404, SdkErrorCode.eventNotFound),
         );
+      });
+
+      group("a draft's event", () {
+        late EvaluationTemplate moving;
+
+        setUpAll(() async {
+          if (!evaluationsOn) return;
+          // Its own template: the no-period key of this member on the
+          // main template is held by 15.60's evaluation (R7).
+          moving = await coach.evaluations.createTemplate(
+            name: 'test_i15_moving',
+            layout: standardLayout(),
+          );
+        });
+
+        test('15.64: a draft moves to an event and back to general, keeping '
+            'its period', () async {
+          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) {
+            return;
+          }
+
+          final e = await coach.evaluations.createEvaluation(
+            templateId: moving.id,
+            createdFor: memberName,
+          );
+          expect(e.isGeneral, isTrue);
+
+          final scoped = await coach.evaluations.updateEvaluation(
+            e.id,
+            eventId: () => event.id,
+          );
+          expect(scoped.eventId, event.id);
+          expect(scoped.isGeneral, isFalse);
+          expect(scoped.periodStartUtc, isNull);
+          expect(
+            (await coach.evaluations.getEvaluation(e.id)).eventId,
+            event.id,
+          );
+
+          final general = await coach.evaluations.updateEvaluation(
+            e.id,
+            eventId: () => null,
+          );
+          expect(general.eventId, isNull);
+          expect(general.isGeneral, isTrue);
+
+          final start = DateTime.utc(2025, 6);
+          final end = DateTime.utc(2025, 6, 30);
+          final withPeriod = await coach.evaluations.updateEvaluation(
+            e.id,
+            periodStartUtc: () => start,
+            periodEndUtc: () => end,
+          );
+          expect(withPeriod.periodStartUtc, start);
+          final unchanged = await coach.evaluations.updateEvaluation(e.id);
+          expect(unchanged.periodStartUtc, start);
+          expect(unchanged.periodEndUtc, end);
+          expect(unchanged.isGeneral, isTrue);
+        });
+
+        test('15.65: moving a draft to an event checks eligibility '
+            'again', () async {
+          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) {
+            return;
+          }
+
+          final e = await coach.evaluations.createEvaluation(
+            templateId: moving.id,
+            createdFor: otherMemberName,
+          );
+          await expectLater(
+            coach.evaluations.updateEvaluation(e.id, eventId: () => event.id),
+            throwsCode(422, SdkErrorCode.notEligible),
+          );
+          await expectLater(
+            coach.evaluations.updateEvaluation(e.id, eventId: () => 999999),
+            throwsCode(404, SdkErrorCode.eventNotFound),
+          );
+
+          // The attendance lies outside a past period: not eligible.
+          final m = await coach.evaluations.createEvaluation(
+            templateId: moving.id,
+            createdFor: memberName,
+            periodStartUtc: DateTime.utc(2025, 2),
+            periodEndUtc: DateTime.utc(2025, 2, 28),
+          );
+          await expectLater(
+            coach.evaluations.updateEvaluation(m.id, eventId: () => event.id),
+            throwsCode(422, SdkErrorCode.notEligible),
+          );
+          final read = await coach.evaluations.getEvaluation(e.id);
+          expect(read.isGeneral, isTrue);
+          expect(
+            (await coach.evaluations.getEvaluation(m.id)).isGeneral,
+            isTrue,
+          );
+        });
       });
     });
   });
