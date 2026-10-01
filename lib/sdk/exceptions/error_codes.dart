@@ -221,6 +221,15 @@ abstract final class SdkErrorCode {
   // Evidence on an item that is not a question allowing it, or a file that
   // is not an image, a video or a PDF.
   static const invalidEvidence = 'INVALID_EVIDENCE';
+  // A live template already holds the name, compared without regard to
+  // case or surrounding spaces: create, rename and restore.
+  static const templateNameTaken = 'TEMPLATE_NAME_TAKEN';
+  // The effective owner already holds a live review of this member and
+  // template over the same period (the exact bounds, or none): create, a
+  // draft's event or period change, transfer and restore.
+  static const duplicateEvaluation = 'DUPLICATE_EVALUATION';
+  // A review period ending after the server's clock: a review looks back.
+  static const periodInFuture = 'PERIOD_IN_FUTURE';
 
   // Credit system (#14, club_server#294).
   // Opening an account against a camp or one-off: credit is for programmes.

@@ -25,14 +25,17 @@ import '../models/pagination.dart';
 ///
 /// Lifecycle is draft → saved → published, and a draft cannot be published
 /// directly (422 `INVALID_TRANSITION`). Only a draft is edited — its
-/// answers, one at a time, and its period; anything else is 422
+/// answers, one at a time, its event and its period; anything else is 422
 /// `INVALID_STATE`. Saving refuses an incomplete draft with 422
 /// `INCOMPLETE`, whose `ServerException.details['details']['itemIds']`
 /// names the items. Event-scoped evaluations require the owner on the
 /// event's coach list and an attendance record for the member (422
 /// `NOT_ELIGIBLE`).
 ///
-/// Templates are read by any staff member and written only by an admin.
+/// Templates are read and written by any staff member — an admin or a
+/// coach; a member gets 403. Hard-deleting a template stays super-admin
+/// only. A live template's name is unique, compared without regard to
+/// case or surrounding spaces (422 `TEMPLATE_NAME_TAKEN`).
 abstract interface class EvaluationSource {
   // ══════════════════════════════════════════════════════════════════════════
   // EVALUATIONS
@@ -40,7 +43,14 @@ abstract interface class EvaluationSource {
 
   /// Create a draft with no answers, created by and owned by the calling
   /// coach. No [eventId] makes a general evaluation. A period gives both
-  /// bounds or neither, the start before the end (422 otherwise).
+  /// bounds or neither, the end not before the start (422
+  /// `VALIDATION_ERROR` otherwise); a one-day period ends where it starts.
+  /// A period ending after the server's clock is 422 `PERIOD_IN_FUTURE`:
+  /// a review looks back.
+  ///
+  /// A coach holds one live review per member, template and period — the
+  /// exact bounds, or none, which counts as a value; the event is not part
+  /// of the key. A second one is 422 `DUPLICATE_EVALUATION`.
   Future<EvaluationStaffView> createEvaluation({
     required int templateId,
     required String createdFor,
@@ -69,13 +79,30 @@ abstract interface class EvaluationSource {
     int limit = 20,
   });
 
-  /// Set a draft's period; pass both null to clear it. The member must
-  /// still have an attendance record within it for an event evaluation
-  /// (422 `NOT_ELIGIBLE`). The event and member are fixed at creation.
-  Future<EvaluationStaffView> updateEvaluationPeriod(
+  /// Change a draft's event, its period, or both (club_server#535, R23).
+  ///
+  /// Each argument follows the ValueGetter pattern: an omitted (null)
+  /// getter leaves that field as it is, and a getter returning null clears
+  /// it. `eventId: () => null` makes the draft general; `eventId: () => 9`
+  /// moves it to event 9. A period gives both bounds or neither, so pass
+  /// [periodStartUtc] and [periodEndUtc] together — both returning null
+  /// clear it; one alone, or an end before the start, is 422
+  /// `VALIDATION_ERROR`. The end may equal the start (a one-day period) but
+  /// not lie after the server's clock (422 `PERIOD_IN_FUTURE`).
+  ///
+  /// Eligibility is checked again for the effective owner against the
+  /// resulting event and period: 422 `NOT_ELIGIBLE` when the owner does not
+  /// coach that event or the member has no attendance record in it (within
+  /// the period, if any); 404 `EVENT_NOT_FOUND` for an unknown event. A
+  /// period that makes this a second live review of the same member and
+  /// template over the same period for the owner is 422
+  /// `DUPLICATE_EVALUATION`. Only a draft is edited (422 `INVALID_STATE`);
+  /// the member is fixed at creation.
+  Future<EvaluationStaffView> updateEvaluation(
     int id, {
-    required DateTime? periodStartUtc,
-    required DateTime? periodEndUtc,
+    int? Function()? eventId,
+    DateTime? Function()? periodStartUtc,
+    DateTime? Function()? periodEndUtc,
   });
 
   /// Write the answer to item [itemId] of a draft, replacing any earlier
@@ -121,7 +148,9 @@ abstract interface class EvaluationSource {
   Future<void> hardDeleteEvaluation(int id);
 
   /// Restore a soft-deleted evaluation.
-  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted; 422
+  /// `DUPLICATE_EVALUATION` while the owner holds a live review of the same
+  /// member, template and period.
   Future<EvaluationStaffView> restoreEvaluation(int id);
 
   /// draft → saved, once every required question is answered and every
@@ -142,7 +171,8 @@ abstract interface class EvaluationSource {
   /// owner, or by an admin naming it by id. Returns nothing — afterwards
   /// only the new owner sees it. The new owner must be eligible as the
   /// creator was (422 `NOT_ELIGIBLE`); a published one is 422
-  /// `INVALID_STATE`.
+  /// `INVALID_STATE`. A new owner who already holds a live review of the
+  /// same member, template and period is 422 `DUPLICATE_EVALUATION`.
   Future<void> transferEvaluation(int id, {required String owner});
 
   /// The member copy as it would be published, as PDF bytes: the owner's
@@ -159,7 +189,7 @@ abstract interface class EvaluationSource {
     int limit = 20,
   });
 
-  /// List soft-deleted templates (admin only).
+  /// List soft-deleted templates. Any staff member.
   Future<PaginatedList<EvaluationTemplate>> listDeletedTemplates({
     int offset = 0,
     int limit = 20,
@@ -168,8 +198,10 @@ abstract interface class EvaluationSource {
   /// Fetch one template (404 `TEMPLATE_NOT_FOUND`).
   Future<EvaluationTemplate> getTemplate(int id);
 
-  /// Create a template whole (admin only), its items inline in [layout].
-  /// A template with no question is 422. An item with `originItemId` is a
+  /// Create a template whole, its items inline in [layout]. Any staff
+  /// member. A template with no question is 422; a name a live template
+  /// already holds (ignoring case and surrounding spaces) is 422
+  /// `TEMPLATE_NAME_TAKEN`. An item with `originItemId` is a
   /// copy, which must keep its origin's answer domain (422
   /// `ORIGIN_MISMATCH`; an unknown origin is 404 `ITEM_NOT_FOUND`).
   Future<EvaluationTemplate> createTemplate({
@@ -177,9 +209,10 @@ abstract interface class EvaluationSource {
     required List<EvaluationLayoutEntry<EvaluationTemplateItem>> layout,
   });
 
-  /// Rename (always allowed) or re-lay out a template (admin only). The
-  /// layout must name every item exactly once (422 `INVALID_LAYOUT`). A
-  /// null argument leaves that field unchanged.
+  /// Rename (allowed while in use) or re-lay out a template. Any staff
+  /// member. The layout must name every item exactly once (422
+  /// `INVALID_LAYOUT`); a name another live template holds is 422
+  /// `TEMPLATE_NAME_TAKEN`. A null argument leaves that field unchanged.
   Future<EvaluationTemplate> updateTemplate(
     int id, {
     String? name,
@@ -187,7 +220,7 @@ abstract interface class EvaluationSource {
   });
 
   /// Add [item] at the end of the layout, or of the [section] (created if
-  /// absent). Admin only.
+  /// absent). Any staff member.
   Future<EvaluationTemplate> addItem(
     int templateId,
     EvaluationTemplateItem item, {
@@ -196,14 +229,14 @@ abstract interface class EvaluationSource {
 
   /// Replace item [itemId] whole with [item]; it keeps its id and origin.
   /// Changing its type is 422 `ITEM_TYPE_FIXED`; an item of another
-  /// template is 404 `ITEM_NOT_FOUND`. Admin only.
+  /// template is 404 `ITEM_NOT_FOUND`. Any staff member.
   Future<EvaluationTemplate> replaceItem(
     int templateId,
     int itemId,
     EvaluationTemplateItem item,
   );
 
-  /// Remove item [itemId] and its place in the layout. Admin only.
+  /// Remove item [itemId] and its place in the layout. Any staff member.
   Future<EvaluationTemplate> removeItem(int templateId, int itemId);
 
   /// Items of every live template, matching [search] in their text and of
@@ -215,8 +248,9 @@ abstract interface class EvaluationSource {
     int limit = 20,
   });
 
-  /// Soft-delete a template; returns the deleted row. Refused while a live
-  /// evaluation uses it (422 `TEMPLATE_IN_USE`).
+  /// Soft-delete a template; returns the deleted row. Any staff member.
+  /// Refused while a live evaluation uses it (422 `TEMPLATE_IN_USE`). A
+  /// soft-deleted template holds no name.
   Future<EvaluationTemplate> deleteTemplate(int id);
 
   /// Permanently delete a soft-deleted template (super-admin only).
@@ -224,7 +258,8 @@ abstract interface class EvaluationSource {
   /// first; 422 `TEMPLATE_IN_USE` while any evaluation uses it.
   Future<void> hardDeleteTemplate(int id);
 
-  /// Restore a soft-deleted template.
-  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
+  /// Restore a soft-deleted template. Any staff member.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted; 422
+  /// `TEMPLATE_NAME_TAKEN` if a live template now holds its name.
   Future<EvaluationTemplate> restoreTemplate(int id);
 }

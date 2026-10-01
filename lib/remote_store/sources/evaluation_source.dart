@@ -86,17 +86,27 @@ class RemoteEvaluationSource implements EvaluationSource {
   }
 
   @override
-  Future<EvaluationStaffView> updateEvaluationPeriod(
+  Future<EvaluationStaffView> updateEvaluation(
     int id, {
-    required DateTime? periodStartUtc,
-    required DateTime? periodEndUtc,
+    int? Function()? eventId,
+    DateTime? Function()? periodStartUtc,
+    DateTime? Function()? periodEndUtc,
   }) async {
+    // ValueGetter pattern: an omitted getter leaves the field out of the
+    // body (no change); a getter returning null sends an explicit null.
+    final body = <String, dynamic>{};
+    if (eventId != null) {
+      body['eventId'] = eventId();
+    }
+    if (periodStartUtc != null) {
+      body['periodStartUtc'] = periodStartUtc()?.millisecondsSinceEpoch;
+    }
+    if (periodEndUtc != null) {
+      body['periodEndUtc'] = periodEndUtc()?.millisecondsSinceEpoch;
+    }
     final response = await _store.patch(
       endpoints.evaluations.byId(id),
-      body: <String, dynamic>{
-        'periodStartUtc': periodStartUtc?.millisecondsSinceEpoch,
-        'periodEndUtc': periodEndUtc?.millisecondsSinceEpoch,
-      },
+      body: body,
     );
     return EvaluationStaffView.fromMap(response);
   }
