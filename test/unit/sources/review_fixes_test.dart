@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:club_sdk_2/remote_store/sources/auth_source.dart';
-import 'package:club_sdk_2/remote_store/sources/evaluation_source.dart';
 import 'package:club_sdk_2/remote_store/sources/event_source.dart';
 import 'package:club_sdk_2/remote_store/sources/notification_source.dart';
 import 'package:club_sdk_2/remote_store/sources/public_source.dart';
@@ -12,7 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
-/// Source-level fixes from the SDK review: #45, #46, #47, #48, #51, #52, #53.
+/// Source-level fixes from the SDK review: #45, #47, #48, #51, #52, #53.
 void main() {
   late List<http.Request> requests;
 
@@ -95,65 +94,6 @@ void main() {
       await RemoteAuthSource(store).logout();
 
       expect(store.authToken, isNull);
-    });
-  });
-
-  group('Issue 46: template categories are sent without their id', () {
-    const fetched = [
-      EvaluationCategory(
-        id: 7,
-        key: 'skating',
-        label: 'S',
-        minValue: 1,
-        maxValue: 5,
-      ),
-      EvaluationCategory(
-        id: 8,
-        key: 'passing',
-        label: 'P',
-        minValue: 1,
-        maxValue: 5,
-      ),
-    ];
-
-    test('EvaluationCategory.toInputMap has no id', () {
-      expect(fetched.first.toInputMap(), {
-        'key': 'skating',
-        'label': 'S',
-        'minValue': 1,
-        'maxValue': 5,
-        'defaultValue': null,
-      });
-    });
-
-    test('updateTemplate with fetched categories sends no id', () async {
-      final store = storeWith((_) => error(418, 'STOP'));
-      await expectLater(
-        RemoteEvaluationSource(store).updateTemplate(3, categories: fetched),
-        throwsA(isA<ServerException>()),
-      );
-      final categories = bodyOf(requests.single)['categories'] as List;
-      expect(
-        categories.cast<Map<String, dynamic>>().map((c) => c.containsKey('id')),
-        everyElement(isFalse),
-      );
-    });
-
-    test('createTemplate with fetched categories sends no id', () async {
-      final store = storeWith((_) => error(418, 'STOP'));
-      await expectLater(
-        RemoteEvaluationSource(store).createTemplate(
-          name: 'copy',
-          scopes: const [EvaluationScopeType.event],
-          categories: fetched,
-        ),
-        throwsA(isA<ServerException>()),
-      );
-      final categories = bodyOf(requests.single)['categories'] as List;
-      expect(
-        categories.cast<Map<String, dynamic>>().map((c) => c.containsKey('id')),
-        everyElement(isFalse),
-      );
     });
   });
 

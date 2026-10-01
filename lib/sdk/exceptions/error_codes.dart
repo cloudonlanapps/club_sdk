@@ -83,9 +83,13 @@ abstract final class SdkErrorCode {
   static const galleryItemNotFound = 'GALLERY_ITEM_NOT_FOUND';
   // Credit system (#14): no account with that 8-character code.
   static const creditAccountNotFound = 'CREDIT_ACCOUNT_NOT_FOUND';
-  // Evaluations (club_server#302): unknown evaluation or template id.
+  // Evaluations (club_server#302): unknown evaluation or template id. An
+  // evaluation the caller does not own is not found either (#535).
   static const evaluationNotFound = 'EVALUATION_NOT_FOUND';
   static const templateNotFound = 'TEMPLATE_NOT_FOUND';
+  // An item named through a template it does not belong to, or an unknown
+  // copy origin (club_server#535).
+  static const itemNotFound = 'ITEM_NOT_FOUND';
   // The event has no extended marketing block (club_server#410, #22).
   static const eventMarketingNotFound = 'EVENT_MARKETING_NOT_FOUND';
 
@@ -193,17 +197,39 @@ abstract final class SdkErrorCode {
   static const membersIneligible = 'MEMBERS_INELIGIBLE';
   static const notEligible = 'NOT_ELIGIBLE';
   static const userNotEligibleForEvent = 'USER_NOT_ELIGIBLE_FOR_EVENT';
-  // Evaluations (club_server#302). `INVALID_SCORE`: a score names a
-  // category the template does not declare, or its value is outside the
-  // declared bounds. `TEMPLATE_SCOPE_MISMATCH`: a template applied outside
-  // the scopes it declares. `TEMPLATE_IN_USE`: a template deleted or its
-  // categories re-declared while evaluations reference it. Event-scoped
-  // eligibility failures (author not on `coachNames`, subject without an
-  // attendance record) are `NOT_ELIGIBLE` above; lifecycle misuse is
-  // `INVALID_TRANSITION` / `INVALID_STATE`.
-  static const invalidScore = 'INVALID_SCORE';
-  static const templateScopeMismatch = 'TEMPLATE_SCOPE_MISMATCH';
+  // Evaluations (club_server#302, #535). Event-scoped eligibility failures
+  // (owner not on `coachNames`, member without an attendance record, an
+  // owner without the coach role) are `NOT_ELIGIBLE` above; lifecycle
+  // misuse is `INVALID_TRANSITION`, and editing anything but a draft is
+  // `INVALID_STATE`.
+  // A template deleted, or its items or layout changed, while evaluations
+  // use it. The count is in `ServerException.details['details']['count']`.
   static const templateInUse = 'TEMPLATE_IN_USE';
+  // An answer of the wrong kind, outside its item's domain, or for an item
+  // that is not a question of the evaluation's template.
+  static const invalidAnswer = 'INVALID_ANSWER';
+  // Save refused: a required question is unanswered, or an answer lacks
+  // the coach note it requires. The items are in
+  // `ServerException.details['details']['itemIds']`.
+  static const incomplete = 'INCOMPLETE';
+  // A template layout that does not name every item exactly once.
+  static const invalidLayout = 'INVALID_LAYOUT';
+  // A replacement item of another type than the item it replaces.
+  static const itemTypeFixed = 'ITEM_TYPE_FIXED';
+  // A copied item whose answer domain differs from its origin's.
+  static const originMismatch = 'ORIGIN_MISMATCH';
+  // Evidence on an item that is not a question allowing it, or a file that
+  // is not an image, a video or a PDF.
+  static const invalidEvidence = 'INVALID_EVIDENCE';
+  // A live template already holds the name, compared without regard to
+  // case or surrounding spaces: create, rename and restore.
+  static const templateNameTaken = 'TEMPLATE_NAME_TAKEN';
+  // The effective owner already holds a live review of this member and
+  // template over the same period (the exact bounds, or none): create, a
+  // draft's event or period change, transfer and restore.
+  static const duplicateEvaluation = 'DUPLICATE_EVALUATION';
+  // A review period ending after the server's clock: a review looks back.
+  static const periodInFuture = 'PERIOD_IN_FUTURE';
 
   // Credit system (#14, club_server#294).
   // Opening an account against a camp or one-off: credit is for programmes.

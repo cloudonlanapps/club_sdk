@@ -94,15 +94,36 @@ export 'sdk/models/enums.dart'
         EventType,
         OccurrenceStatus,
         Visibility;
-export 'sdk/models/evaluation_category.dart' show EvaluationCategory;
+export 'sdk/models/evaluation_answer.dart' show EvaluationAnswer;
+export 'sdk/models/evaluation_answer_input.dart' show EvaluationAnswerInput;
+export 'sdk/models/evaluation_choice.dart' show EvaluationChoice;
+export 'sdk/models/evaluation_evidence.dart' show EvaluationEvidence;
+export 'sdk/models/evaluation_item_type.dart' show EvaluationItemType;
+export 'sdk/models/evaluation_layout_entry.dart'
+    show EvaluationLayoutEntry, EvaluationLayoutItem, EvaluationLayoutSection;
+export 'sdk/models/evaluation_media_tags.dart' show EvaluationMediaTags;
+export 'sdk/models/evaluation_member_template.dart'
+    show EvaluationMemberTemplate;
 export 'sdk/models/evaluation_member_view.dart' show EvaluationMemberView;
-export 'sdk/models/evaluation_scope.dart' show EvaluationScope;
-export 'sdk/models/evaluation_scope_type.dart' show EvaluationScopeType;
-export 'sdk/models/evaluation_score.dart' show EvaluationScore;
-export 'sdk/models/evaluation_score_input.dart' show EvaluationScoreInput;
+export 'sdk/models/evaluation_rate_level.dart' show EvaluationRateLevel;
+export 'sdk/models/evaluation_rate_type.dart' show EvaluationRateType;
 export 'sdk/models/evaluation_staff_view.dart' show EvaluationStaffView;
 export 'sdk/models/evaluation_status.dart' show EvaluationStatus;
 export 'sdk/models/evaluation_template.dart' show EvaluationTemplate;
+export 'sdk/models/evaluation_template_item.dart'
+    show
+        EvaluationChoiceItem,
+        EvaluationInfoItem,
+        EvaluationMultipleChoiceItem,
+        EvaluationNumberItem,
+        EvaluationQaItem,
+        EvaluationQuestionItem,
+        EvaluationRatingItem,
+        EvaluationSingleChoiceItem,
+        EvaluationTemplateItem,
+        EvaluationYesNoItem;
+export 'sdk/models/evaluation_template_item_hit.dart'
+    show EvaluationTemplateItemHit;
 export 'sdk/models/event.dart' show Event;
 export 'sdk/models/event_input.dart' show EventInput;
 export 'sdk/models/event_marketing.dart' show EventMarketing;

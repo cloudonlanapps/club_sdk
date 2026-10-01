@@ -1,32 +1,30 @@
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import 'evaluation_category.dart';
-import 'evaluation_scope_type.dart';
+import 'evaluation_layout_entry.dart';
+import 'evaluation_template_item.dart';
 
-const evaluationTemplateListEquality = DeepCollectionEquality();
-
-/// A named, reusable set of score categories (R49–R51).
+/// A template: a [name], its [items] and their [layout] (club_server#535,
+/// R12, R12c, R49).
 ///
-/// Every evaluation names exactly one template (R10a), whose [categories]
-/// are the contract its scores are validated against. A template declares
-/// the [scopes] it may be applied within; applying it elsewhere is 422
-/// `TEMPLATE_SCOPE_MISMATCH`. A template referenced by any evaluation
-/// cannot be deleted or have its categories re-declared (422
-/// `TEMPLATE_IN_USE`). [deletedAtUtc] is set only on soft-deleted rows.
+/// The items are the contract every evaluation's answers are validated
+/// against. [layout] names each item id exactly once, at the top level or
+/// in a section; [items] come in layout order. While any evaluation uses
+/// the template its items and layout are frozen (422 `TEMPLATE_IN_USE`);
+/// renaming stays allowed; [inUse] says so up front (R27a). [deletedAtUtc]
+/// is set only on soft-deleted rows.
 @immutable
 class EvaluationTemplate {
   const EvaluationTemplate({
     required this.id,
     required this.name,
     required this.createdBy,
-    required this.scopes,
-    required this.categories,
+    required this.layout,
+    required this.items,
+    required this.inUse,
     required this.createdAtUtc,
     required this.updatedAtUtc,
-    this.description,
     this.deletedAtUtc,
   });
 
@@ -34,14 +32,12 @@ class EvaluationTemplate {
     return EvaluationTemplate(
       id: map['id'] as int,
       name: map['name'] as String,
-      description: map['description'] as String?,
       createdBy: map['createdBy'] as String,
-      scopes: ((map['scopes'] as List?) ?? const <dynamic>[])
-          .map((e) => EvaluationScopeType.fromWire(e as String))
+      layout: EvaluationLayoutEntry.idsFromWire(map['layout'] as List?),
+      items: ((map['items'] as List?) ?? const <dynamic>[])
+          .map((e) => EvaluationTemplateItem.fromMap(e as Map<String, dynamic>))
           .toList(growable: false),
-      categories: ((map['categories'] as List?) ?? const <dynamic>[])
-          .map((e) => EvaluationCategory.fromMap(e as Map<String, dynamic>))
-          .toList(growable: false),
+      inUse: map['inUse'] as bool? ?? false,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
         isUtc: true,
@@ -64,29 +60,40 @@ class EvaluationTemplate {
 
   final int id;
   final String name;
-  final String? description;
 
   /// Username of the admin who created the template.
   final String createdBy;
 
-  /// The scopes this template may be applied within.
-  final List<EvaluationScopeType> scopes;
+  /// The order of items, by id, optionally grouped into sections.
+  final List<EvaluationLayoutEntry<int>> layout;
 
-  /// The validation contract for scores.
-  final List<EvaluationCategory> categories;
+  /// Every item, in layout order.
+  final List<EvaluationTemplateItem> items;
+
+  /// Whether any evaluation, soft-deleted included, is written against the
+  /// template: its items and layout are then frozen (club_server#535, R27a).
+  final bool inUse;
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
   /// Set only when the template is soft-deleted.
   final DateTime? deletedAtUtc;
 
+  /// The item with [itemId], or null.
+  EvaluationTemplateItem? itemById(int itemId) {
+    for (final item in items) {
+      if (item.id == itemId) return item;
+    }
+    return null;
+  }
+
   EvaluationTemplate copyWith({
     int? id,
     String? name,
-    String? Function()? description,
     String? createdBy,
-    List<EvaluationScopeType>? scopes,
-    List<EvaluationCategory>? categories,
+    List<EvaluationLayoutEntry<int>>? layout,
+    List<EvaluationTemplateItem>? items,
+    bool? inUse,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
     DateTime? Function()? deletedAtUtc,
@@ -94,10 +101,10 @@ class EvaluationTemplate {
     return EvaluationTemplate(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description != null ? description() : this.description,
       createdBy: createdBy ?? this.createdBy,
-      scopes: scopes ?? this.scopes,
-      categories: categories ?? this.categories,
+      layout: layout ?? this.layout,
+      items: items ?? this.items,
+      inUse: inUse ?? this.inUse,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
       deletedAtUtc: deletedAtUtc != null ? deletedAtUtc() : this.deletedAtUtc,
@@ -108,10 +115,10 @@ class EvaluationTemplate {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'description': description,
       'createdBy': createdBy,
-      'scopes': scopes.map((s) => s.wireName).toList(),
-      'categories': categories.map((c) => c.toMap()).toList(),
+      'layout': layout.map((e) => e.toWire((id) => id)).toList(),
+      'items': items.map((i) => i.toMap()).toList(),
+      'inUse': inUse,
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
       'deletedAtUtc': deletedAtUtc?.millisecondsSinceEpoch,
@@ -122,8 +129,8 @@ class EvaluationTemplate {
 
   @override
   String toString() =>
-      'EvaluationTemplate(id: $id, name: $name, scopes: $scopes, '
-      'categories: ${categories.length}, deletedAtUtc: $deletedAtUtc)';
+      'EvaluationTemplate(id: $id, name: $name, items: ${items.length}, '
+      'inUse: $inUse, deletedAtUtc: $deletedAtUtc)';
 
   @override
   bool operator ==(Object other) {
@@ -131,24 +138,25 @@ class EvaluationTemplate {
     return other is EvaluationTemplate &&
         other.id == id &&
         other.name == name &&
-        other.description == description &&
         other.createdBy == createdBy &&
-        evaluationTemplateListEquality.equals(other.scopes, scopes) &&
-        evaluationTemplateListEquality.equals(other.categories, categories) &&
+        evaluationLayoutEquality.equals(other.layout, layout) &&
+        evaluationLayoutEquality.equals(other.items, items) &&
+        other.inUse == inUse &&
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.deletedAtUtc == deletedAtUtc;
   }
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      description.hashCode ^
-      createdBy.hashCode ^
-      evaluationTemplateListEquality.hash(scopes) ^
-      evaluationTemplateListEquality.hash(categories) ^
-      createdAtUtc.hashCode ^
-      updatedAtUtc.hashCode ^
-      deletedAtUtc.hashCode;
+  int get hashCode => Object.hash(
+    id,
+    name,
+    createdBy,
+    evaluationLayoutEquality.hash(layout),
+    evaluationLayoutEquality.hash(items),
+    inUse,
+    createdAtUtc,
+    updatedAtUtc,
+    deletedAtUtc,
+  );
 }

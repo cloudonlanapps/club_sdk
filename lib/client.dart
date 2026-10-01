@@ -168,7 +168,7 @@ class SecureClient {
   final EvaluationSource evaluations;
 
   /// Member-facing evaluation reads (`/v1/myevaluations`): published
-  /// evaluations only, with no coach note.
+  /// evaluations only, without private items.
   final MyEvaluationsSource myEvaluations;
 
   /// Per-evaluation media link operations

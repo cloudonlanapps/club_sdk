@@ -1,75 +1,62 @@
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import 'evaluation_scope.dart';
-import 'evaluation_score.dart';
+import 'evaluation_answer.dart';
 import 'evaluation_status.dart';
 
-const evaluationScoreListEquality = DeepCollectionEquality();
-
-/// An evaluation as staff read it (R41): every field, including the
-/// private [coachNote].
+/// An evaluation as its effective owner reads it (club_server#535, R41):
+/// every answer, private items included.
 ///
-/// This is the projection returned by every `/evaluations` route. The
-/// subject reads `EvaluationMemberView` instead, a separate type that has
-/// no coach note at all (R39). [publishedAtUtc] is set only while the
-/// evaluation is currently published; withdrawal clears it (R20).
-/// [deletedAtUtc] is set only on soft-deleted rows.
+/// This is the projection every `/evaluations` route returns, and only the
+/// effective owner — [owner], else [createdBy] — ever receives it: to
+/// anyone else, an admin included, the evaluation does not exist (404
+/// `EVALUATION_NOT_FOUND`, R38a). The member reads `EvaluationMemberView`.
+/// No [eventId] means a general evaluation. [publishedAtUtc] is set only
+/// while published (R20); [deletedAtUtc] only on soft-deleted rows.
 @immutable
 class EvaluationStaffView {
   const EvaluationStaffView({
     required this.id,
-    required this.subjectUsername,
-    required this.authorUsername,
     required this.templateId,
+    required this.createdFor,
+    required this.createdBy,
     required this.status,
-    required this.scope,
-    required this.scores,
+    required this.answers,
     required this.createdAtUtc,
     required this.updatedAtUtc,
-    this.comment,
-    this.coachNote,
+    this.owner,
+    this.eventId,
+    this.periodStartUtc,
+    this.periodEndUtc,
     this.publishedAtUtc,
     this.deletedAtUtc,
   });
 
   factory EvaluationStaffView.fromMap(Map<String, dynamic> map) {
+    DateTime? instant(Object? wire) => wire == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            (wire as num).toInt(),
+            isUtc: true,
+          );
     return EvaluationStaffView(
       id: map['id'] as int,
-      subjectUsername: map['subjectUsername'] as String,
-      authorUsername: map['authorUsername'] as String,
       templateId: map['templateId'] as int,
+      createdFor: map['createdFor'] as String,
+      createdBy: map['createdBy'] as String,
+      owner: map['owner'] as String?,
+      eventId: map['eventId'] as int?,
+      periodStartUtc: instant(map['periodStartUtc']),
+      periodEndUtc: instant(map['periodEndUtc']),
       status: EvaluationStatus.fromWire(map['status'] as String),
-      scope: EvaluationScope.fromMap(
-        Map<String, dynamic>.from(map['scope'] as Map),
-      ),
-      scores: ((map['scores'] as List?) ?? const <dynamic>[])
-          .map((e) => EvaluationScore.fromMap(e as Map<String, dynamic>))
+      answers: ((map['answers'] as List?) ?? const <dynamic>[])
+          .map((e) => EvaluationAnswer.fromMap(e as Map<String, dynamic>))
           .toList(growable: false),
-      comment: map['comment'] as String?,
-      coachNote: map['coachNote'] as String?,
-      createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
-        map['createdAtUtc'] as int,
-        isUtc: true,
-      ),
-      updatedAtUtc: DateTime.fromMillisecondsSinceEpoch(
-        map['updatedAtUtc'] as int,
-        isUtc: true,
-      ),
-      publishedAtUtc: map['publishedAtUtc'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['publishedAtUtc'] as int,
-              isUtc: true,
-            )
-          : null,
-      deletedAtUtc: map['deletedAtUtc'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['deletedAtUtc'] as int,
-              isUtc: true,
-            )
-          : null,
+      createdAtUtc: instant(map['createdAtUtc'])!,
+      updatedAtUtc: instant(map['updatedAtUtc'])!,
+      publishedAtUtc: instant(map['publishedAtUtc']),
+      deletedAtUtc: instant(map['deletedAtUtc']),
     );
   }
 
@@ -78,23 +65,30 @@ class EvaluationStaffView {
 
   final int id;
 
-  /// The member assessed.
-  final String subjectUsername;
-
-  /// The coach the evaluation is assigned to.
-  final String authorUsername;
-
-  /// The template whose categories the scores are validated against.
+  /// The template whose items the answers are validated against.
   final int templateId;
+
+  /// The member the evaluation is about.
+  final String createdFor;
+
+  /// The coach who started it; never changes.
+  final String createdBy;
+
+  /// The coach it was transferred to, if any.
+  final String? owner;
+
+  /// The event assessed; null for a general evaluation.
+  final int? eventId;
+
+  /// Start of the period covered, if narrowed (R4).
+  final DateTime? periodStartUtc;
+
+  /// End of the period covered, if narrowed (R4).
+  final DateTime? periodEndUtc;
   final EvaluationStatus status;
-  final EvaluationScope scope;
-  final List<EvaluationScore> scores;
 
-  /// Text meant for the subject.
-  final String? comment;
-
-  /// Private note for staff; never reaches the subject (R39).
-  final String? coachNote;
+  /// The answers given, in item order.
+  final List<EvaluationAnswer> answers;
   final DateTime createdAtUtc;
   final DateTime updatedAtUtc;
 
@@ -104,19 +98,34 @@ class EvaluationStaffView {
   /// Set only when soft-deleted.
   final DateTime? deletedAtUtc;
 
-  /// Whether the subject can currently read this evaluation.
+  /// The one coach who sees and acts on it: [owner], else [createdBy].
+  String get effectiveOwner => owner ?? createdBy;
+
+  /// Whether it is about the member in general rather than one event.
+  bool get isGeneral => eventId == null;
+
+  /// Whether the member can currently read it.
   bool get isPublished => publishedAtUtc != null;
+
+  /// The answer to item [itemId], or null.
+  EvaluationAnswer? answerFor(int itemId) {
+    for (final answer in answers) {
+      if (answer.itemId == itemId) return answer;
+    }
+    return null;
+  }
 
   EvaluationStaffView copyWith({
     int? id,
-    String? subjectUsername,
-    String? authorUsername,
     int? templateId,
+    String? createdFor,
+    String? createdBy,
+    String? Function()? owner,
+    int? Function()? eventId,
+    DateTime? Function()? periodStartUtc,
+    DateTime? Function()? periodEndUtc,
     EvaluationStatus? status,
-    EvaluationScope? scope,
-    List<EvaluationScore>? scores,
-    String? Function()? comment,
-    String? Function()? coachNote,
+    List<EvaluationAnswer>? answers,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
     DateTime? Function()? publishedAtUtc,
@@ -124,14 +133,17 @@ class EvaluationStaffView {
   }) {
     return EvaluationStaffView(
       id: id ?? this.id,
-      subjectUsername: subjectUsername ?? this.subjectUsername,
-      authorUsername: authorUsername ?? this.authorUsername,
       templateId: templateId ?? this.templateId,
+      createdFor: createdFor ?? this.createdFor,
+      createdBy: createdBy ?? this.createdBy,
+      owner: owner != null ? owner() : this.owner,
+      eventId: eventId != null ? eventId() : this.eventId,
+      periodStartUtc: periodStartUtc != null
+          ? periodStartUtc()
+          : this.periodStartUtc,
+      periodEndUtc: periodEndUtc != null ? periodEndUtc() : this.periodEndUtc,
       status: status ?? this.status,
-      scope: scope ?? this.scope,
-      scores: scores ?? this.scores,
-      comment: comment != null ? comment() : this.comment,
-      coachNote: coachNote != null ? coachNote() : this.coachNote,
+      answers: answers ?? this.answers,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
       publishedAtUtc: publishedAtUtc != null
@@ -144,14 +156,15 @@ class EvaluationStaffView {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'id': id,
-      'subjectUsername': subjectUsername,
-      'authorUsername': authorUsername,
       'templateId': templateId,
+      'createdFor': createdFor,
+      'createdBy': createdBy,
+      'owner': owner,
+      'eventId': eventId,
+      'periodStartUtc': periodStartUtc?.millisecondsSinceEpoch,
+      'periodEndUtc': periodEndUtc?.millisecondsSinceEpoch,
       'status': status.wireName,
-      'scope': scope.toMap(),
-      'scores': scores.map((s) => s.toMap()).toList(),
-      'comment': comment,
-      'coachNote': coachNote,
+      'answers': answers.map((a) => a.toMap()).toList(),
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
       'publishedAtUtc': publishedAtUtc?.millisecondsSinceEpoch,
@@ -163,23 +176,23 @@ class EvaluationStaffView {
 
   @override
   String toString() =>
-      'EvaluationStaffView(id: $id, subject: $subjectUsername, '
-      'author: $authorUsername, status: $status, scope: $scope, '
-      'publishedAtUtc: $publishedAtUtc)';
+      'EvaluationStaffView(id: $id, createdFor: $createdFor, '
+      'owner: $effectiveOwner, status: $status, eventId: $eventId)';
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is EvaluationStaffView &&
         other.id == id &&
-        other.subjectUsername == subjectUsername &&
-        other.authorUsername == authorUsername &&
         other.templateId == templateId &&
+        other.createdFor == createdFor &&
+        other.createdBy == createdBy &&
+        other.owner == owner &&
+        other.eventId == eventId &&
+        other.periodStartUtc == periodStartUtc &&
+        other.periodEndUtc == periodEndUtc &&
         other.status == status &&
-        other.scope == scope &&
-        evaluationScoreListEquality.equals(other.scores, scores) &&
-        other.comment == comment &&
-        other.coachNote == coachNote &&
+        evaluationAnswerListEquality.equals(other.answers, answers) &&
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.publishedAtUtc == publishedAtUtc &&
@@ -187,18 +200,20 @@ class EvaluationStaffView {
   }
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      subjectUsername.hashCode ^
-      authorUsername.hashCode ^
-      templateId.hashCode ^
-      status.hashCode ^
-      scope.hashCode ^
-      evaluationScoreListEquality.hash(scores) ^
-      comment.hashCode ^
-      coachNote.hashCode ^
-      createdAtUtc.hashCode ^
-      updatedAtUtc.hashCode ^
-      publishedAtUtc.hashCode ^
-      deletedAtUtc.hashCode;
+  int get hashCode => Object.hash(
+    id,
+    templateId,
+    createdFor,
+    createdBy,
+    owner,
+    eventId,
+    periodStartUtc,
+    periodEndUtc,
+    status,
+    evaluationAnswerListEquality.hash(answers),
+    createdAtUtc,
+    updatedAtUtc,
+    publishedAtUtc,
+    deletedAtUtc,
+  );
 }

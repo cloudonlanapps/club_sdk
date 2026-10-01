@@ -3,6 +3,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/evaluation_fixtures.dart';
 import '../utils/event_time.dart';
 import '../utils/module_gate.dart';
 import '../utils/register_and_approve.dart';
@@ -25,6 +26,7 @@ import '../utils/test_png.dart';
 void main() {
   group('club_server#526: wrong-state delete codes', () {
     late SecureClient sudo;
+    late SecureClient coach;
     late bool evaluationsOn;
 
     late int groupId;
@@ -82,6 +84,9 @@ void main() {
         );
       }
       await sudo.users.assignRole(coachName, 'coach');
+      coach = await createRemoteSecureClient(baseUrl: baseUrl);
+      await coach.auth.login(coachName, password);
+      expect((await coach.auth.getCurrentUser()).username, coachName);
 
       groupId = (await sudo.groups.createGroup(name: 'test_i526_group')).id;
       venueId = (await sudo.venues.createVenue(
@@ -109,23 +114,14 @@ void main() {
       if (evaluationsOn) {
         templateId = (await sudo.evaluations.createTemplate(
           name: 'test_i526_template_$suffix',
-          scopes: const [EvaluationScopeType.general],
-          categories: const [
-            EvaluationCategory(
-              key: 'skating',
-              label: 'Skating',
-              minValue: 1,
-              maxValue: 5,
-            ),
-          ],
+          layout: standardLayout(),
         )).id;
-        evaluationId = (await sudo.evaluations.createEvaluation(
-          subjectUsername: memberName,
+        // Only a coach creates an evaluation, and only its owner reads,
+        // deletes or restores it (club_server#535); the super admin
+        // hard-deletes whoever owns it.
+        evaluationId = (await coach.evaluations.createEvaluation(
           templateId: templateId!,
-          scope: const EvaluationScope.general(),
-          authorUsername: coachName,
-          scores: const [EvaluationScoreInput(key: 'skating', value: 4)],
-          comment: 'i526',
+          createdFor: memberName,
         )).id;
       }
     });
@@ -136,13 +132,14 @@ void main() {
       await sudo.media.softDelete(mediaId);
       await sudo.media.hardDelete(mediaId);
       if (evaluationId != null) {
-        await sudo.evaluations.deleteEvaluation(evaluationId!);
+        await coach.evaluations.deleteEvaluation(evaluationId!);
         await sudo.evaluations.hardDeleteEvaluation(evaluationId!);
       }
       if (templateId != null) {
         await sudo.evaluations.deleteTemplate(templateId!);
         await sudo.evaluations.hardDeleteTemplate(templateId!);
       }
+      await coach.auth.logout();
       await sudo.auth.logout();
     });
 
@@ -183,7 +180,7 @@ void main() {
           sudo.evaluations.hardDeleteEvaluation(evaluationId!),
           hardDeleteNeedsSoftDelete,
         );
-        final still = await sudo.evaluations.getEvaluation(evaluationId!);
+        final still = await coach.evaluations.getEvaluation(evaluationId!);
         expect(still.id, evaluationId);
       });
 
@@ -274,10 +271,10 @@ void main() {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
         await expectLater(
-          sudo.evaluations.restoreEvaluation(evaluationId!),
+          coach.evaluations.restoreEvaluation(evaluationId!),
           nothingToRestore,
         );
-        final still = await sudo.evaluations.getEvaluation(evaluationId!);
+        final still = await coach.evaluations.getEvaluation(evaluationId!);
         expect(still.deletedAtUtc, isNull);
       });
 

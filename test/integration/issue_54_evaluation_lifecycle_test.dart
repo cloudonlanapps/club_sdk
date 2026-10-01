@@ -3,16 +3,16 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/evaluation_fixtures.dart';
 import '../utils/module_gate.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 import '../utils/test_png.dart';
 
-/// Issue 54: the evaluation calls no test reached — the delete lifecycle of
-/// evaluations and templates, `updateTemplate`, `transferEvaluation` and
-/// `listMyEvaluationMedia`. Also the fixes they would have caught:
-/// re-sending fetched categories (#46) and media linked to an evaluation
-/// (#42).
+/// Issue 54 / #98: the evaluation calls beyond the core flow — the delete
+/// lifecycles of evaluations and templates, editing a template one item at
+/// a time, copying items between templates, and evidence attached to
+/// answers (club_server#535), including media linked to an evaluation (#42).
 ///
 /// Needs the evaluations module: every test skips on the default stack.
 /// Run with `just test-modules issue_54_evaluation_lifecycle_test.dart`.
@@ -20,49 +20,53 @@ void main() {
   group('Issue 54: evaluation lifecycle', () {
     late SecureClient sudo;
     late SecureClient admin;
+    late SecureClient coach;
+    late SecureClient otherCoach;
     late SecureClient member;
+    late SecureClient otherMember;
     late bool evaluationsOn;
-    late int templateId;
+    late EvaluationTemplate template;
 
     const memberName = 'test_i54_member';
+    const otherMemberName = 'test_i54_other';
     const coachName = 'test_i54_coach';
     const otherCoachName = 'test_i54_coach2';
     const adminName = 'test_i54_admin';
     const password = 'password123';
     final suffix = DateTime.now().millisecondsSinceEpoch;
 
-    const categories = [
-      EvaluationCategory(
-        key: 'skating',
-        label: 'Skating',
-        minValue: 1,
-        maxValue: 5,
-        defaultValue: 3,
-      ),
-      EvaluationCategory(
-        key: 'passing',
-        label: 'Passing',
-        minValue: 1,
-        maxValue: 5,
-      ),
-    ];
+    Matcher throwsCode(int status, String code) => throwsA(
+      isA<ServerException>()
+          .having((e) => e.statusCode, 'status', status)
+          .having((e) => e.code, 'code', code),
+    );
 
-    Future<EvaluationStaffView> draft({String author = coachName}) =>
-        sudo.evaluations.createEvaluation(
-          subjectUsername: memberName,
-          templateId: templateId,
-          scope: const EvaluationScope.general(),
-          authorUsername: author,
-          scores: const [EvaluationScoreInput(key: 'skating', value: 4)],
-          comment: 'i54',
-        );
+    Future<SecureClient> loginAs(String username) async {
+      final client = await createRemoteSecureClient(baseUrl: baseUrl);
+      await client.auth.login(username, password);
+      expect((await client.auth.getCurrentUser()).username, username);
+      return client;
+    }
 
     Future<EvaluationTemplate> newTemplate(String name) =>
-        sudo.evaluations.createTemplate(
+        admin.evaluations.createTemplate(
           name: 'test_i54_${name}_$suffix',
-          scopes: const [EvaluationScopeType.general],
-          categories: categories,
+          layout: standardLayout(),
         );
+
+    // One coach holds one live review per member, template and period
+    // (R7), and a period ends in the past (R4): each draft gets its own
+    // one-day period, counted on from a fixed past date.
+    var days = 0;
+    Future<EvaluationStaffView> draft() {
+      final day = DateTime.utc(2025).add(Duration(days: days++));
+      return coach.evaluations.createEvaluation(
+        templateId: template.id,
+        createdFor: memberName,
+        periodStartUtc: day,
+        periodEndUtc: day,
+      );
+    }
 
     setUpAll(() async {
       sudo = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -74,7 +78,13 @@ void main() {
       await sudo.auth.login(sudoUsername, sudoPassword);
       evaluationsOn = (await stackCapabilities(sudo)).evaluations;
 
-      for (final name in [memberName, coachName, otherCoachName, adminName]) {
+      for (final name in [
+        memberName,
+        otherMemberName,
+        coachName,
+        otherCoachName,
+        adminName,
+      ]) {
         await registerAndApprove(
           client: sudo,
           adminUsername: sudoUsername,
@@ -93,20 +103,21 @@ void main() {
       await sudo.users.assignRole(otherCoachName, 'coach');
       await sudo.users.assignRole(adminName, 'admin');
 
-      admin = await createRemoteSecureClient(baseUrl: baseUrl);
-      await admin.auth.login(adminName, password);
-      member = await createRemoteSecureClient(baseUrl: baseUrl);
-      await member.auth.login(memberName, password);
+      admin = await loginAs(adminName);
+      coach = await loginAs(coachName);
+      otherCoach = await loginAs(otherCoachName);
+      member = await loginAs(memberName);
+      otherMember = await loginAs(otherMemberName);
 
       if (evaluationsOn) {
-        templateId = (await newTemplate('main')).id;
+        template = await newTemplate('main');
       }
     });
 
     tearDownAll(() async {
-      await member.auth.logout();
-      await admin.auth.logout();
-      await sudo.auth.logout();
+      for (final c in [otherMember, member, otherCoach, coach, admin, sudo]) {
+        await c.auth.logout();
+      }
     });
 
     group('evaluation delete lifecycle', () {
@@ -121,81 +132,70 @@ void main() {
           'listing', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final deleted = await sudo.evaluations.deleteEvaluation(id);
+        final deleted = await coach.evaluations.deleteEvaluation(id);
         expect(deleted.deletedAtUtc, isNotNull);
 
-        final active = await sudo.evaluations.listEvaluations(
-          subjectUsername: memberName,
+        final active = await coach.evaluations.listEvaluations(limit: 100);
+        expect(active.items.map((e) => e.id), isNot(contains(id)));
+        final gone = await coach.evaluations.listDeletedEvaluations(
           limit: 100,
         );
-        expect(active.items.map((e) => e.id), isNot(contains(id)));
-        final gone = await sudo.evaluations.listDeletedEvaluations(limit: 100);
         expect(gone.items.map((e) => e.id), contains(id));
       });
 
       test('54.02: restore moves it back', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final restored = await sudo.evaluations.restoreEvaluation(id);
+        final restored = await coach.evaluations.restoreEvaluation(id);
         expect(restored.deletedAtUtc, isNull);
 
-        final active = await sudo.evaluations.listEvaluations(
-          subjectUsername: memberName,
+        final active = await coach.evaluations.listEvaluations(limit: 100);
+        expect(active.items.map((e) => e.id), contains(id));
+        final gone = await coach.evaluations.listDeletedEvaluations(
           limit: 100,
         );
-        expect(active.items.map((e) => e.id), contains(id));
-        final gone = await sudo.evaluations.listDeletedEvaluations(limit: 100);
         expect(gone.items.map((e) => e.id), isNot(contains(id)));
       });
 
-      // club_server#526: refused like every other hard delete of a live
-      // item (it used to hard-delete an evaluation never soft-deleted).
       test('54.03: hard-delete of an active evaluation is refused with 422 '
           'HARD_DELETE_NEEDS_SOFT_DELETE', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
         await expectLater(
           sudo.evaluations.hardDeleteEvaluation(id),
-          throwsA(
-            isA<ServerException>()
-                .having((e) => e.statusCode, 'status', 422)
-                .having(
-                  (e) => e.code,
-                  'code',
-                  SdkErrorCode.hardDeleteNeedsSoftDelete,
-                ),
-          ),
+          throwsCode(422, SdkErrorCode.hardDeleteNeedsSoftDelete),
         );
-        final still = await sudo.evaluations.getEvaluation(id);
+        final still = await coach.evaluations.getEvaluation(id);
         expect(still.deletedAtUtc, isNull);
       });
 
       test('54.04: a regular admin cannot hard-delete', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        await sudo.evaluations.deleteEvaluation(id);
+        await coach.evaluations.deleteEvaluation(id);
         await expectLater(
           admin.evaluations.hardDeleteEvaluation(id),
           throwsA(
-            isA<ServerException>().having((e) => e.statusCode, 'status', 403),
+            isA<ServerException>().having((e) => e.statusCode, 's', 403),
           ),
         );
-        final gone = await sudo.evaluations.listDeletedEvaluations(limit: 100);
+        final gone = await coach.evaluations.listDeletedEvaluations(
+          limit: 100,
+        );
         expect(gone.items.map((e) => e.id), contains(id));
       });
 
-      test('54.05: the super admin hard-deletes; it leaves both '
-          'listings', () async {
+      test('54.05: the super admin hard-deletes one they do not own; it '
+          'leaves both listings', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
         await sudo.evaluations.hardDeleteEvaluation(id);
 
-        final active = await sudo.evaluations.listEvaluations(
-          subjectUsername: memberName,
+        final active = await coach.evaluations.listEvaluations(limit: 100);
+        expect(active.items.map((e) => e.id), isNot(contains(id)));
+        final gone = await coach.evaluations.listDeletedEvaluations(
           limit: 100,
         );
-        expect(active.items.map((e) => e.id), isNot(contains(id)));
-        final gone = await sudo.evaluations.listDeletedEvaluations(limit: 100);
         expect(gone.items.map((e) => e.id), isNot(contains(id)));
       });
     });
@@ -212,59 +212,50 @@ void main() {
           'listing', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final deleted = await sudo.evaluations.deleteTemplate(id);
+        final deleted = await admin.evaluations.deleteTemplate(id);
         expect(deleted.deletedAtUtc, isNotNull);
 
-        final active = await sudo.evaluations.listTemplates(limit: 100);
+        final active = await admin.evaluations.listTemplates(limit: 100);
         expect(active.items.map((t) => t.id), isNot(contains(id)));
-        final gone = await sudo.evaluations.listDeletedTemplates(limit: 100);
+        final gone = await admin.evaluations.listDeletedTemplates(limit: 100);
         expect(gone.items.map((t) => t.id), contains(id));
       });
 
       test('54.12: restore moves it back', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final restored = await sudo.evaluations.restoreTemplate(id);
+        final restored = await admin.evaluations.restoreTemplate(id);
         expect(restored.deletedAtUtc, isNull);
 
-        final active = await sudo.evaluations.listTemplates(limit: 100);
+        final active = await admin.evaluations.listTemplates(limit: 100);
         expect(active.items.map((t) => t.id), contains(id));
-        final gone = await sudo.evaluations.listDeletedTemplates(limit: 100);
+        final gone = await admin.evaluations.listDeletedTemplates(limit: 100);
         expect(gone.items.map((t) => t.id), isNot(contains(id)));
       });
 
-      // club_server#526: as for evaluations.
       test('54.13: hard-delete of an active template is refused with 422 '
           'HARD_DELETE_NEEDS_SOFT_DELETE', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
         await expectLater(
           sudo.evaluations.hardDeleteTemplate(id),
-          throwsA(
-            isA<ServerException>()
-                .having((e) => e.statusCode, 'status', 422)
-                .having(
-                  (e) => e.code,
-                  'code',
-                  SdkErrorCode.hardDeleteNeedsSoftDelete,
-                ),
-          ),
+          throwsCode(422, SdkErrorCode.hardDeleteNeedsSoftDelete),
         );
-        final still = await sudo.evaluations.getTemplate(id);
+        final still = await admin.evaluations.getTemplate(id);
         expect(still.deletedAtUtc, isNull);
       });
 
       test('54.14: a regular admin cannot hard-delete', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        await sudo.evaluations.deleteTemplate(id);
+        await admin.evaluations.deleteTemplate(id);
         await expectLater(
           admin.evaluations.hardDeleteTemplate(id),
           throwsA(
-            isA<ServerException>().having((e) => e.statusCode, 'status', 403),
+            isA<ServerException>().having((e) => e.statusCode, 's', 403),
           ),
         );
-        final gone = await sudo.evaluations.listDeletedTemplates(limit: 100);
+        final gone = await admin.evaluations.listDeletedTemplates(limit: 100);
         expect(gone.items.map((t) => t.id), contains(id));
       });
 
@@ -274,196 +265,362 @@ void main() {
 
         await sudo.evaluations.hardDeleteTemplate(id);
 
-        final active = await sudo.evaluations.listTemplates(limit: 100);
+        final active = await admin.evaluations.listTemplates(limit: 100);
         expect(active.items.map((t) => t.id), isNot(contains(id)));
-        final gone = await sudo.evaluations.listDeletedTemplates(limit: 100);
+        final gone = await admin.evaluations.listDeletedTemplates(limit: 100);
         expect(gone.items.map((t) => t.id), isNot(contains(id)));
       });
     });
 
-    group('updateTemplate', () {
-      // The SDK no longer sends `id` (#46), so this is no longer a 422. The
-      // server then replaces the categories by clearing and re-inserting
-      // them, and the re-inserted keys collide with the unique
-      // (template, key) index before the old rows are deleted: a 500.
-      test(
-        '54.21 (#46): re-sending the fetched categories unchanged '
-        'succeeds',
-        skip:
-            'club_server answers 500 when a template re-declares the keys '
-            'it already has (unique index hit before the old rows go)',
-        () async {
-          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
-
-          final created = await newTemplate('resend');
-          final fetched = await sudo.evaluations.getTemplate(created.id);
-          expect(fetched.categories.every((c) => c.id != null), isTrue);
-
-          final updated = await sudo.evaluations.updateTemplate(
-            created.id,
-            name: 'test_i54_resent_$suffix',
-            categories: fetched.categories,
-          );
-          expect(updated.name, 'test_i54_resent_$suffix');
-          expect(updated.categories.map((c) => c.key), ['skating', 'passing']);
-        },
-      );
-
-      test('54.21b: categories with new keys replace the old ones', () async {
+    group('editing a template', () {
+      test('54.21: an item is added at the end, or into a section', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final created = await newTemplate('rekey');
-        final fetched = await sudo.evaluations.getTemplate(created.id);
-
-        final updated = await sudo.evaluations.updateTemplate(
-          created.id,
-          categories: [
-            for (final c in fetched.categories)
-              c.copyWith(key: '${c.key}_v2', id: () => c.id),
-          ],
+        final t = await newTemplate('add');
+        final atEnd = await admin.evaluations.addItem(
+          t.id,
+          const EvaluationNumberItem(question: 'Laps'),
         );
-        expect(updated.categories.map((c) => c.key), [
-          'skating_v2',
-          'passing_v2',
-        ]);
+        final added = atEnd.items.last;
+        expect(added, isA<EvaluationNumberItem>());
+        expect(atEnd.layout.last, EvaluationLayoutItem(added.id!));
+
+        final inSection = await admin.evaluations.addItem(
+          t.id,
+          const EvaluationQaItem(question: 'Anything else?'),
+          section: 'Skills',
+        );
+        final qa = inSection.items.firstWhere(
+          (i) => i is EvaluationQaItem && i.question == 'Anything else?',
+        );
+        final skills = inSection.layout
+            .whereType<EvaluationLayoutSection<int>>()
+            .single;
+        expect(skills.items.last, qa.id);
+
+        final newSection = await admin.evaluations.addItem(
+          t.id,
+          const EvaluationYesNoItem(question: 'Ready for games?'),
+          section: 'Readiness',
+        );
+        final readiness = newSection.layout.last;
+        expect(readiness, isA<EvaluationLayoutSection<int>>());
+        expect(
+          (readiness as EvaluationLayoutSection<int>).section,
+          'Readiness',
+        );
+        expect(await admin.evaluations.getTemplate(t.id), newSection);
       });
 
-      test("54.22 (#46): a fetched template's categories create a "
-          'copy', () async {
+      test('54.22: an item is replaced whole, keeping its id', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final source = await sudo.evaluations.getTemplate(templateId);
-        final copy = await sudo.evaluations.createTemplate(
-          name: 'test_i54_copy_$suffix',
-          scopes: source.scopes,
-          categories: source.categories,
+        final t = await newTemplate('replace');
+        final rating =
+            t.itemById(itemIdOf(t, EvaluationItemType.rating))!
+                as EvaluationRatingItem;
+        final updated = await admin.evaluations.replaceItem(
+          t.id,
+          rating.id!,
+          rating.copyWith(question: 'Edge work', isPrivate: true),
         );
-        expect(copy.categories.map((c) => c.key), ['skating', 'passing']);
+        final read = updated.itemById(rating.id!)! as EvaluationRatingItem;
+        expect(read.question, 'Edge work');
+        expect(read.isPrivate, isTrue);
+        expect(updated.items.length, t.items.length);
       });
 
-      test('54.23: changes the description and scopes', () async {
+      test('54.23: an item keeps its type', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final created = await newTemplate('edit');
-        final updated = await sudo.evaluations.updateTemplate(
-          created.id,
-          description: 'edited',
-          scopes: const [
-            EvaluationScopeType.general,
-            EvaluationScopeType.event,
-          ],
+        final t = await newTemplate('type');
+        await expectLater(
+          admin.evaluations.replaceItem(
+            t.id,
+            itemIdOf(t, EvaluationItemType.rating),
+            const EvaluationQaItem(question: 'Now in writing'),
+          ),
+          throwsCode(422, SdkErrorCode.itemTypeFixed),
         );
-        expect(updated.description, 'edited');
+      });
+
+      test('54.24: an item of another template is not found', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('foreign');
+        final foreign = template.itemById(
+          itemIdOf(template, EvaluationItemType.qa),
+        )!;
+        await expectLater(
+          admin.evaluations.replaceItem(t.id, foreign.id!, foreign),
+          throwsCode(404, SdkErrorCode.itemNotFound),
+        );
+        await expectLater(
+          admin.evaluations.removeItem(t.id, foreign.id!),
+          throwsCode(404, SdkErrorCode.itemNotFound),
+        );
+      });
+
+      test('54.25: an item is removed with its place in the layout', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('remove');
+        final numberId = itemIdOf(t, EvaluationItemType.number);
+        final updated = await admin.evaluations.removeItem(t.id, numberId);
+        expect(updated.itemById(numberId), isNull);
         expect(
-          updated.scopes,
-          unorderedEquals([
-            EvaluationScopeType.general,
-            EvaluationScopeType.event,
-          ]),
+          updated.layout.expand((e) => e.items),
+          isNot(contains(numberId)),
         );
-        expect(
-          (await sudo.evaluations.getTemplate(created.id)).description,
-          'edited',
+      });
+
+      test('54.26: the layout is re-ordered, naming every item once', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('relayout');
+        final ids = t.items.map((i) => i.id!).toList();
+        final reversed = [
+          for (final id in ids.reversed) EvaluationLayoutItem<int>(id),
+        ];
+        final updated = await admin.evaluations.updateTemplate(
+          t.id,
+          layout: reversed,
         );
+        expect(updated.layout, reversed);
+        expect(updated.items.map((i) => i.id), ids.reversed);
+
+        await expectLater(
+          admin.evaluations.updateTemplate(t.id, layout: reversed.sublist(1)),
+          throwsCode(422, SdkErrorCode.invalidLayout),
+        );
+        await expectLater(
+          admin.evaluations.updateTemplate(
+            t.id,
+            layout: [...reversed, reversed.first],
+          ),
+          throwsCode(422, SdkErrorCode.invalidLayout),
+        );
+        expect((await admin.evaluations.getTemplate(t.id)).layout, reversed);
+      });
+
+      test('54.27: a coach edits items; a member cannot', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('coach_edit');
+        final added = await coach.evaluations.addItem(
+          t.id,
+          const EvaluationQaItem(question: 'By a coach'),
+        );
+        expect(added.items, hasLength(t.items.length + 1));
+        expect(added.items.last, isA<EvaluationQaItem>());
+        final removed = await coach.evaluations.removeItem(
+          t.id,
+          added.items.last.id!,
+        );
+        expect(removed.items, t.items);
+
+        await expectLater(
+          member.evaluations.addItem(
+            t.id,
+            const EvaluationQaItem(question: 'By a member'),
+          ),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 's', 403),
+          ),
+        );
+        await expectLater(
+          member.evaluations.removeItem(t.id, t.items.last.id!),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 's', 403),
+          ),
+        );
+        expect((await admin.evaluations.getTemplate(t.id)).items, t.items);
       });
     });
 
-    group('transferEvaluation', () {
-      test('54.31: moves a draft to another coach', () async {
-        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
-
-        final e = await draft();
-        expect(e.authorUsername, coachName);
-
-        final moved = await sudo.evaluations.transferEvaluation(
-          e.id,
-          newAuthorUsername: otherCoachName,
-        );
-        expect(moved.authorUsername, otherCoachName);
-        expect(
-          (await sudo.evaluations.getEvaluation(e.id)).authorUsername,
-          otherCoachName,
-        );
-      });
-
-      // Discovery: for a general-scope evaluation the server accepts any
-      // active user as the new author, staff or not.
-      test(
-        '54.32: to a user who is not staff is refused',
-        skip:
-            'club_server accepts a non-staff author on transfer of a '
-            'general-scope evaluation as of 2026-09-26',
-        () async {
-          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
-
-          final e = await draft();
-          await expectLater(
-            sudo.evaluations.transferEvaluation(
-              e.id,
-              newAuthorUsername: memberName,
-            ),
-            throwsA(isA<ServerException>()),
-          );
-          expect(
-            (await sudo.evaluations.getEvaluation(e.id)).authorUsername,
-            coachName,
-          );
-        },
-      );
-    });
-
-    group('evaluation media', () {
-      late int id;
-      late Media shared;
-      late Media private;
+    group('copying items', () {
+      late EvaluationRatingItem source;
 
       setUpAll(() async {
         if (!evaluationsOn) return;
-        id = (await draft()).id;
-        shared = await sudo.media.upload(
-          fileBytes: testPngBytes,
-          filename: 'test_i54_shared.png',
-          contentType: 'image/png',
-          preserveOriginal: true,
+        source =
+            template.itemById(itemIdOf(template, EvaluationItemType.rating))!
+                as EvaluationRatingItem;
+      });
+
+      test('54.31: the item search finds items by text and type', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final hits = await coach.evaluations.searchItems(
+          search: 'Skating',
+          type: EvaluationItemType.rating,
+          limit: 100,
         );
-        private = await sudo.media.upload(
-          fileBytes: testPngBytes,
-          filename: 'test_i54_private.png',
-          contentType: 'image/png',
-          preserveOriginal: true,
-        );
-        await sudo.evaluationMedia.attach(
-          id,
-          tag: 'shared_clips',
-          mediaUuid: shared.uuid,
-        );
-        await sudo.evaluationMedia.attach(
-          id,
-          tag: 'coach_notes',
-          mediaUuid: private.uuid,
+        final hit = hits.items.firstWhere((h) => h.templateId == template.id);
+        expect(hit.templateName, template.name);
+        expect(hit.item, source);
+        expect(
+          hits.items.map((h) => h.item.type).toSet(),
+          {EvaluationItemType.rating},
         );
       });
 
-      test('54.41 (#42): getLinks reports the evaluation owner', () async {
+      test('54.32: a copy records its origin, and a copy of a copy the '
+          'first', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final links = await sudo.media.getLinks(shared.uuid);
+        final t = await newTemplate('copy');
+        final withCopy = await admin.evaluations.addItem(
+          t.id,
+          source.copyWith(
+            id: () => null,
+            question: 'Skating (copied)',
+            originItemId: () => source.id,
+          ),
+        );
+        final copy = withCopy.items.last as EvaluationRatingItem;
+        expect(copy.originItemId, source.id);
+        expect(copy.question, 'Skating (copied)');
+
+        final t2 = await newTemplate('copy2');
+        final withCopy2 = await admin.evaluations.addItem(
+          t2.id,
+          copy.copyWith(id: () => null, originItemId: () => copy.id),
+        );
+        expect(
+          (withCopy2.items.last as EvaluationRatingItem).originItemId,
+          source.id,
+        );
+      });
+
+      test('54.33: a copy keeps its answer domain', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('mismatch');
+        await expectLater(
+          admin.evaluations.addItem(
+            t.id,
+            source.copyWith(
+              id: () => null,
+              originItemId: () => source.id,
+              rateMax: () => 10,
+            ),
+          ),
+          throwsCode(422, SdkErrorCode.originMismatch),
+        );
+      });
+
+      test('54.34: an unknown origin is not found', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final t = await newTemplate('noorigin');
+        await expectLater(
+          admin.evaluations.addItem(
+            t.id,
+            source.copyWith(id: () => null, originItemId: () => 999999),
+          ),
+          throwsCode(404, SdkErrorCode.itemNotFound),
+        );
+      });
+    });
+
+    group('evidence', () {
+      late int id;
+      late int ratingId;
+      late int multipleId;
+      late int qaId;
+      late Media clip;
+      late Media secret;
+
+      Future<Media> upload(String name) => coach.media.upload(
+        fileBytes: testPngBytes,
+        filename: 'test_i54_$name.png',
+        contentType: 'image/png',
+        preserveOriginal: true,
+      );
+
+      setUpAll(() async {
+        if (!evaluationsOn) return;
+        ratingId = itemIdOf(template, EvaluationItemType.rating);
+        multipleId = itemIdOf(template, EvaluationItemType.multipleChoice);
+        qaId = itemIdOf(template, EvaluationItemType.qa);
+        id = (await draft()).id;
+        clip = await upload('clip');
+        secret = await upload('secret');
+      });
+
+      test('54.41: evidence is attached under the item id and read with '
+          'the answer', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await coach.evaluationMedia.attach(
+          id,
+          tag: EvaluationMediaTags.evidence(ratingId),
+          mediaUuid: clip.uuid,
+        );
+        await coach.evaluationMedia.attach(
+          id,
+          tag: EvaluationMediaTags.evidence(qaId),
+          mediaUuid: secret.uuid,
+        );
+
+        final e = await coach.evaluations.getEvaluation(id);
+        expect(e.answerFor(ratingId)!.evidence.single.mediaUuid, clip.uuid);
+        expect(e.answerFor(ratingId)!.valueNum, isNull);
+        expect(e.answerFor(qaId)!.evidence.single.mediaUuid, secret.uuid);
+      });
+
+      test('54.42: evidence is refused where the item takes none', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final noEvidence = {
+          'a question without evidence': EvaluationMediaTags.evidence(
+            itemIdOf(template, EvaluationItemType.yesNo),
+          ),
+          'an info item': EvaluationMediaTags.evidence(
+            itemIdOf(template, EvaluationItemType.info),
+          ),
+          'a free-form tag': 'shared_clips',
+        };
+        for (final MapEntry(key: what, value: tag) in noEvidence.entries) {
+          await expectLater(
+            coach.evaluationMedia.attach(id, tag: tag, mediaUuid: clip.uuid),
+            throwsCode(422, SdkErrorCode.invalidEvidence),
+            reason: what,
+          );
+        }
+      });
+
+      test("54.43: another coach cannot reach the owner's evidence", () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        await expectLater(
+          otherCoach.evaluationMedia.listGrouped(id),
+          throwsCode(404, SdkErrorCode.evaluationNotFound),
+        );
+      });
+
+      test('54.44 (#42): getLinks reports the evaluation owner', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final links = await sudo.media.getLinks(clip.uuid);
         expect(links, hasLength(1));
         expect(links.single.ownerType, MediaLinkOwnerType.evaluation);
         expect(links.single.ownerId, '$id');
-        expect(links.single.tag, 'shared_clips');
+        expect(links.single.tag, EvaluationMediaTags.evidence(ratingId));
       });
 
-      test('54.42 (#42): searchLinks with no owner filter lists evaluation '
-          'media', () async {
+      test('54.45 (#42): searchLinks lists evaluation media', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-        final page = await sudo.media.searchLinks(tag: 'shared_clips');
+        final page = await sudo.media.searchLinks(
+          tag: EvaluationMediaTags.evidence(ratingId),
+        );
         expect(
           page.items.where(
             (l) =>
                 l.ownerType == MediaLinkOwnerType.evaluation &&
-                l.mediaUuid == shared.uuid,
+                l.mediaUuid == clip.uuid,
           ),
           hasLength(1),
         );
@@ -471,53 +628,183 @@ void main() {
         await sudo.media.searchLinks(limit: 100);
       });
 
-      test(
-        '54.43 (#42): searchLinks filters by the evaluation owner',
-        () async {
-          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+      test('54.46: clearing an answer detaches its evidence', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-          final page = await sudo.media.searchLinks(
-            ownerType: MediaLinkOwnerType.evaluation,
-            limit: 100,
-          );
-          expect(
-            page.items.map((l) => l.ownerType).toSet(),
-            {MediaLinkOwnerType.evaluation},
-          );
-          expect(
-            page.items.map((l) => l.mediaUuid),
-            containsAll([shared.uuid, private.uuid]),
-          );
-        },
-      );
+        final extra = await upload('extra');
+        await coach.evaluationMedia.attach(
+          id,
+          tag: EvaluationMediaTags.evidence(multipleId),
+          mediaUuid: extra.uuid,
+        );
+        final cleared = await coach.evaluations.clearAnswer(id, multipleId);
+        expect(cleared.answerFor(multipleId), isNull);
+        final grouped = await coach.evaluationMedia.listGrouped(id);
+        expect(
+          grouped.containsKey(EvaluationMediaTags.evidence(multipleId)),
+          isFalse,
+        );
+      });
 
-      test('54.44: listMyEvaluationMedia is 404 before publication', () async {
+      test('54.47: once published, the member sees evidence on public '
+          'items only, and it is frozen', () async {
         if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
         await expectLater(
           member.myEvaluations.listMyEvaluationMedia(memberName, id),
+          throwsCode(404, SdkErrorCode.evaluationNotFound),
+        );
+
+        await coach.evaluations.putAnswer(
+          id,
+          ratingId,
+          const EvaluationAnswerInput(valueNum: 3),
+        );
+        await coach.evaluations.saveEvaluation(id);
+        await expectLater(
+          coach.evaluationMedia.detach(
+            id,
+            EvaluationMediaTags.evidence(ratingId),
+            clip.uuid,
+          ),
+          throwsCode(422, SdkErrorCode.invalidState),
+        );
+        await coach.evaluations.publishEvaluation(id);
+
+        final media = await member.myEvaluations.listMyEvaluationMedia(
+          memberName,
+          id,
+        );
+        expect(
+          media.keys,
+          unorderedEquals([
+            EvaluationMediaTags.evidence(ratingId),
+            EvaluationMediaTags.memberCopy,
+          ]),
+        );
+        expect(
+          media[EvaluationMediaTags.evidence(ratingId)]!.single.mediaUuid,
+          clip.uuid,
+        );
+
+        final view = await member.myEvaluations.getMyEvaluation(memberName, id);
+        expect(view.answers.map((a) => a.itemId), [ratingId]);
+        expect(view.answers.single.evidence.single.mediaUuid, clip.uuid);
+      });
+    });
+
+    group('uploaded evidence', () {
+      late int ratingId;
+
+      Future<EvaluationStaffView> uploadTo(
+        SecureClient by,
+        int id,
+        int itemId, {
+        List<int> bytes = testPngBytes,
+        String filename = 'test_i54_upload.png',
+        String? contentType = 'image/png',
+      }) => by.evaluations.uploadEvidence(
+        id,
+        itemId,
+        bytes: bytes,
+        filename: filename,
+        contentType: contentType,
+      );
+
+      setUpAll(() async {
+        if (!evaluationsOn) return;
+        ratingId = itemIdOf(template, EvaluationItemType.rating);
+      });
+
+      test('54.50: an upload is stored as evidence the member downloads '
+          'once published, and another member cannot', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        final uploaded = await uploadTo(coach, id, ratingId);
+        expect(uploaded.id, id);
+        final evidence = uploaded.answerFor(ratingId)!.evidence.single;
+        expect(evidence.metadata, 'test_i54_upload.png');
+        final uuid = evidence.mediaUuid;
+
+        final read = await coach.evaluations.getEvaluation(id);
+        expect(read.answerFor(ratingId)!.evidence.single.mediaUuid, uuid);
+        final grouped = await coach.evaluationMedia.listGrouped(id);
+        expect(
+          grouped[EvaluationMediaTags.evidence(ratingId)]!.map(
+            (l) => l.mediaUuid,
+          ),
+          [uuid],
+        );
+
+        await coach.evaluations.putAnswer(
+          id,
+          ratingId,
+          const EvaluationAnswerInput(valueNum: 3),
+        );
+        await coach.evaluations.saveEvaluation(id);
+        final published = await coach.evaluations.publishEvaluation(id);
+        expect(published.status, EvaluationStatus.published);
+
+        final media = await member.myEvaluations.listMyEvaluationMedia(
+          memberName,
+          id,
+        );
+        expect(
+          media[EvaluationMediaTags.evidence(ratingId)]!.single.mediaUuid,
+          uuid,
+        );
+        expect(await member.media.download(uuid), testPngBytes);
+        expect(await otherCoach.media.download(uuid), testPngBytes);
+        await expectLater(
+          otherMember.media.download(uuid),
           throwsA(
-            isA<ServerException>().having((e) => e.statusCode, 'status', 404),
+            isA<ServerException>().having((e) => e.statusCode, 'status', 403),
           ),
         );
       });
 
-      test(
-        '54.45: once published, the member sees only shared_ tags',
-        () async {
-          if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+      test('54.51: an upload is refused where the item takes no '
+          'evidence', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
 
-          await sudo.evaluations.saveEvaluation(id);
-          await sudo.evaluations.publishEvaluation(id);
+        final id = (await draft()).id;
+        await expectLater(
+          uploadTo(coach, id, itemIdOf(template, EvaluationItemType.yesNo)),
+          throwsCode(422, SdkErrorCode.invalidEvidence),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
+      });
 
-          final media = await member.myEvaluations.listMyEvaluationMedia(
-            memberName,
-            id,
-          );
-          expect(media.keys, ['shared_clips']);
-          expect(media['shared_clips']!.single.mediaUuid, shared.uuid);
-        },
-      );
+      test('54.52: an upload is refused on a saved evaluation', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        await coach.evaluations.putAnswer(
+          id,
+          ratingId,
+          const EvaluationAnswerInput(valueNum: 3),
+        );
+        final saved = await coach.evaluations.saveEvaluation(id);
+        expect(saved.status, EvaluationStatus.saved);
+
+        await expectLater(
+          uploadTo(coach, id, ratingId),
+          throwsCode(422, SdkErrorCode.invalidState),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
+      });
+
+      test('54.53: only the owner uploads; another coach gets a 404', () async {
+        if (skipUnless(enabled: evaluationsOn, module: 'evaluations')) return;
+
+        final id = (await draft()).id;
+        await expectLater(
+          uploadTo(otherCoach, id, ratingId),
+          throwsCode(404, SdkErrorCode.evaluationNotFound),
+        );
+        expect(await coach.evaluationMedia.listGrouped(id), isEmpty);
+      });
     });
   });
 }
