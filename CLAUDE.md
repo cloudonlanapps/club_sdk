@@ -129,7 +129,9 @@ just test-modules                      # stack with credits, evaluations, market
 ```
 
 Each recipe spins up its **own** fresh isolated server (free ports, started in
-tmux via `background_server.sh` (native_deploy, on PATH)) and tears it down on exit — no shared
+tmux via `background_server.sh`, which the recipe clones from
+`cloudonlanapps/native_deploy` into the gitignored `.native_deploy/` and pulls on
+every run) and tears it down on exit — no shared
 stack to reset or collide on. The stack is described by `sdk_test.conf` or
 `sdk_test_modules.conf`, whose `source` clones club_server's `main` afresh for
 each run from `https://github.com/cloudonlanapps/club_server.git` (public, over
