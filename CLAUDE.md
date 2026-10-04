@@ -78,13 +78,20 @@ lib/
 
 ```
 test/
-  unit/models/             # Model serialization, equality, copyWith tests
-  unit/utils/              # Utility function tests
-  integration/             # Remote API integration tests
-  shared/
-    categories/            # 21 categorical test suites (s01-s21)
-    workflows/             # 11 user workflow tests
-    mock_seed_data.dart    # Shared mock data
+  unit/                    # No server required
+    models/                # Model serialization, equality, copyWith tests
+    endpoints/             # URL builder tests
+    sources/               # Remote*Source tests against a stubbed HTTP client
+    remote_store/          # HTTP wrapper tests (auth, retry, health check)
+    http/                  # API exception mapping tests
+    public_api/            # Barrel export surface tests
+    utils/                 # Utility function tests
+  integration/             # Against a real club_server stack, one flat directory:
+                           #   sNN_*       categorical suites
+                           #   workflow_*  user workflow tests
+                           #   issue_*, bug_*  per-issue regression tests
+  utils/                   # Shared helpers: test_client.dart,
+                           #   clear_test_artifacts.dart, mock_seed_data.dart, ...
 ```
 
 ## Core Domains
@@ -124,14 +131,18 @@ just test-modules                      # stack with credits, evaluations, market
 Each recipe spins up its **own** fresh isolated server (free ports, started in
 tmux via `background_server.sh` (native_deploy, on PATH)) and tears it down on exit — no shared
 stack to reset or collide on. The stack is described by `sdk_test.conf` or
-`sdk_test_modules.conf`, whose `source` clones club_server's `main` from git
-afresh for each run (so it needs SSH access to that repo); to test against a
-local server checkout, point `source` at it or point `SDK_CONF` at your own conf. The
+`sdk_test_modules.conf`, whose `source` clones club_server's `main` afresh for
+each run from `https://github.com/cloudonlanapps/club_server.git` (public, over
+HTTPS — no credentials needed); to test against a local server checkout, point
+`source` at it or point `SDK_CONF` / `SDK_MODULES_CONF` at your own conf. The
+`port` and `db_port` in the confs are only defaults: the recipes start the stack
+with `--auto-ports`, which picks two free ports. The
 recipes inject `MYCLUB_API_BASE_URL` (the just-picked port),
 `MYCLUB_SUDO_USERNAME` and `MYCLUB_SUDO_PASSWORD` (the conf's
-`bootstrap_password`) so `test_client.dart` connects to that stack. Running
-plain `dart test test/integration/` works only if a server is already up and those env
-vars point at it — the `just` recipes are the safer default.
+`bootstrap_password`) so `test/utils/test_client.dart` connects to that stack. Running
+plain `dart test test/integration/` skips all of that: without those env vars it
+falls back to `http://localhost:8155/v1`, so it works only if a server is already
+up there — the `just` recipes are the safer default.
 
 Each integration test file must be **self-contained** — it owns its setup, data, and teardown. No reliance on global seeding or execution order of other test files.
 
@@ -139,7 +150,7 @@ Each integration test file must be **self-contained** — it owns its setup, dat
 
 - **Do NOT use `createTestClient()`** which triggers full JSON seeding of all users, venues, and groups.
 - Use `createRemoteSecureClient(baseUrl: baseUrl)` directly for a bare client.
-- Import `baseUrl`, `sudoUsername`, `sudoPassword` from `test_client.dart` for server config only.
+- Import `baseUrl`, `sudoUsername`, `sudoPassword` from `../utils/test_client.dart` for server config only.
 
 ### 2. Seed Only What the Test Needs
 
@@ -206,12 +217,14 @@ All entity types (users, venues, groups, events) support a three-step delete lif
 
 ### 7. Available Utilities
 
+Shared helpers live in `test/utils/`; integration tests import them as `../utils/<file>`.
+
 | Utility | Import | Purpose |
 |---------|--------|---------|
-| `baseUrl`, `sudoUsername`, `sudoPassword` | `test_client.dart` | Server config constants |
+| `baseUrl`, `sudoUsername`, `sudoPassword` | `../utils/test_client.dart` | Server config constants |
 | `createRemoteSecureClient()` | `package:club_sdk_2/remote_store.dart` | Bare client factory |
-| `clearTestArtifacts()` | `clear_test_artifacts.dart` | Wipes all `test_` entities |
-| `testPrefix` | `mock_seed_data.dart` | The `test_` prefix constant |
+| `clearTestArtifacts()` | `../utils/clear_test_artifacts.dart` | Wipes all `test_` entities |
+| `testPrefix` | `../utils/mock_seed_data.dart` | The `test_` prefix constant |
 
 ## Dependencies
 
