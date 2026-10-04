@@ -1,0 +1,351 @@
+import 'package:club_sdk_2/club_sdk_2.dart';
+import 'package:test/test.dart';
+
+/// Occurrence Model Unit Tests (OccurrenceStatus, Occurrence).
+///
+/// Tests requirements from Section 20 (SDK Architecture):
+/// - 20.06: Immutable Models - copyWith pattern for immutable updates
+/// - 20.07: JSON Serialization - toMap/fromMap, toJson/fromJson roundtrip
+/// - 20.08: Value Equality - operator==, hashCode implementation
+void main() {
+  group('OccurrenceStatus', () {
+    test('values contains all expected statuses', () {
+      expect(
+        OccurrenceStatus.values,
+        containsAll([
+          OccurrenceStatus.scheduled,
+          OccurrenceStatus.completed,
+          OccurrenceStatus.cancelled,
+          OccurrenceStatus.rescheduled,
+        ]),
+      );
+    });
+  });
+
+  group('Occurrence', () {
+    final now = DateTime.utc(2026, 2, 26, 11, 35);
+    final occurrence = Occurrence(
+      eventId: 1,
+      originalStartTimeUtc: now,
+      actualStartTimeUtc: now,
+      actualEndTimeUtc: now.add(const Duration(hours: 2)),
+      status: OccurrenceStatus.scheduled,
+      venueId: 1,
+      organizerName: 'coach-occ-1',
+      enrollmentStatus: EnrollmentStatus.assigned,
+      attendanceStatus: AttendanceStatus.present,
+    );
+
+    test('two instances with same values are equal', () {
+      final sameOcc = Occurrence(
+        eventId: 1,
+        originalStartTimeUtc: now,
+        actualStartTimeUtc: now,
+        actualEndTimeUtc: now.add(const Duration(hours: 2)),
+        status: OccurrenceStatus.scheduled,
+        venueId: 1,
+        organizerName: 'coach-occ-1',
+        enrollmentStatus: EnrollmentStatus.assigned,
+        attendanceStatus: AttendanceStatus.present,
+      );
+
+      expect(occurrence, sameOcc);
+    });
+
+    test('two instances with different values are not equal', () {
+      final differentOcc = Occurrence(
+        eventId: 2,
+        originalStartTimeUtc: now,
+        actualStartTimeUtc: now,
+        actualEndTimeUtc: now.add(const Duration(hours: 2)),
+        status: OccurrenceStatus.scheduled,
+        venueId: 1,
+      );
+
+      expect(occurrence, isNot(differentOcc));
+    });
+
+    test('equal instances have same hashCode', () {
+      final sameOcc = Occurrence(
+        eventId: 1,
+        originalStartTimeUtc: now,
+        actualStartTimeUtc: now,
+        actualEndTimeUtc: now.add(const Duration(hours: 2)),
+        status: OccurrenceStatus.scheduled,
+        venueId: 1,
+        organizerName: 'coach-occ-1',
+        enrollmentStatus: EnrollmentStatus.assigned,
+        attendanceStatus: AttendanceStatus.present,
+      );
+
+      expect(occurrence.hashCode, sameOcc.hashCode);
+    });
+
+    test('copyWith creates new instance with changed non-nullable field', () {
+      final updated = occurrence.copyWith(status: OccurrenceStatus.completed);
+      expect(updated.status, OccurrenceStatus.completed);
+      expect(updated.venueId, occurrence.venueId);
+    });
+
+    test('copyWith preserves unchanged fields', () {
+      final updated = occurrence.copyWith(status: OccurrenceStatus.cancelled);
+      expect(updated.eventId, 1);
+      expect(updated.organizerName, 'coach-occ-1');
+      expect(updated.enrollmentStatus, EnrollmentStatus.assigned);
+    });
+
+    test('copyWith can set nullable field to new value via ValueGetter', () {
+      final noStatus = Occurrence(
+        eventId: 1,
+        originalStartTimeUtc: now,
+        actualStartTimeUtc: now,
+        actualEndTimeUtc: now.add(const Duration(hours: 2)),
+        status: OccurrenceStatus.scheduled,
+        venueId: 1,
+      );
+
+      final updated = noStatus.copyWith(
+        organizerName: () => 'coach-new',
+        enrollmentStatus: () => EnrollmentStatus.assigned,
+        attendanceStatus: () => AttendanceStatus.absent,
+      );
+      expect(updated.organizerName, 'coach-new');
+      expect(updated.enrollmentStatus, EnrollmentStatus.assigned);
+      expect(updated.attendanceStatus, AttendanceStatus.absent);
+    });
+
+    test('copyWith can reset nullable field to null via ValueGetter', () {
+      final cleared = occurrence.copyWith(
+        organizerName: () => null,
+        enrollmentStatus: () => null,
+        attendanceStatus: () => null,
+      );
+      expect(cleared.organizerName, isNull);
+      expect(cleared.enrollmentStatus, isNull);
+      expect(cleared.attendanceStatus, isNull);
+    });
+
+    test('toMap produces correct map structure', () {
+      final map = occurrence.toMap();
+      expect(map['eventId'], 1);
+      expect(map['status'], 'scheduled');
+      expect(map['venueId'], 1);
+      expect(map['enrollmentStatus'], 'assigned');
+      expect(map['attendanceStatus'], 'present');
+      expect(map['originalStartTimeUtc'], isA<int>());
+    });
+
+    test('fromMap restores equivalent instance', () {
+      final map = occurrence.toMap();
+      final fromMap = Occurrence.fromMap(map);
+      expect(fromMap, occurrence);
+    });
+
+    test('toMap/fromMap roundtrip preserves all fields', () {
+      final occWithCount = occurrence.copyWith(attendanceCount: () => 25);
+      final restored = Occurrence.fromMap(occWithCount.toMap());
+      expect(restored, occWithCount);
+    });
+
+    test('toJson/fromJson roundtrip preserves all fields', () {
+      final json = occurrence.toJson();
+      final fromJson = Occurrence.fromJson(json);
+      expect(fromJson, occurrence);
+    });
+
+    test('fromMap handles null optional fields', () {
+      final map = {
+        'eventId': 1,
+        'originalStartTimeUtc': now.millisecondsSinceEpoch,
+        'actualStartTimeUtc': now.millisecondsSinceEpoch,
+        'actualEndTimeUtc': now
+            .add(const Duration(hours: 1))
+            .millisecondsSinceEpoch,
+        'status': 'scheduled',
+        'venueId': 1,
+      };
+      final occ = Occurrence.fromMap(map);
+      expect(occ.organizerName, isNull);
+      expect(occ.enrollmentStatus, isNull);
+      expect(occ.attendanceStatus, isNull);
+      expect(occ.attendanceCount, isNull);
+      expect(occ.isRescheduled, isFalse);
+    });
+
+    test('Issue 705: fromMap parses isRescheduled, defaulting to false', () {
+      final base = {
+        'eventId': 1,
+        'originalStartTimeUtc': now.millisecondsSinceEpoch,
+        'actualStartTimeUtc': now.millisecondsSinceEpoch,
+        'actualEndTimeUtc': now
+            .add(const Duration(hours: 1))
+            .millisecondsSinceEpoch,
+        'status': 'scheduled',
+        'venueId': 1,
+      };
+      expect(Occurrence.fromMap(base).isRescheduled, isFalse);
+      expect(
+        Occurrence.fromMap({...base, 'isRescheduled': true}).isRescheduled,
+        isTrue,
+      );
+    });
+
+    test('Issue 705: isRescheduled round-trips through toMap', () {
+      final overridden = occurrence.copyWith(isRescheduled: true);
+      expect(Occurrence.fromMap(overridden.toMap()).isRescheduled, isTrue);
+    });
+  });
+
+  group('Issue 1: Occurrence version', () {
+    final now = DateTime.utc(2027, 6, 1, 9);
+    final changedAt = DateTime.utc(2027, 5, 20, 8, 15);
+    // The shape club_server's OccurrenceResponse sends (#430).
+    Map<String, dynamic> serverPayload({
+      int version = 1,
+      int? updatedAt,
+      String? updatedBy,
+    }) => {
+      'eventId': 7,
+      'eventTitle': 'Camp',
+      'eventType': 'camp',
+      'occurrenceTimeUtc': now.millisecondsSinceEpoch,
+      'startTimeUtc': now.millisecondsSinceEpoch,
+      'endTimeUtc': now.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      'venueId': 1,
+      'venueName': 'Rink',
+      'organizerName': 'org',
+      'organizerDisplayName': 'Org',
+      'status': 'scheduled',
+      'isRescheduled': false,
+      'cancelReason': null,
+      'version': version,
+      'updatedAt': updatedAt,
+      'updatedBy': updatedBy,
+    };
+
+    test('fromMap reads an unchanged occurrence as version 1 with no '
+        'author', () {
+      final occ = Occurrence.fromMap(serverPayload());
+      expect(occ.version, 1);
+      expect(occ.updatedAtUtc, isNull);
+      expect(occ.updatedBy, isNull);
+    });
+
+    test('fromMap reads version, updatedAt and updatedBy once changed', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 3,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'coach_1',
+        ),
+      );
+      expect(occ.version, 3);
+      expect(occ.updatedAtUtc, changedAt);
+      expect(occ.updatedAtUtc!.isUtc, isTrue);
+      expect(occ.updatedBy, 'coach_1');
+    });
+
+    test('toMap/fromMap round-trip preserves the version fields', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 4,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'admin',
+        ),
+      );
+      final back = Occurrence.fromMap(occ.toMap());
+      expect(back, occ);
+      expect(back.version, 4);
+      expect(back.updatedAtUtc, changedAt);
+      expect(back.updatedBy, 'admin');
+    });
+
+    test('occurrences differing only in version are not equal', () {
+      final a = Occurrence.fromMap(serverPayload(version: 2));
+      final b = Occurrence.fromMap(serverPayload(version: 3));
+      expect(a, isNot(b));
+    });
+
+    test('copyWith sets the version and clears the author via '
+        'ValueGetter', () {
+      final occ = Occurrence.fromMap(
+        serverPayload(
+          version: 2,
+          updatedAt: changedAt.millisecondsSinceEpoch,
+          updatedBy: 'coach_1',
+        ),
+      );
+      final copy = occ.copyWith(
+        version: 5,
+        updatedAtUtc: () => null,
+        updatedBy: () => null,
+      );
+      expect(copy.version, 5);
+      expect(copy.updatedAtUtc, isNull);
+      expect(copy.updatedBy, isNull);
+      expect(occ.copyWith().version, 2);
+    });
+  });
+
+  group('Issue 6: venueName and organizerDisplayName', () {
+    final t = DateTime.utc(2027, 6, 1, 9);
+    Map<String, dynamic> payload({
+      String? venueName = 'Main Rink',
+      String? organizerDisplayName = 'Coach Kim',
+    }) => {
+      'eventId': 7,
+      'occurrenceTimeUtc': t.millisecondsSinceEpoch,
+      'startTimeUtc': t.millisecondsSinceEpoch,
+      'endTimeUtc': t.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      'venueId': 1,
+      'venueName': venueName,
+      'organizerName': 'kim',
+      'organizerDisplayName': organizerDisplayName,
+      'status': 'scheduled',
+      'version': 1,
+    };
+
+    test('fromMap reads both names', () {
+      final occ = Occurrence.fromMap(payload());
+      expect(occ.venueName, 'Main Rink');
+      expect(occ.organizerDisplayName, 'Coach Kim');
+    });
+
+    test('fromMap reads null names as null', () {
+      final occ = Occurrence.fromMap(
+        payload(venueName: null, organizerDisplayName: null),
+      );
+      expect(occ.venueName, isNull);
+      expect(occ.organizerDisplayName, isNull);
+    });
+
+    test('toMap/fromMap round-trip preserves both names', () {
+      final occ = Occurrence.fromMap(payload());
+      final back = Occurrence.fromMap(occ.toMap());
+      expect(back, occ);
+      expect(back.venueName, 'Main Rink');
+      expect(back.organizerDisplayName, 'Coach Kim');
+    });
+
+    test('the names take part in equality', () {
+      final a = Occurrence.fromMap(payload());
+      expect(a, isNot(Occurrence.fromMap(payload(venueName: 'Annex'))));
+      expect(
+        a,
+        isNot(Occurrence.fromMap(payload(organizerDisplayName: 'Kim'))),
+      );
+    });
+
+    test('copyWith sets and clears the names via ValueGetter', () {
+      final a = Occurrence.fromMap(payload());
+      final cleared = a.copyWith(
+        venueName: () => null,
+        organizerDisplayName: () => null,
+      );
+      expect(cleared.venueName, isNull);
+      expect(cleared.organizerDisplayName, isNull);
+      expect(a.copyWith(venueName: () => 'Annex').venueName, 'Annex');
+      expect(a.copyWith().venueName, 'Main Rink');
+    });
+  });
+}

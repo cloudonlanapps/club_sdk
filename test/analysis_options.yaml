@@ -1,0 +1,7 @@
+include: ../analysis_options.yaml
+
+linter:
+  rules:
+    # Tests intentionally pass explicit values that match defaults to document
+    # the assertion's intent — do not flag them as redundant.
+    avoid_redundant_argument_values: false

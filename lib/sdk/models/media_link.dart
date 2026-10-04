@@ -1,0 +1,270 @@
+import 'dart:convert';
+
+import 'package:meta/meta.dart';
+
+import 'media_ref.dart';
+
+/// Owner type for per-owner media link tables (#162).
+///
+/// One of `user`, `event`, `group`, `venue`, `evaluation` — the owners that
+/// attach media via dedicated link tables. `evaluation` appears only where
+/// the evaluations module is on (#42).
+enum MediaLinkOwnerType {
+  user('user'),
+  event('event'),
+  group('group'),
+  venue('venue'),
+  evaluation('evaluation');
+
+  const MediaLinkOwnerType(this.wire);
+
+  /// Wire string used in URL paths and `ownerType` query / response fields.
+  final String wire;
+
+  static MediaLinkOwnerType fromWire(String wire) {
+    return MediaLinkOwnerType.values.firstWhere(
+      (e) => e.wire == wire,
+      orElse: () =>
+          throw ArgumentError('Unknown MediaLinkOwnerType wire value: $wire'),
+    );
+  }
+}
+
+/// A single link row: what the link says, and the media it points at.
+///
+/// [media] is the same [MediaRef] every other projection embeds, rather than
+/// the same facts flattened under a second set of names — `mediaUuid` for
+/// what is `uuid` everywhere else (club_server#426).
+@immutable
+class MediaLink {
+  const MediaLink({
+    required this.tag,
+    required this.media,
+    required this.createdAtUtc,
+    required this.updatedAtUtc,
+    this.metadata,
+    this.ownerDeleted = false,
+  });
+
+  factory MediaLink.fromMap(Map<String, dynamic> map) {
+    return MediaLink(
+      tag: map['tag'] as String,
+      metadata: map['metadata'] as String?,
+      media: MediaRef.fromMap(map['media'] as Map<String, dynamic>),
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
+      createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
+        map['createdAtUtc'] as int,
+        isUtc: true,
+      ),
+      updatedAtUtc: DateTime.fromMillisecondsSinceEpoch(
+        map['updatedAtUtc'] as int,
+        isUtc: true,
+      ),
+    );
+  }
+
+  factory MediaLink.fromJson(String source) =>
+      MediaLink.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  final String tag;
+  final String? metadata;
+
+  /// The media this link points at.
+  final MediaRef media;
+
+  final DateTime createdAtUtc;
+  final DateTime updatedAtUtc;
+
+  /// Whether the owner (group, venue or event) is soft-deleted
+  /// (club_server#517). Its links stay readable but are read-only: adding,
+  /// changing or removing one answers 422 `OWNER_DELETED`. False when the
+  /// server omits it.
+  final bool ownerDeleted;
+
+  /// The uuid of the linked media. Shorthand for `media.uuid`.
+  String get mediaUuid => media.uuid;
+
+  Map<String, dynamic> toMap() => {
+    'tag': tag,
+    'metadata': metadata,
+    'media': media.toMap(),
+    'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
+    'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
+    'ownerDeleted': ownerDeleted,
+  };
+
+  @override
+  String toString() =>
+      'MediaLink(tag: $tag, media: $media, metadata: $metadata, '
+      'ownerDeleted: $ownerDeleted)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaLink &&
+          other.tag == tag &&
+          other.metadata == metadata &&
+          other.media == media &&
+          other.createdAtUtc == createdAtUtc &&
+          other.updatedAtUtc == updatedAtUtc &&
+          other.ownerDeleted == ownerDeleted;
+
+  @override
+  int get hashCode => Object.hash(
+    tag,
+    metadata,
+    media,
+    createdAtUtc,
+    updatedAtUtc,
+    ownerDeleted,
+  );
+}
+
+/// One row from `GET /v1/media/by_id/{uuid}/links` (reverse lookup).
+///
+/// Does not denormalize media columns since the caller already has the
+/// media in hand (they queried by its uuid).
+@immutable
+class MediaLinkReverseEntry {
+  const MediaLinkReverseEntry({
+    required this.ownerType,
+    required this.ownerId,
+    required this.tag,
+    required this.createdAtUtc,
+    required this.updatedAtUtc,
+    this.metadata,
+    this.ownerDeleted = false,
+  });
+
+  factory MediaLinkReverseEntry.fromMap(Map<String, dynamic> map) {
+    return MediaLinkReverseEntry(
+      ownerType: MediaLinkOwnerType.fromWire(map['ownerType'] as String),
+      ownerId: map['ownerId'].toString(),
+      tag: map['tag'] as String,
+      metadata: map['metadata'] as String?,
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
+      createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
+        map['createdAtUtc'] as int,
+        isUtc: true,
+      ),
+      updatedAtUtc: DateTime.fromMillisecondsSinceEpoch(
+        map['updatedAtUtc'] as int,
+        isUtc: true,
+      ),
+    );
+  }
+
+  final MediaLinkOwnerType ownerType;
+
+  /// `username` for users; stringified int id for events / groups / venues.
+  final String ownerId;
+  final String tag;
+  final String? metadata;
+  final DateTime createdAtUtc;
+  final DateTime updatedAtUtc;
+
+  /// Whether the owner is soft-deleted (club_server#517), as on
+  /// [MediaLink.ownerDeleted]. False when the server omits it.
+  final bool ownerDeleted;
+
+  @override
+  String toString() =>
+      'MediaLinkReverseEntry(${ownerType.wire}:$ownerId, tag: $tag, '
+      'ownerDeleted: $ownerDeleted)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaLinkReverseEntry &&
+          other.ownerType == ownerType &&
+          other.ownerId == ownerId &&
+          other.tag == tag &&
+          other.metadata == metadata &&
+          other.createdAtUtc == createdAtUtc &&
+          other.updatedAtUtc == updatedAtUtc &&
+          other.ownerDeleted == ownerDeleted;
+
+  @override
+  int get hashCode => Object.hash(
+    ownerType,
+    ownerId,
+    tag,
+    metadata,
+    createdAtUtc,
+    updatedAtUtc,
+    ownerDeleted,
+  );
+}
+
+/// One row from `GET /v1/media/links` (admin/coach cross-owner search).
+@immutable
+class MediaLinkCrossEntry {
+  const MediaLinkCrossEntry({
+    required this.mediaUuid,
+    required this.ownerType,
+    required this.ownerId,
+    required this.tag,
+    required this.mediaType,
+    required this.createdAtUtc,
+    this.metadata,
+    this.ownerDeleted = false,
+  });
+
+  factory MediaLinkCrossEntry.fromMap(Map<String, dynamic> map) {
+    return MediaLinkCrossEntry(
+      mediaUuid: map['mediaUuid'] as String,
+      ownerType: MediaLinkOwnerType.fromWire(map['ownerType'] as String),
+      ownerId: map['ownerId'].toString(),
+      tag: map['tag'] as String,
+      metadata: map['metadata'] as String?,
+      mediaType: map['mediaType'] as String,
+      ownerDeleted: map['ownerDeleted'] as bool? ?? false,
+      createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
+        map['createdAtUtc'] as int,
+        isUtc: true,
+      ),
+    );
+  }
+
+  final String mediaUuid;
+  final MediaLinkOwnerType ownerType;
+  final String ownerId;
+  final String tag;
+  final String? metadata;
+  final String mediaType;
+  final DateTime createdAtUtc;
+
+  /// Whether the owner is soft-deleted (club_server#517), as on
+  /// [MediaLink.ownerDeleted]. False when the server omits it.
+  final bool ownerDeleted;
+
+  @override
+  String toString() =>
+      'MediaLinkCrossEntry(${ownerType.wire}:$ownerId, tag: $tag, '
+      'media: $mediaUuid, ownerDeleted: $ownerDeleted)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaLinkCrossEntry &&
+          other.mediaUuid == mediaUuid &&
+          other.ownerType == ownerType &&
+          other.ownerId == ownerId &&
+          other.tag == tag &&
+          other.metadata == metadata &&
+          other.mediaType == mediaType &&
+          other.createdAtUtc == createdAtUtc &&
+          other.ownerDeleted == ownerDeleted;
+
+  @override
+  int get hashCode => Object.hash(
+    mediaUuid,
+    ownerType,
+    ownerId,
+    tag,
+    metadata,
+    mediaType,
+    createdAtUtc,
+    ownerDeleted,
+  );
+}
