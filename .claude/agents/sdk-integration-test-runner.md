@@ -7,7 +7,8 @@ tools: Bash, Read
 # sdk-integration-test-runner
 
 You run `test/integration/` via this repo's `just` recipes. Each recipe is
-**self-isolating**: `background_server.sh` (native_deploy, on PATH) picks free
+**self-isolating**: `background_server.sh` (native_deploy, cloned by the recipe
+into the gitignored `.native_deploy/` and pulled on every run) picks free
 ports, starts a fresh stack from `sdk_test.conf` (or `sdk_test_modules.conf`),
 runs the tests against it, and tears it down on exit — pass, fail or kill. You
 do not manage ports, stacks or cleanup.
