@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/mock_seed_data.dart';
 import '../utils/test_client.dart';
 
 /// Section 24: System preferences.
@@ -28,13 +29,10 @@ void main() {
     });
 
     test('24.02: set then read back returns the written value', () async {
-      final prefs = await client.admin.listPreferences();
-      if (prefs.isEmpty) {
-        markTestSkipped('server exposes no preferences to write');
-        return;
-      }
-      final key = prefs.first.key;
-      final original = prefs.first.value;
+      // A key of its own: writing back a listed preference stamps it, and
+      // issue_518 needs the server's defaulted keys never written.
+      final key = '${testPrefix}s24_${DateTime.now().millisecondsSinceEpoch}';
+      const original = {'on': true};
 
       final written = await client.admin.setPreference(key, original);
       expect(written.key, key);
