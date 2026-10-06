@@ -40,6 +40,38 @@ void main() {
       expect(NotificationType.isKnown('enrollment.trial_ended'), isTrue);
     });
 
+    test('Issue 7: group.member_ineligible is a known type', () {
+      expect(NotificationType.groupMemberIneligible, 'group.member_ineligible');
+      expect(NotificationType.all, contains('group.member_ineligible'));
+      expect(NotificationType.isKnown('group.member_ineligible'), isTrue);
+    });
+
+    test('Issue 7: a group.member_ineligible notification carries the group '
+        'and the member', () {
+      final n = AppNotification.fromMap(const <String, dynamic>{
+        'id': 3,
+        'username': 'admin',
+        'type': 'group.member_ineligible',
+        'channel': 'in_app',
+        'payload': <String, dynamic>{
+          'v': 1,
+          'type': 'group.member_ineligible',
+          'data': <String, dynamic>{
+            'groupId': 5,
+            'groupName': 'test_U12',
+            'membername': 'amy',
+          },
+        },
+        'isRead': false,
+        'createdAtUtc': 1791244800000,
+      });
+      expect(n.type, NotificationType.groupMemberIneligible);
+      final data = n.payload['data'] as Map<String, dynamic>;
+      expect(data['groupId'], 5);
+      expect(data['groupName'], 'test_U12');
+      expect(data['membername'], 'amy');
+    });
+
     test('Issue 30: the trial-ended withdrawal reason is named', () {
       expect(Enrollment.trialCreditExhaustedReason, 'trialCreditExhausted');
     });

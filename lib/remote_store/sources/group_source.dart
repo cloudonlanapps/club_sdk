@@ -1,4 +1,5 @@
 import '../../sdk/interfaces/group.dart';
+import '../../sdk/models/age.dart';
 import '../../sdk/models/bulk_members_result.dart';
 import '../../sdk/models/eligible_user.dart';
 import '../../sdk/models/gender.dart';
@@ -44,8 +45,9 @@ class RemoteGroupSource implements GroupSource {
   Future<Group> createGroup({
     required String name,
     String? description,
-    DateTime? dobOnOrAfterUtc,
-    DateTime? dobOnOrBeforeUtc,
+    Age? minAge,
+    Age? maxAge,
+    bool? strictAge,
     Gender? gender,
     bool? semiAuto,
   }) async {
@@ -54,10 +56,9 @@ class RemoteGroupSource implements GroupSource {
       body: {
         'name': name,
         'description': ?description,
-        if (dobOnOrAfterUtc != null)
-          'dobOnOrAfterUtc': dobOnOrAfterUtc.millisecondsSinceEpoch,
-        if (dobOnOrBeforeUtc != null)
-          'dobOnOrBeforeUtc': dobOnOrBeforeUtc.millisecondsSinceEpoch,
+        if (minAge != null) 'minAge': minAge.toMap(),
+        if (maxAge != null) 'maxAge': maxAge.toMap(),
+        'strictAge': ?strictAge,
         if (gender != null) 'gender': gender.serverValue,
         'semiAuto': ?semiAuto,
       },
@@ -70,8 +71,9 @@ class RemoteGroupSource implements GroupSource {
     int id, {
     String? name,
     String? Function()? description,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     Gender? Function()? gender,
     bool? semiAuto,
   }) async {
@@ -83,11 +85,14 @@ class RemoteGroupSource implements GroupSource {
     if (description != null) {
       body['description'] = description();
     }
-    if (dobOnOrAfterUtc != null) {
-      body['dobOnOrAfterUtc'] = dobOnOrAfterUtc()?.millisecondsSinceEpoch;
+    if (minAge != null) {
+      body['minAge'] = minAge()?.toMap();
     }
-    if (dobOnOrBeforeUtc != null) {
-      body['dobOnOrBeforeUtc'] = dobOnOrBeforeUtc()?.millisecondsSinceEpoch;
+    if (maxAge != null) {
+      body['maxAge'] = maxAge()?.toMap();
+    }
+    if (strictAge != null) {
+      body['strictAge'] = strictAge;
     }
     if (gender != null) {
       body['gender'] = gender()?.serverValue;

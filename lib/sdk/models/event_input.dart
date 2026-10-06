@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import 'age.dart';
 import 'enums.dart';
 import 'event.dart';
 import 'event_session.dart';
@@ -43,8 +44,9 @@ class EventInput {
     this.organizerName,
     this.rrule,
     this.gender,
-    this.dobOnOrAfterUtc,
-    this.dobOnOrBeforeUtc,
+    this.minAge,
+    this.maxAge,
+    this.strictAge = false,
     this.isFeatured = false,
     this.galleryUris,
     this.sessions,
@@ -71,18 +73,13 @@ class EventInput {
       gender: map['gender'] != null
           ? Gender.fromName(map['gender'] as String)
           : null,
-      dobOnOrAfterUtc: map['dobOnOrAfterUtc'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['dobOnOrAfterUtc'] as int,
-              isUtc: true,
-            )
+      minAge: map['minAge'] != null
+          ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
           : null,
-      dobOnOrBeforeUtc: map['dobOnOrBeforeUtc'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['dobOnOrBeforeUtc'] as int,
-              isUtc: true,
-            )
+      maxAge: map['maxAge'] != null
+          ? Age.fromMap(map['maxAge'] as Map<String, dynamic>)
           : null,
+      strictAge: (map['strictAge'] as bool?) ?? false,
       isFeatured: (map['isFeatured'] as bool?) ?? false,
       galleryUris: map['galleryUris'] != null
           ? List<String>.from(map['galleryUris'] as List)
@@ -114,8 +111,9 @@ class EventInput {
       startTimeUtc: event.startTimeUtc,
       endTimeUtc: event.endTimeUtc,
       gender: event.gender,
-      dobOnOrAfterUtc: event.dobOnOrAfterUtc,
-      dobOnOrBeforeUtc: event.dobOnOrBeforeUtc,
+      minAge: event.minAge,
+      maxAge: event.maxAge,
+      strictAge: event.strictAge,
       isFeatured: event.isFeatured,
       galleryUris: event.galleryUris,
       sessions: event.sessions,
@@ -143,10 +141,13 @@ class EventInput {
   final DateTime startTimeUtc;
   final DateTime endTimeUtc;
 
-  // Structured eligibility — see [Event] for semantics.
+  // Structured eligibility — see [Event] for semantics. The age band is what
+  // a form edits; the window of birth dates it comes to is the server's to
+  // work out and is not accepted on a write (club_server#16, #7).
   final Gender? gender;
-  final DateTime? dobOnOrAfterUtc;
-  final DateTime? dobOnOrBeforeUtc;
+  final Age? minAge;
+  final Age? maxAge;
+  final bool strictAge;
 
   final bool isFeatured;
   final List<String>? galleryUris;
@@ -176,8 +177,9 @@ class EventInput {
       createdAtUtc: now,
       updatedAtUtc: now,
       gender: gender,
-      dobOnOrAfterUtc: dobOnOrAfterUtc,
-      dobOnOrBeforeUtc: dobOnOrBeforeUtc,
+      minAge: minAge,
+      maxAge: maxAge,
+      strictAge: strictAge,
       isFeatured: isFeatured,
       galleryUris: galleryUris,
       sessions: sessions,
@@ -196,8 +198,9 @@ class EventInput {
     DateTime? startTimeUtc,
     DateTime? endTimeUtc,
     Gender? Function()? gender,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     bool? isFeatured,
     List<String>? Function()? galleryUris,
     List<EventSession>? Function()? sessions,
@@ -216,12 +219,9 @@ class EventInput {
       startTimeUtc: startTimeUtc ?? this.startTimeUtc,
       endTimeUtc: endTimeUtc ?? this.endTimeUtc,
       gender: gender != null ? gender() : this.gender,
-      dobOnOrAfterUtc: dobOnOrAfterUtc != null
-          ? dobOnOrAfterUtc()
-          : this.dobOnOrAfterUtc,
-      dobOnOrBeforeUtc: dobOnOrBeforeUtc != null
-          ? dobOnOrBeforeUtc()
-          : this.dobOnOrBeforeUtc,
+      minAge: minAge != null ? minAge() : this.minAge,
+      maxAge: maxAge != null ? maxAge() : this.maxAge,
+      strictAge: strictAge ?? this.strictAge,
       isFeatured: isFeatured ?? this.isFeatured,
       galleryUris: galleryUris != null ? galleryUris() : this.galleryUris,
       sessions: sessions != null ? sessions() : this.sessions,
@@ -241,8 +241,9 @@ class EventInput {
       'startTimeUtc': startTimeUtc.millisecondsSinceEpoch,
       'endTimeUtc': endTimeUtc.millisecondsSinceEpoch,
       'gender': gender?.serverValue,
-      'dobOnOrAfterUtc': dobOnOrAfterUtc?.millisecondsSinceEpoch,
-      'dobOnOrBeforeUtc': dobOnOrBeforeUtc?.millisecondsSinceEpoch,
+      'minAge': minAge?.toMap(),
+      'maxAge': maxAge?.toMap(),
+      'strictAge': strictAge,
       'isFeatured': isFeatured,
       'galleryUris': galleryUris,
       'sessions': sessions?.map((s) => s.toMap()).toList(),
@@ -276,8 +277,9 @@ class EventInput {
         other.startTimeUtc == startTimeUtc &&
         other.endTimeUtc == endTimeUtc &&
         other.gender == gender &&
-        other.dobOnOrAfterUtc == dobOnOrAfterUtc &&
-        other.dobOnOrBeforeUtc == dobOnOrBeforeUtc &&
+        other.minAge == minAge &&
+        other.maxAge == maxAge &&
+        other.strictAge == strictAge &&
         other.isFeatured == isFeatured &&
         _stringListEquality.equals(other.galleryUris, galleryUris) &&
         _sessionListEquality.equals(other.sessions, sessions);
@@ -296,8 +298,9 @@ class EventInput {
         startTimeUtc.hashCode ^
         endTimeUtc.hashCode ^
         gender.hashCode ^
-        dobOnOrAfterUtc.hashCode ^
-        dobOnOrBeforeUtc.hashCode ^
+        minAge.hashCode ^
+        maxAge.hashCode ^
+        strictAge.hashCode ^
         isFeatured.hashCode ^
         _stringListEquality.hash(galleryUris) ^
         _sessionListEquality.hash(sessions);

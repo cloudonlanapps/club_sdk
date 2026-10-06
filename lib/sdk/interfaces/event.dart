@@ -1,3 +1,4 @@
+import '../models/age.dart';
 import '../models/conflict_report.dart';
 import '../models/eligible_user.dart';
 import '../models/enums.dart';
@@ -53,6 +54,10 @@ abstract interface class EventSource {
   ///
   /// [shortDescription], [stamp], [highlights] and [includes] are the basic
   /// marketing block (club_server#409, #22), each optional.
+  ///
+  /// [minAge], [maxAge] and [strictAge] are the age band (club_server#16,
+  /// #7); the server works out the window of birth dates and reports it on
+  /// the event. A minimum greater than the maximum is 422 `INVALID_STATE`.
   Future<Event> createEvent({
     required String title,
     required String description,
@@ -65,8 +70,9 @@ abstract interface class EventSource {
     List<String>? coachNames,
     String? rrule,
     Gender? gender,
-    DateTime? dobOnOrAfterUtc,
-    DateTime? dobOnOrBeforeUtc,
+    Age? minAge,
+    Age? maxAge,
+    bool? strictAge,
     bool isFeatured,
     List<String>? galleryUris,
     String? shortDescription,
@@ -123,6 +129,10 @@ abstract interface class EventSource {
   /// clears the coaches, an omitted getter leaves them alone (#48).
   /// [organizerName] cannot be cleared, since every event has an organizer:
   /// `null` leaves it unchanged.
+  ///
+  /// [minAge] and [maxAge] take getters: one returning `null` clears the
+  /// bound, an omitted getter leaves it alone (club_server#16, #7).
+  /// [strictAge] left `null` is unchanged.
   Future<Event> updateEvent(
     int eventId, {
     required int version,
@@ -132,8 +142,9 @@ abstract interface class EventSource {
     String? organizerName,
     List<String>? Function()? coachNames,
     Gender? Function()? gender,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     bool? isFeatured,
     List<String>? Function()? galleryUris,
     String? Function()? shortDescription,
@@ -202,6 +213,9 @@ abstract interface class EventSource {
   /// [version] is the event version the caller last loaded (#25); a stale
   /// one is refused with `StaleVersionException`.
   ///
+  /// [minAge], [maxAge] and [strictAge] correct the age band as on
+  /// [updateEvent] (club_server#16, #7).
+  ///
   /// Throws `ServerException` with `INVALID_EVENT_TYPE` if the event
   /// is a camp or one-off (use [updateEvent]).
   Future<Event> correctionOnEvent(
@@ -211,8 +225,9 @@ abstract interface class EventSource {
     String? description,
     Visibility? visibility,
     Gender? Function()? gender,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     bool? isFeatured,
     List<String>? Function()? galleryUris,
     String? Function()? shortDescription,

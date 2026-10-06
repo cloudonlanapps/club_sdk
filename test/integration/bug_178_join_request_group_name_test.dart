@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/age_dates.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -51,13 +52,13 @@ void main() {
         firstName: 'Bug178',
         phone: '0000000000',
         gender: Gender.male,
-        dateOfBirthUtc: DateTime.utc(2012, 6, 15),
+        dateOfBirthUtc: bornAgo(years: 12, months: 6),
       );
 
       final semi = await adminClient.groups.createGroup(
         name: semiName,
-        dobOnOrAfterUtc: DateTime.utc(2010),
-        dobOnOrBeforeUtc: DateTime.utc(2014),
+        minAge: const Age(years: 10),
+        maxAge: const Age(years: 15),
         gender: Gender.male,
         semiAuto: true,
       );

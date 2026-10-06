@@ -430,4 +430,110 @@ void main() {
       expect(g.copyWith().members, hasLength(2));
     });
   });
+
+  group('Issue 7: age band', () {
+    final created = DateTime.utc(2026, 3);
+    final referenceDay = DateTime.utc(2026, 10, 6);
+    // GroupResponse of a server with age-based eligibility
+    // (club_server#16, #17).
+    Map<String, dynamic> payload() => {
+      'id': 5,
+      'name': 'test_U12',
+      'description': null,
+      'kind': 'semi_auto',
+      'minAge': {'years': 8, 'months': 0, 'days': 0},
+      'maxAge': {'years': 12, 'months': 6, 'days': 0},
+      'strictAge': true,
+      'dobOnOrAfterUtc': DateTime.utc(2014, 4, 6).millisecondsSinceEpoch,
+      'dobOnOrBeforeUtc': DateTime.utc(2018, 10, 6).millisecondsSinceEpoch,
+      'eligibilityReferenceDayUtc': referenceDay.millisecondsSinceEpoch,
+      'gender': null,
+      'memberCount': 4,
+      'ineligibleMemberCount': 1,
+      'createdAtUtc': created.millisecondsSinceEpoch,
+      'requested': false,
+    };
+
+    test('fromMap reads minAge, maxAge and strictAge', () {
+      final g = Group.fromMap(payload());
+      expect(g.minAge, const Age(years: 8));
+      expect(g.maxAge, const Age(years: 12, months: 6));
+      expect(g.strictAge, isTrue);
+    });
+
+    test('fromMap reads the reference day and keeps the window the server '
+        'worked out', () {
+      final g = Group.fromMap(payload());
+      expect(g.eligibilityReferenceDayUtc, referenceDay);
+      expect(g.dobOnOrAfterUtc, DateTime.utc(2014, 4, 6));
+      expect(g.dobOnOrBeforeUtc, DateTime.utc(2018, 10, 6));
+    });
+
+    test('fromMap reads ineligibleMemberCount', () {
+      expect(Group.fromMap(payload()).ineligibleMemberCount, 1);
+    });
+
+    test('a group with no band, or from a server that predates it, reads '
+        'no ages, relaxed, no reference day and nobody ineligible', () {
+      final g = Group.fromMap({
+        'id': 1,
+        'name': 'Basic',
+        'kind': 'manual',
+        'createdAtUtc': created.millisecondsSinceEpoch,
+      });
+      expect(g.minAge, isNull);
+      expect(g.maxAge, isNull);
+      expect(g.strictAge, isFalse);
+      expect(g.eligibilityReferenceDayUtc, isNull);
+      expect(g.ineligibleMemberCount, 0);
+    });
+
+    test('fromMap reads eligible on the inline members', () {
+      final g = Group.fromMap({
+        ...payload(),
+        'members': const [
+          {'membername': 'amy', 'eligible': true},
+          {'membername': 'bo', 'eligible': false},
+        ],
+      });
+      expect(g.members!.map((m) => m.eligible), [true, false]);
+    });
+
+    test('toMap/fromMap and toJson/fromJson round-trip the band', () {
+      final g = Group.fromMap(payload());
+      expect(g.toMap()['minAge'], {'years': 8, 'months': 0, 'days': 0});
+      expect(g.toMap()['strictAge'], isTrue);
+      expect(g.toMap()['ineligibleMemberCount'], 1);
+      expect(Group.fromMap(g.toMap()), g);
+      expect(Group.fromJson(g.toJson()), g);
+    });
+
+    test('the band, the reference day and the ineligible count take part '
+        'in equality', () {
+      final g = Group.fromMap(payload());
+      expect(g.hashCode, Group.fromMap(payload()).hashCode);
+      expect(g, isNot(g.copyWith(minAge: () => const Age(years: 9))));
+      expect(g, isNot(g.copyWith(maxAge: () => const Age(years: 13))));
+      expect(g, isNot(g.copyWith(strictAge: false)));
+      expect(
+        g,
+        isNot(
+          g.copyWith(
+            eligibilityReferenceDayUtc: () => DateTime.utc(2026, 10, 7),
+          ),
+        ),
+      );
+      expect(g, isNot(g.copyWith(ineligibleMemberCount: 0)));
+    });
+
+    test('copyWith clears a bound through its getter and keeps the '
+        'other', () {
+      final g = Group.fromMap(payload());
+      final open = g.copyWith(maxAge: () => null);
+      expect(open.maxAge, isNull);
+      expect(open.minAge, const Age(years: 8));
+      expect(open.strictAge, isTrue);
+      expect(g.copyWith().maxAge, const Age(years: 12, months: 6));
+    });
+  });
 }

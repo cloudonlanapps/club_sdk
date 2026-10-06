@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:club_sdk_2/remote_store/sources/event_source.dart';
+import 'package:club_sdk_2/sdk/models/age.dart';
 import 'package:club_sdk_2/sdk/models/enums.dart';
 import 'package:club_sdk_2/sdk/models/event_session.dart';
 import 'package:club_sdk_2/sdk/models/gender.dart';
@@ -86,8 +87,9 @@ void main() {
           organizerName: 'Org',
           coachNames: () => ['c1'],
           gender: () => Gender.male,
-          dobOnOrAfterUtc: () => DateTime.utc(2010),
-          dobOnOrBeforeUtc: () => DateTime.utc(2015),
+          minAge: () => const Age(years: 11),
+          maxAge: () => const Age(years: 16),
+          strictAge: true,
           isFeatured: true,
           galleryUris: () => ['uuid-2'],
         );

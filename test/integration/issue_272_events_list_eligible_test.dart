@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/age_dates.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -14,9 +15,11 @@ void main() {
     late SecureClient client;
     late int venueId;
 
-    final maleDob = DateTime.utc(2010);
-    final femaleDob = DateTime.utc(2010);
-    final oldDob = DateTime.utc(2000);
+    // Ages counted back from today; an event's window is counted on the day
+    // it starts (club_server#16), a few days from now.
+    final maleDob = bornAgo(years: 16, months: 6);
+    final femaleDob = bornAgo(years: 16, months: 6);
+    final oldDob = bornAgo(years: 26, months: 6);
 
     setUpAll(() async {
       client = await createRemoteSecureClient(baseUrl: baseUrl);
@@ -90,7 +93,7 @@ void main() {
     var eventCounter = 0;
     Future<Event> createEvent({
       Gender? gender,
-      DateTime? dobOnOrAfterUtc,
+      Age? maxAge,
     }) async {
       eventCounter += 1;
       final start = DateTime.now().toUtc().add(
@@ -105,7 +108,7 @@ void main() {
         startTimeUtc: start,
         endTimeUtc: start.add(const Duration(hours: 1)),
         gender: gender,
-        dobOnOrAfterUtc: dobOnOrAfterUtc,
+        maxAge: maxAge,
       );
     }
 
@@ -127,8 +130,8 @@ void main() {
       expect(names.contains('test_old_i272'), isFalse);
     });
 
-    test('Issue 272: DOB window excludes out-of-window users', () async {
-      final event = await createEvent(dobOnOrAfterUtc: DateTime.utc(2005));
+    test('Issue 272: age band excludes out-of-window users', () async {
+      final event = await createEvent(maxAge: const Age(years: 21));
       final eligible = await client.events.listEligible(event.id);
       final names = eligible.map((e) => e.username).toSet();
       expect(names.contains('test_male_i272'), isTrue);

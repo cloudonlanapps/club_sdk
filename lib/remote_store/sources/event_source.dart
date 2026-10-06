@@ -1,4 +1,5 @@
 import '../../sdk/interfaces/event.dart';
+import '../../sdk/models/age.dart';
 import '../../sdk/models/conflict_report.dart';
 import '../../sdk/models/eligible_user.dart';
 import '../../sdk/models/enums.dart';
@@ -72,8 +73,9 @@ class RemoteEventSource implements EventSource {
     List<String>? coachNames,
     String? rrule,
     Gender? gender,
-    DateTime? dobOnOrAfterUtc,
-    DateTime? dobOnOrBeforeUtc,
+    Age? minAge,
+    Age? maxAge,
+    bool? strictAge,
     bool isFeatured = false,
     List<String>? galleryUris,
     String? shortDescription,
@@ -96,10 +98,9 @@ class RemoteEventSource implements EventSource {
         'coachNames': ?coachNames,
         'rrule': ?rrule,
         if (gender != null) 'gender': gender.serverValue,
-        if (dobOnOrAfterUtc != null)
-          'dobOnOrAfterUtc': dobOnOrAfterUtc.millisecondsSinceEpoch,
-        if (dobOnOrBeforeUtc != null)
-          'dobOnOrBeforeUtc': dobOnOrBeforeUtc.millisecondsSinceEpoch,
+        if (minAge != null) 'minAge': minAge.toMap(),
+        if (maxAge != null) 'maxAge': maxAge.toMap(),
+        'strictAge': ?strictAge,
         'isFeatured': isFeatured,
         'galleryUris': ?galleryUris,
         'shortDescription': ?shortDescription,
@@ -157,8 +158,9 @@ class RemoteEventSource implements EventSource {
     String? organizerName,
     List<String>? Function()? coachNames,
     Gender? Function()? gender,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     bool? isFeatured,
     List<String>? Function()? galleryUris,
     String? Function()? shortDescription,
@@ -181,10 +183,11 @@ class RemoteEventSource implements EventSource {
       // The server clears coaches on [] and ignores null (#48).
       if (coachNames != null) 'coachNames': coachNames() ?? const <String>[],
       if (gender != null) 'gender': gender()?.serverValue,
-      if (dobOnOrAfterUtc != null)
-        'dobOnOrAfterUtc': dobOnOrAfterUtc()?.millisecondsSinceEpoch,
-      if (dobOnOrBeforeUtc != null)
-        'dobOnOrBeforeUtc': dobOnOrBeforeUtc()?.millisecondsSinceEpoch,
+      // A getter returning null sends an explicit null, which clears the
+      // bound; the server keeps a bound that is left out (club_server#16).
+      if (minAge != null) 'minAge': minAge()?.toMap(),
+      if (maxAge != null) 'maxAge': maxAge()?.toMap(),
+      'strictAge': ?strictAge,
       'isFeatured': ?isFeatured,
       if (galleryUris != null) 'galleryUris': galleryUris(),
       if (shortDescription != null) 'shortDescription': shortDescription(),
@@ -244,8 +247,9 @@ class RemoteEventSource implements EventSource {
     String? description,
     Visibility? visibility,
     Gender? Function()? gender,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     bool? isFeatured,
     List<String>? Function()? galleryUris,
     String? Function()? shortDescription,
@@ -261,10 +265,11 @@ class RemoteEventSource implements EventSource {
       'description': ?description,
       if (visibility != null) 'visibility': visibility.name,
       if (gender != null) 'gender': gender()?.serverValue,
-      if (dobOnOrAfterUtc != null)
-        'dobOnOrAfterUtc': dobOnOrAfterUtc()?.millisecondsSinceEpoch,
-      if (dobOnOrBeforeUtc != null)
-        'dobOnOrBeforeUtc': dobOnOrBeforeUtc()?.millisecondsSinceEpoch,
+      // A getter returning null sends an explicit null, which clears the
+      // bound; the server keeps a bound that is left out (club_server#16).
+      if (minAge != null) 'minAge': minAge()?.toMap(),
+      if (maxAge != null) 'maxAge': maxAge()?.toMap(),
+      'strictAge': ?strictAge,
       'isFeatured': ?isFeatured,
       if (galleryUris != null) 'galleryUris': galleryUris(),
       if (shortDescription != null) 'shortDescription': shortDescription(),

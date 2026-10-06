@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:club_sdk_2/remote_store/sources/event_source.dart';
+import 'package:club_sdk_2/sdk/models/age.dart';
 import 'package:club_sdk_2/sdk/models/enums.dart';
 import 'package:club_sdk_2/sdk/models/event_session.dart';
 import 'package:club_sdk_2/sdk/models/gender.dart';
@@ -150,8 +151,8 @@ void main() {
         title: 'T2',
         visibility: Visibility.private,
         gender: () => Gender.female,
-        dobOnOrAfterUtc: () => DateTime.utc(2010),
-        dobOnOrBeforeUtc: () => null,
+        minAge: () => const Age(years: 11),
+        maxAge: () => null,
         isFeatured: true,
         galleryUris: () => ['u1'],
       );
@@ -160,12 +161,9 @@ void main() {
       expect(body['title'], 'T2');
       expect(body['visibility'], 'private');
       expect(body['gender'], 'female');
-      expect(
-        body['dobOnOrAfterUtc'],
-        DateTime.utc(2010).millisecondsSinceEpoch,
-      );
-      expect(body.containsKey('dobOnOrBeforeUtc'), isTrue);
-      expect(body['dobOnOrBeforeUtc'], isNull);
+      expect(body['minAge'], {'years': 11, 'months': 0, 'days': 0});
+      expect(body.containsKey('maxAge'), isTrue);
+      expect(body['maxAge'], isNull);
       expect(body['isFeatured'], true);
       expect(body['galleryUris'], ['u1']);
       expect(body.containsKey('coachNames'), isFalse);
