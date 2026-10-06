@@ -25,6 +25,7 @@ class Enrollment {
     this.updatedAtUtc,
     this.enrolledAtUtc,
     this.withdrawnAtUtc,
+    this.eligible = true,
   });
 
   factory Enrollment.fromMap(Map<String, dynamic> map) {
@@ -58,6 +59,7 @@ class Enrollment {
               isUtc: true,
             )
           : null,
+      eligible: (map['eligible'] as bool?) ?? true,
     );
   }
 
@@ -91,6 +93,14 @@ class Enrollment {
   /// When the user withdrew or was removed from the enrollment.
   final DateTime? withdrawnAtUtc;
 
+  /// False while the member is enrolled (accepted, assigned, on trial or
+  /// asking to withdraw) and no longer meets the event's gender or age
+  /// window (club_server#19, #9), worked out when the row is read. True for
+  /// every other row, and for one from a server that predates the field.
+  /// Nobody is removed automatically; see
+  /// `NotificationType.enrollmentMemberIneligible`.
+  final bool eligible;
+
   Enrollment copyWith({
     int? id,
     String? membername,
@@ -103,6 +113,7 @@ class Enrollment {
     DateTime? Function()? updatedAtUtc,
     DateTime? Function()? enrolledAtUtc,
     DateTime? Function()? withdrawnAtUtc,
+    bool? eligible,
   }) {
     return Enrollment(
       id: id ?? this.id,
@@ -124,6 +135,7 @@ class Enrollment {
       withdrawnAtUtc: withdrawnAtUtc != null
           ? withdrawnAtUtc()
           : this.withdrawnAtUtc,
+      eligible: eligible ?? this.eligible,
     );
   }
 
@@ -140,6 +152,7 @@ class Enrollment {
       'updatedAtUtc': updatedAtUtc?.millisecondsSinceEpoch,
       'enrolledAtUtc': enrolledAtUtc?.millisecondsSinceEpoch,
       'withdrawnAtUtc': withdrawnAtUtc?.millisecondsSinceEpoch,
+      'eligible': eligible,
     };
   }
 
@@ -148,7 +161,7 @@ class Enrollment {
   @override
   String toString() {
     return 'Enrollment(id: $id, membername: $membername, eventId: $eventId, '
-        'status: $status, isTrial: $isTrial)';
+        'status: $status, isTrial: $isTrial, eligible: $eligible)';
   }
 
   @override
@@ -166,7 +179,8 @@ class Enrollment {
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.enrolledAtUtc == enrolledAtUtc &&
-        other.withdrawnAtUtc == withdrawnAtUtc;
+        other.withdrawnAtUtc == withdrawnAtUtc &&
+        other.eligible == eligible;
   }
 
   @override
@@ -181,6 +195,7 @@ class Enrollment {
         createdAtUtc.hashCode ^
         updatedAtUtc.hashCode ^
         enrolledAtUtc.hashCode ^
-        withdrawnAtUtc.hashCode;
+        withdrawnAtUtc.hashCode ^
+        eligible.hashCode;
   }
 }
