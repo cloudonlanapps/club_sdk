@@ -17,6 +17,7 @@ class Capabilities {
     this.evaluations = false,
     this.eventMarketing = false,
     this.identityVerification = true,
+    this.defaultCountryCode,
   });
 
   factory Capabilities.fromMap(Map<String, dynamic> map) {
@@ -25,6 +26,7 @@ class Capabilities {
       evaluations: (map['evaluations'] as bool?) ?? false,
       eventMarketing: (map['eventMarketing'] as bool?) ?? false,
       identityVerification: (map['identityVerification'] as bool?) ?? true,
+      defaultCountryCode: map['defaultCountryCode'] as String?,
     );
   }
 
@@ -49,17 +51,27 @@ class Capabilities {
   /// the field always required verification.
   final bool identityVerification;
 
+  /// The club's country calling code, one to three digits without `+`
+  /// (club_server#15, #6), for completing a phone number typed without one.
+  ///
+  /// Null when the deployment sets none, or the server predates the field.
+  final String? defaultCountryCode;
+
   Capabilities copyWith({
     bool? creditSystem,
     bool? evaluations,
     bool? eventMarketing,
     bool? identityVerification,
+    String? Function()? defaultCountryCode,
   }) {
     return Capabilities(
       creditSystem: creditSystem ?? this.creditSystem,
       evaluations: evaluations ?? this.evaluations,
       eventMarketing: eventMarketing ?? this.eventMarketing,
       identityVerification: identityVerification ?? this.identityVerification,
+      defaultCountryCode: defaultCountryCode != null
+          ? defaultCountryCode()
+          : this.defaultCountryCode,
     );
   }
 
@@ -69,6 +81,7 @@ class Capabilities {
       'evaluations': evaluations,
       'eventMarketing': eventMarketing,
       'identityVerification': identityVerification,
+      'defaultCountryCode': defaultCountryCode,
     };
   }
 
@@ -78,7 +91,8 @@ class Capabilities {
   String toString() =>
       'Capabilities(creditSystem: $creditSystem, evaluations: $evaluations, '
       'eventMarketing: $eventMarketing, '
-      'identityVerification: $identityVerification)';
+      'identityVerification: $identityVerification, '
+      'defaultCountryCode: $defaultCountryCode)';
 
   @override
   bool operator ==(Object other) {
@@ -87,7 +101,8 @@ class Capabilities {
         other.creditSystem == creditSystem &&
         other.evaluations == evaluations &&
         other.eventMarketing == eventMarketing &&
-        other.identityVerification == identityVerification;
+        other.identityVerification == identityVerification &&
+        other.defaultCountryCode == defaultCountryCode;
   }
 
   @override
@@ -95,5 +110,6 @@ class Capabilities {
       creditSystem.hashCode ^
       evaluations.hashCode ^
       eventMarketing.hashCode ^
-      identityVerification.hashCode;
+      identityVerification.hashCode ^
+      defaultCountryCode.hashCode;
 }
