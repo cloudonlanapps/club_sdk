@@ -1,3 +1,4 @@
+import '../models/age.dart';
 import '../models/bulk_members_result.dart';
 import '../models/eligible_user.dart';
 import '../models/gender.dart';
@@ -28,13 +29,16 @@ abstract interface class GroupSource {
   /// it is `auto`. Without criteria the group is `manual` regardless of
   /// [semiAuto].
   ///
-  /// [dobOnOrAfterUtc] / [dobOnOrBeforeUtc] are inclusive DOB bounds.
-  /// The server floors both values to UTC midnight on write.
+  /// The criteria are [gender] and the age band (club_server#16, #7):
+  /// [minAge], [maxAge] and [strictAge]. The server works out today's window
+  /// of birth dates and reports it on the group. A minimum greater than the
+  /// maximum is 422 `INVALID_STATE`.
   Future<Group> createGroup({
     required String name,
     String? description,
-    DateTime? dobOnOrAfterUtc,
-    DateTime? dobOnOrBeforeUtc,
+    Age? minAge,
+    Age? maxAge,
+    bool? strictAge,
     Gender? gender,
     bool? semiAuto,
   });
@@ -42,13 +46,16 @@ abstract interface class GroupSource {
   /// Update a group. Uses ValueGetter pattern for nullable fields.
   ///
   /// Pass [semiAuto] to flip between `auto` and `semiAuto` when criteria are
-  /// present. The server floors DOB bounds to UTC midnight on write.
+  /// present. A [minAge] or [maxAge] getter returning `null` clears that
+  /// bound; an omitted one leaves it alone. [strictAge] left `null` is
+  /// unchanged.
   Future<Group> updateGroup(
     int id, {
     String? name,
     String? Function()? description,
-    DateTime? Function()? dobOnOrAfterUtc,
-    DateTime? Function()? dobOnOrBeforeUtc,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     Gender? Function()? gender,
     bool? semiAuto,
   });

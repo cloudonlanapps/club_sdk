@@ -56,6 +56,7 @@ export 'sdk/interfaces/venue.dart' show VenueSource;
 
 // ClubInfo is exported from the_club/club_info.dart below
 export 'sdk/models/address.dart' show Address;
+export 'sdk/models/age.dart' show Age;
 export 'sdk/models/attendance.dart' show AttendanceRecord, AttendanceStats;
 export 'sdk/models/attendance_mark_record.dart' show AttendanceMarkRecord;
 export 'sdk/models/attendance_mark_report.dart' show AttendanceMarkReport;

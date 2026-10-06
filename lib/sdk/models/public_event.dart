@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import 'age.dart';
 import 'enums.dart';
 import 'event_marketing_basic.dart';
 import 'event_session.dart';
@@ -36,8 +37,12 @@ class PublicEvent {
     this.untilTimeUtc,
     this.sessions,
     this.gender,
+    this.minAge,
+    this.maxAge,
+    this.strictAge = false,
     this.dobOnOrAfterUtc,
     this.dobOnOrBeforeUtc,
+    this.eligibilityReferenceDayUtc,
     this.isFeatured = false,
     this.isPast = false,
     this.cover,
@@ -68,8 +73,16 @@ class PublicEvent {
       gender: map['gender'] != null
           ? Gender.fromName(map['gender'] as String)
           : null,
+      minAge: map['minAge'] != null
+          ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
+          : null,
+      maxAge: map['maxAge'] != null
+          ? Age.fromMap(map['maxAge'] as Map<String, dynamic>)
+          : null,
+      strictAge: (map['strictAge'] as bool?) ?? false,
       dobOnOrAfterUtc: optionalTime('dobOnOrAfterUtc'),
       dobOnOrBeforeUtc: optionalTime('dobOnOrBeforeUtc'),
+      eligibilityReferenceDayUtc: optionalTime('eligibilityReferenceDayUtc'),
       isFeatured: (map['isFeatured'] as bool?) ?? false,
       isPast: (map['isPast'] as bool?) ?? false,
       cover: map['cover'] != null
@@ -115,11 +128,28 @@ class PublicEvent {
   final DateTime? untilTimeUtc;
   final List<EventSession>? sessions;
 
-  // Eligibility is shown as the event's windows; the reader has no
+  // Eligibility is shown as the event's band and window; the reader has no
   // identity to match against.
   final Gender? gender;
+
+  /// The age band (club_server#16, #7): the youngest and oldest age
+  /// admitted, each optional, and whether the check is strict. Strict
+  /// admits ages exactly [minAge] to [maxAge] on the reference day; relaxed,
+  /// the default, widens each end by a year less a day.
+  final Age? minAge;
+  final Age? maxAge;
+  final bool strictAge;
+
+  /// The window of birth dates the band comes to on
+  /// [eligibilityReferenceDayUtc], both ends inclusive; `null` places no
+  /// limit on that side. Worked out by the server and read-only: writes take
+  /// the ages.
   final DateTime? dobOnOrAfterUtc;
   final DateTime? dobOnOrBeforeUtc;
+
+  /// The calendar day ages are counted on; see `Event`. Null from a server
+  /// that predates the age band.
+  final DateTime? eligibilityReferenceDayUtc;
   final bool isFeatured;
 
   /// Whether every occurrence has finished.
@@ -157,8 +187,12 @@ class PublicEvent {
     DateTime? Function()? untilTimeUtc,
     List<EventSession>? Function()? sessions,
     Gender? Function()? gender,
+    Age? Function()? minAge,
+    Age? Function()? maxAge,
+    bool? strictAge,
     DateTime? Function()? dobOnOrAfterUtc,
     DateTime? Function()? dobOnOrBeforeUtc,
+    DateTime? Function()? eligibilityReferenceDayUtc,
     bool? isFeatured,
     bool? isPast,
     MediaRef? Function()? cover,
@@ -181,12 +215,18 @@ class PublicEvent {
       untilTimeUtc: untilTimeUtc != null ? untilTimeUtc() : this.untilTimeUtc,
       sessions: sessions != null ? sessions() : this.sessions,
       gender: gender != null ? gender() : this.gender,
+      minAge: minAge != null ? minAge() : this.minAge,
+      maxAge: maxAge != null ? maxAge() : this.maxAge,
+      strictAge: strictAge ?? this.strictAge,
       dobOnOrAfterUtc: dobOnOrAfterUtc != null
           ? dobOnOrAfterUtc()
           : this.dobOnOrAfterUtc,
       dobOnOrBeforeUtc: dobOnOrBeforeUtc != null
           ? dobOnOrBeforeUtc()
           : this.dobOnOrBeforeUtc,
+      eligibilityReferenceDayUtc: eligibilityReferenceDayUtc != null
+          ? eligibilityReferenceDayUtc()
+          : this.eligibilityReferenceDayUtc,
       isFeatured: isFeatured ?? this.isFeatured,
       isPast: isPast ?? this.isPast,
       cover: cover != null ? cover() : this.cover,
@@ -212,8 +252,13 @@ class PublicEvent {
       'untilTimeUtc': untilTimeUtc?.millisecondsSinceEpoch,
       'sessions': sessions?.map((s) => s.toMap()).toList(),
       'gender': gender?.serverValue,
+      'minAge': minAge?.toMap(),
+      'maxAge': maxAge?.toMap(),
+      'strictAge': strictAge,
       'dobOnOrAfterUtc': dobOnOrAfterUtc?.millisecondsSinceEpoch,
       'dobOnOrBeforeUtc': dobOnOrBeforeUtc?.millisecondsSinceEpoch,
+      'eligibilityReferenceDayUtc':
+          eligibilityReferenceDayUtc?.millisecondsSinceEpoch,
       'isFeatured': isFeatured,
       'isPast': isPast,
       'cover': cover?.toMap(),
@@ -252,8 +297,12 @@ class PublicEvent {
         other.untilTimeUtc == untilTimeUtc &&
         _sessionListEquality.equals(other.sessions, sessions) &&
         other.gender == gender &&
+        other.minAge == minAge &&
+        other.maxAge == maxAge &&
+        other.strictAge == strictAge &&
         other.dobOnOrAfterUtc == dobOnOrAfterUtc &&
         other.dobOnOrBeforeUtc == dobOnOrBeforeUtc &&
+        other.eligibilityReferenceDayUtc == eligibilityReferenceDayUtc &&
         other.isFeatured == isFeatured &&
         other.isPast == isPast &&
         other.cover == cover &&
@@ -278,8 +327,12 @@ class PublicEvent {
       untilTimeUtc.hashCode ^
       _sessionListEquality.hash(sessions) ^
       gender.hashCode ^
+      minAge.hashCode ^
+      maxAge.hashCode ^
+      strictAge.hashCode ^
       dobOnOrAfterUtc.hashCode ^
       dobOnOrBeforeUtc.hashCode ^
+      eligibilityReferenceDayUtc.hashCode ^
       isFeatured.hashCode ^
       isPast.hashCode ^
       cover.hashCode ^

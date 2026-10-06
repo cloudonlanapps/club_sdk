@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/age_dates.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -32,10 +33,11 @@ void main() {
 
       await client.auth.login(sudoUsername, sudoPassword);
 
-      // Single approved member used across the three tests. DOB sits in
-      // the middle of the initial 2010-01-01..2014-01-01 window so we
-      // have room to both narrow (still in window) and narrow-past-her
-      // (ineligible) within the same fixture.
+      // Single approved member used across the three tests. Aged 12 and a
+      // half, in the middle of the initial 10-to-14 band, so we have room
+      // to both narrow (still in the band) and narrow past them
+      // (ineligible) within the same fixture. The age is counted back from
+      // today: a group's window moves forward each day (club_server#16).
       await registerAndApprove(
         client: client,
         adminUsername: sudoUsername,
@@ -46,7 +48,7 @@ void main() {
         firstName: 'Bug174',
         phone: '0000000000',
         gender: Gender.male,
-        dateOfBirthUtc: DateTime.utc(2011, 6, 15),
+        dateOfBirthUtc: bornAgo(years: 12, months: 6),
       );
 
       await client.auth.logout();
@@ -64,15 +66,15 @@ void main() {
       }
     });
 
-    /// Creates a fresh semi_auto group with criteria spanning
-    /// 2010-01-01..2014-01-01 and adds `test_bug174_member` as an
-    /// approved member. Each test gets its own group so we don't leak
-    /// state across tests.
+    /// Creates a fresh semi_auto group admitting ages 10 to 14, strictly,
+    /// and adds `test_bug174_member` as an approved member. Each test gets
+    /// its own group so we don't leak state across tests.
     Future<Group> createSemiAutoGroupWithMember(String name) async {
       final group = await client.groups.createGroup(
         name: name,
-        dobOnOrAfterUtc: DateTime.utc(2010),
-        dobOnOrBeforeUtc: DateTime.utc(2014),
+        minAge: const Age(years: 10),
+        maxAge: const Age(years: 14),
+        strictAge: true,
         semiAuto: true,
       );
       expect(group.kind, GroupKind.semiAuto);
@@ -86,12 +88,12 @@ void main() {
       () async {
         final group = await createSemiAutoGroupWithMember('test_bug174_reject');
 
-        // Narrow lower bound to 2013-01-01 — past the member's DOB of
-        // 2011-06-15 → member becomes ineligible → server must reject.
+        // Lower the maximum age to 11 — below the member's 12 and a half
+        // → member becomes ineligible → server must reject.
         await expectLater(
           () => client.groups.updateGroup(
             group.id,
-            dobOnOrAfterUtc: () => DateTime.utc(2013),
+            maxAge: () => const Age(years: 11),
           ),
           throwsA(
             isA<ServerException>().having(
@@ -105,8 +107,9 @@ void main() {
         // Group state must be unchanged on rejection.
         final fresh = await client.groups.getGroup(group.id);
         expect(fresh.kind, GroupKind.semiAuto);
-        expect(fresh.dobOnOrAfterUtc, DateTime.utc(2010));
-        expect(fresh.dobOnOrBeforeUtc, DateTime.utc(2014));
+        expect(fresh.minAge, const Age(years: 10));
+        expect(fresh.maxAge, const Age(years: 14));
+        expect(fresh.strictAge, isTrue);
       },
     );
 
@@ -116,19 +119,19 @@ void main() {
       () async {
         final group = await createSemiAutoGroupWithMember('test_bug174_accept');
 
-        // Narrow lower bound to 2011-01-01 — still earlier than the
-        // member's DOB of 2011-06-15 → member remains eligible → accept.
+        // Lower the maximum age to 13 — still above the member's 12 and a
+        // half → member remains eligible → accept.
         final updated = await client.groups.updateGroup(
           group.id,
-          dobOnOrAfterUtc: () => DateTime.utc(2011),
+          maxAge: () => const Age(years: 13),
         );
         expect(updated.kind, GroupKind.semiAuto);
-        expect(updated.dobOnOrAfterUtc, DateTime.utc(2011));
-        expect(updated.dobOnOrBeforeUtc, DateTime.utc(2014));
+        expect(updated.maxAge, const Age(years: 13));
+        expect(updated.minAge, const Age(years: 10));
 
         // Double-verify via GET.
         final fresh = await client.groups.getGroup(group.id);
-        expect(fresh.dobOnOrAfterUtc, DateTime.utc(2011));
+        expect(fresh.maxAge, const Age(years: 13));
       },
     );
 
@@ -142,12 +145,14 @@ void main() {
         // member's eligibility is moot and the server must accept.
         final updated = await client.groups.updateGroup(
           group.id,
-          dobOnOrAfterUtc: () => null,
-          dobOnOrBeforeUtc: () => null,
+          minAge: () => null,
+          maxAge: () => null,
           gender: () => null,
           semiAuto: false,
         );
         expect(updated.kind, GroupKind.manual);
+        expect(updated.minAge, isNull);
+        expect(updated.maxAge, isNull);
         expect(updated.dobOnOrAfterUtc, isNull);
         expect(updated.dobOnOrBeforeUtc, isNull);
         expect(updated.gender, isNull);

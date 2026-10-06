@@ -271,4 +271,95 @@ void main() {
       });
     });
   });
+
+  group('Issue 7: age band', () {
+    final referenceDay = DateTime.utc(2027, 1, 1);
+    // EventResponse of a server with age-based eligibility (club_server#16).
+    Map<String, dynamic> payload() => {
+      'id': 42,
+      'title': 'test_U12 camp',
+      'description': 'D',
+      'type': 'camp',
+      'visibility': 'public',
+      'venueId': 1,
+      'startTimeUtc': DateTime.utc(2027, 1, 1, 10).millisecondsSinceEpoch,
+      'endTimeUtc': DateTime.utc(2027, 1, 1, 11).millisecondsSinceEpoch,
+      'createdAtUtc': DateTime.utc(2026, 1, 1, 9).millisecondsSinceEpoch,
+      'updatedAtUtc': DateTime.utc(2026, 1, 2).millisecondsSinceEpoch,
+      'minAge': {'years': 8, 'months': 0, 'days': 0},
+      'maxAge': {'years': 12, 'months': 6, 'days': 0},
+      'strictAge': true,
+      'dobOnOrAfterUtc': DateTime.utc(2014, 7).millisecondsSinceEpoch,
+      'dobOnOrBeforeUtc': DateTime.utc(2019).millisecondsSinceEpoch,
+      'eligibilityReferenceDayUtc': referenceDay.millisecondsSinceEpoch,
+      'isFeatured': false,
+    };
+
+    test('fromMap reads minAge, maxAge and strictAge', () {
+      final e = Event.fromMap(payload());
+      expect(e.minAge, const Age(years: 8));
+      expect(e.maxAge, const Age(years: 12, months: 6));
+      expect(e.strictAge, isTrue);
+    });
+
+    test('fromMap reads the reference day and keeps the window the server '
+        'worked out', () {
+      final e = Event.fromMap(payload());
+      expect(e.eligibilityReferenceDayUtc, referenceDay);
+      expect(e.dobOnOrAfterUtc, DateTime.utc(2014, 7));
+      expect(e.dobOnOrBeforeUtc, DateTime.utc(2019));
+    });
+
+    test('an event with no band, or from a server that predates it, reads '
+        'no ages, relaxed and no reference day', () {
+      final e = Event.fromMap(
+        payload()
+          ..remove('minAge')
+          ..remove('maxAge')
+          ..remove('strictAge')
+          ..remove('eligibilityReferenceDayUtc'),
+      );
+      expect(e.minAge, isNull);
+      expect(e.maxAge, isNull);
+      expect(e.strictAge, isFalse);
+      expect(e.eligibilityReferenceDayUtc, isNull);
+    });
+
+    test('toMap/fromMap and toJson/fromJson round-trip the band', () {
+      final e = Event.fromMap(payload());
+      expect(e.toMap()['maxAge'], {'years': 12, 'months': 6, 'days': 0});
+      expect(e.toMap()['strictAge'], isTrue);
+      expect(
+        e.toMap()['eligibilityReferenceDayUtc'],
+        referenceDay.millisecondsSinceEpoch,
+      );
+      expect(Event.fromMap(e.toMap()), e);
+      expect(Event.fromJson(e.toJson()), e);
+    });
+
+    test('the band and the reference day take part in equality', () {
+      final e = Event.fromMap(payload());
+      expect(e.hashCode, Event.fromMap(payload()).hashCode);
+      expect(e, isNot(e.copyWith(minAge: () => const Age(years: 9))));
+      expect(e, isNot(e.copyWith(maxAge: () => const Age(years: 13))));
+      expect(e, isNot(e.copyWith(strictAge: false)));
+      expect(
+        e,
+        isNot(
+          e.copyWith(
+            eligibilityReferenceDayUtc: () => DateTime.utc(2027, 1, 2),
+          ),
+        ),
+      );
+    });
+
+    test('copyWith clears a bound through its getter and keeps the '
+        'other', () {
+      final e = Event.fromMap(payload());
+      final open = e.copyWith(minAge: () => null);
+      expect(open.minAge, isNull);
+      expect(open.maxAge, const Age(years: 12, months: 6));
+      expect(e.copyWith().minAge, const Age(years: 8));
+    });
+  });
 }

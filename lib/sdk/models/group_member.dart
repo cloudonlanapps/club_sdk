@@ -4,7 +4,7 @@ import 'package:meta/meta.dart';
 
 /// A member row as returned by `GET /v1/groups/by_id/{id}/members`.
 ///
-/// The server sends exactly these four fields (`GroupMemberInfo`). This was
+/// The server sends exactly these fields (`GroupMemberInfo`). This was
 /// previously parsed as `UserInfo`, whose extra fields then fell to their
 /// defaults — so every member reported `status: pending` with no roles.
 /// Fetch the full record separately when more than a name is needed.
@@ -15,6 +15,7 @@ class GroupMember {
     this.firstName,
     this.lastName,
     this.nickname,
+    this.eligible = true,
   });
 
   factory GroupMember.fromMap(Map<String, dynamic> map) {
@@ -23,6 +24,7 @@ class GroupMember {
       firstName: map['firstName'] as String?,
       lastName: map['lastName'] as String?,
       nickname: map['nickname'] as String?,
+      eligible: (map['eligible'] as bool?) ?? true,
     );
   }
 
@@ -35,6 +37,12 @@ class GroupMember {
   final String? firstName;
   final String? lastName;
   final String? nickname;
+
+  /// False for a semi-auto member who no longer meets the group's age band
+  /// or gender (club_server#17, #7), worked out when the row is read. Staff,
+  /// and members of manual and auto groups, are always true, as is a row
+  /// from a server that predates the field. Nobody is removed automatically.
+  final bool eligible;
 
   /// Best available display name, falling back to the username.
   String get displayName {
@@ -50,12 +58,14 @@ class GroupMember {
     String? Function()? firstName,
     String? Function()? lastName,
     String? Function()? nickname,
+    bool? eligible,
   }) {
     return GroupMember(
       membername: membername ?? this.membername,
       firstName: firstName != null ? firstName() : this.firstName,
       lastName: lastName != null ? lastName() : this.lastName,
       nickname: nickname != null ? nickname() : this.nickname,
+      eligible: eligible ?? this.eligible,
     );
   }
 
@@ -65,6 +75,7 @@ class GroupMember {
       'firstName': firstName,
       'lastName': lastName,
       'nickname': nickname,
+      'eligible': eligible,
     };
   }
 
@@ -73,7 +84,7 @@ class GroupMember {
   @override
   String toString() {
     return 'GroupMember(membername: $membername, firstName: $firstName, '
-        'lastName: $lastName, nickname: $nickname)';
+        'lastName: $lastName, nickname: $nickname, eligible: $eligible)';
   }
 
   @override
@@ -83,9 +94,11 @@ class GroupMember {
         other.membername == membername &&
         other.firstName == firstName &&
         other.lastName == lastName &&
-        other.nickname == nickname;
+        other.nickname == nickname &&
+        other.eligible == eligible;
   }
 
   @override
-  int get hashCode => Object.hash(membername, firstName, lastName, nickname);
+  int get hashCode =>
+      Object.hash(membername, firstName, lastName, nickname, eligible);
 }

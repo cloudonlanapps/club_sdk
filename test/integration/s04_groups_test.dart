@@ -2,6 +2,7 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
+import '../utils/age_dates.dart';
 import '../utils/clear_test_artifacts.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -91,8 +92,9 @@ void main() {
         gender: Gender.male,
       );
 
-      // Users with specific DOB and gender for auto group tests.
-      // boy1: male, DOB 2014-06-15
+      // Users with specific ages and gender for auto group tests. The ages
+      // are counted back from today, since a group's window moves each day.
+      // boy1: male, aged 12 years 3 months
       await registerAndApprove(
         client: client,
         adminUsername: sudoUsername,
@@ -103,10 +105,10 @@ void main() {
         firstName: 'Boy One',
         phone: '0000000000',
         gender: Gender.male,
-        dateOfBirthUtc: DateTime.utc(2014, 6, 15),
+        dateOfBirthUtc: bornAgo(years: 12, months: 3),
       );
 
-      // boy2: male, DOB 2018-03-01
+      // boy2: male, aged 8 years 6 months
       await registerAndApprove(
         client: client,
         adminUsername: sudoUsername,
@@ -118,10 +120,10 @@ void main() {
         phone: '0000000000',
         gender: Gender.male,
         // ignore: but explicit DOB makes intent clearer
-        dateOfBirthUtc: DateTime.utc(2018, 3, 1),
+        dateOfBirthUtc: bornAgo(years: 8, months: 6),
       );
 
-      // girl1: female, DOB 2013-09-01
+      // girl1: female, aged 13 years 1 month
       await registerAndApprove(
         client: client,
         adminUsername: sudoUsername,
@@ -133,10 +135,10 @@ void main() {
         phone: '0000000000',
         gender: Gender.female,
         // ignore: but explicit DOB makes intent clearer
-        dateOfBirthUtc: DateTime.utc(2013, 9, 1),
+        dateOfBirthUtc: bornAgo(years: 13, months: 1),
       );
 
-      // adult: male, DOB 2000-01-01
+      // adult: male, aged 26
       await registerAndApprove(
         client: client,
         adminUsername: sudoUsername,
@@ -148,10 +150,10 @@ void main() {
         phone: '0000000000',
         gender: Gender.male,
         // ignore: but explicit DOB makes intent clearer
-        dateOfBirthUtc: DateTime.utc(2000, 1, 1),
+        dateOfBirthUtc: bornAgo(years: 26),
       );
 
-      // coach: adult male, DOB 1990-01-01, role coach.
+      // coach: adult male, aged 36, role coach.
       // Used to verify staff exemption from NOT_ELIGIBLE.
       await registerAndApprove(
         client: client,
@@ -164,7 +166,7 @@ void main() {
         phone: '0000000000',
         gender: Gender.male,
         // Explicit DOB makes intent clearer.
-        dateOfBirthUtc: DateTime.utc(1990, 1, 1),
+        dateOfBirthUtc: bornAgo(years: 36),
       );
       await client.users.assignRole('test_coach_s04', 'coach');
 
@@ -396,18 +398,27 @@ void main() {
     // =========================================================================
 
     group('4.11: Auto Group Behavior', () {
-      final dobAfter = DateTime.utc(2010);
-      final dobBefore = DateTime.utc(2018, 12, 31);
+      // Age-based eligibility (club_server#16, #7): the criteria are an age
+      // band, and the server reports the window of birth dates it comes to.
+      const minAge = Age(years: 8);
+      const maxAge = Age(years: 16);
 
-      test('creating group with dobOnOrAfterUtc makes it auto', () async {
+      test('creating group with an age band makes it auto', () async {
         final group = await client.groups.createGroup(
           name: 'test_Auto Age Group 411a',
-          dobOnOrAfterUtc: dobAfter,
-          dobOnOrBeforeUtc: dobBefore,
+          minAge: minAge,
+          maxAge: maxAge,
         );
         expect(group.kind, GroupKind.auto);
-        expect(group.dobOnOrAfterUtc, dobAfter);
-        expect(group.dobOnOrBeforeUtc, dobBefore);
+        expect(group.minAge, minAge);
+        expect(group.maxAge, maxAge);
+        expect(group.strictAge, isFalse);
+        expect(group.dobOnOrAfterUtc, isNotNull);
+        expect(group.dobOnOrBeforeUtc, isNotNull);
+        expect(
+          group.dobOnOrAfterUtc!.isBefore(group.dobOnOrBeforeUtc!),
+          isTrue,
+        );
       });
 
       test('creating group with gender makes it auto', () async {
@@ -430,8 +441,8 @@ void main() {
         () async {
           final group = await client.groups.createGroup(
             name: 'test_SemiAuto Group 411i',
-            dobOnOrAfterUtc: dobAfter,
-            dobOnOrBeforeUtc: dobBefore,
+            minAge: minAge,
+            maxAge: maxAge,
             semiAuto: true,
           );
           expect(group.kind, GroupKind.semiAuto);
@@ -441,8 +452,8 @@ void main() {
       test('creating group with criteria + semiAuto:false is auto', () async {
         final group = await client.groups.createGroup(
           name: 'test_Auto Explicit 411j',
-          dobOnOrAfterUtc: dobAfter,
-          dobOnOrBeforeUtc: dobBefore,
+          minAge: minAge,
+          maxAge: maxAge,
           semiAuto: false,
         );
         expect(group.kind, GroupKind.auto);
@@ -464,8 +475,8 @@ void main() {
         () async {
           final group = await client.groups.createGroup(
             name: 'test_Flip Auto To Semi 411l',
-            dobOnOrAfterUtc: dobAfter,
-            dobOnOrBeforeUtc: dobBefore,
+            minAge: minAge,
+            maxAge: maxAge,
           );
           expect(group.kind, GroupKind.auto);
 
@@ -486,7 +497,7 @@ void main() {
       test('addMember to auto group throws', () async {
         final group = await client.groups.createGroup(
           name: 'test_Auto No Add 411d',
-          dobOnOrAfterUtc: dobAfter,
+          maxAge: maxAge,
         );
 
         expect(
@@ -524,7 +535,7 @@ void main() {
           expect(
             () => client.groups.updateGroup(
               group.id,
-              dobOnOrAfterUtc: () => dobAfter,
+              maxAge: () => maxAge,
             ),
             throwsA(
               isA<ServerException>().having(
@@ -544,12 +555,12 @@ void main() {
 
         final updated = await client.groups.updateGroup(
           group.id,
-          dobOnOrAfterUtc: () => dobAfter,
-          dobOnOrBeforeUtc: () => dobBefore,
+          minAge: () => minAge,
+          maxAge: () => maxAge,
         );
         expect(updated.kind, GroupKind.auto);
-        expect(updated.dobOnOrAfterUtc, dobAfter);
-        expect(updated.dobOnOrBeforeUtc, dobBefore);
+        expect(updated.minAge, minAge);
+        expect(updated.maxAge, maxAge);
       });
     });
 
@@ -558,10 +569,12 @@ void main() {
     // =========================================================================
     //
     // Users seeded in setUpAll:
-    //   test_boy1_s04:  male,   DOB 2014-06-15
-    //   test_boy2_s04:  male,   DOB 2018-03-01
-    //   test_girl1_s04: female, DOB 2013-09-01
-    //   test_adult_s04: male,   DOB 2000-01-01
+    //   test_boy1_s04:  male,   aged 12 years 3 months
+    //   test_boy2_s04:  male,   aged 8 years 6 months
+    //   test_girl1_s04: female, aged 13 years 1 month
+    //   test_adult_s04: male,   aged 26
+    //
+    // The bands are strict, so each admits exactly the ages it names.
 
     group('4.12: Auto Group Membership Queries', () {
       test('gender-only group returns matching gender', () async {
@@ -579,36 +592,38 @@ void main() {
         expect(usernames, isNot(contains('test_girl1_s04')));
       });
 
-      test('DOB-only group returns members within DOB bounds', () async {
+      test('age-only group returns members within the age band', () async {
         final group = await client.groups.createGroup(
-          name: 'test_Youth 2013-2018 412b',
-          dobOnOrAfterUtc: DateTime.utc(2013),
-          dobOnOrBeforeUtc: DateTime.utc(2018, 12, 31),
+          name: 'test_Youth 7-14 412b',
+          minAge: const Age(years: 7),
+          maxAge: const Age(years: 14),
+          strictAge: true,
         );
 
         final members = await client.groups.getMembers(group.id);
         final usernames = members.map((m) => m.membername).toList();
 
-        // boy1 (2014-06-15), boy2 (2018-03-01) and girl1 (2013-09-01) match
+        // boy1 (12y 3m), boy2 (8y 6m) and girl1 (13y 1m) match
         expect(usernames, contains('test_boy1_s04'));
         expect(usernames, contains('test_boy2_s04'));
         expect(usernames, contains('test_girl1_s04'));
-        // adult (2000-01-01) is outside the DOB range
+        // adult (26) is outside the band
         expect(usernames, isNot(contains('test_adult_s04')));
       });
 
-      test('gender + DOB group returns intersection', () async {
+      test('gender + age group returns intersection', () async {
         final group = await client.groups.createGroup(
-          name: 'test_Boys 2014 412c',
+          name: 'test_Boys 12 412c',
           gender: Gender.male,
-          dobOnOrAfterUtc: DateTime.utc(2014),
-          dobOnOrBeforeUtc: DateTime.utc(2014, 12, 31),
+          minAge: const Age(years: 12),
+          maxAge: const Age(years: 12, months: 6),
+          strictAge: true,
         );
 
         final members = await client.groups.getMembers(group.id);
         final usernames = members.map((m) => m.membername).toList();
 
-        // Only boy1 (male, born 2014-06-15) matches
+        // Only boy1 (male, 12y 3m) matches
         expect(usernames, contains('test_boy1_s04'));
         expect(usernames, isNot(contains('test_boy2_s04')));
         expect(usernames, isNot(contains('test_girl1_s04')));
@@ -616,20 +631,21 @@ void main() {
       });
 
       test(
-        'dobOnOrAfter only matches members born on or after the bound',
+        'maxAge only matches members no older than the bound',
         () async {
           final group = await client.groups.createGroup(
-            name: 'test_DOB After 2014 412d',
-            dobOnOrAfterUtc: DateTime.utc(2014),
+            name: 'test_Up To 12 And A Half 412d',
+            maxAge: const Age(years: 12, months: 6),
+            strictAge: true,
           );
 
           final members = await client.groups.getMembers(group.id);
           final usernames = members.map((m) => m.membername).toList();
 
-          // boy1 (2014-06-15) and boy2 (2018-03-01) match
+          // boy1 (12y 3m) and boy2 (8y 6m) match
           expect(usernames, contains('test_boy1_s04'));
           expect(usernames, contains('test_boy2_s04'));
-          // girl1 (2013-09-01) and adult (2000-01-01) are too old
+          // girl1 (13y 1m) and adult (26) are too old
           expect(usernames, isNot(contains('test_girl1_s04')));
           expect(usernames, isNot(contains('test_adult_s04')));
         },
@@ -646,14 +662,14 @@ void main() {
         final group = await client.groups.createGroup(
           name: 'test_Semi Convert Block 413a',
         );
-        // adult (DOB 2000) does NOT match a youth criteria.
+        // adult (26) does NOT match a youth criteria.
         await client.groups.addMember(group.id, 'test_adult_s04');
 
         try {
           await client.groups.updateGroup(
             group.id,
-            dobOnOrAfterUtc: () => DateTime.utc(2010),
-            dobOnOrBeforeUtc: () => DateTime.utc(2018, 12, 31),
+            minAge: () => const Age(years: 8),
+            maxAge: () => const Age(years: 16),
             semiAuto: true,
           );
           fail('Expected ServerException MEMBERS_INELIGIBLE');
@@ -672,8 +688,8 @@ void main() {
         () async {
           final group = await client.groups.createGroup(
             name: 'test_Semi Ineligible 413b',
-            dobOnOrAfterUtc: DateTime.utc(2010),
-            dobOnOrBeforeUtc: DateTime.utc(2018, 12, 31),
+            minAge: const Age(years: 8),
+            maxAge: const Age(years: 16),
             semiAuto: true,
           );
 
@@ -695,12 +711,12 @@ void main() {
         () async {
           final group = await client.groups.createGroup(
             name: 'test_Semi Staff Exempt 413c',
-            dobOnOrAfterUtc: DateTime.utc(2010),
-            dobOnOrBeforeUtc: DateTime.utc(2018, 12, 31),
+            minAge: const Age(years: 8),
+            maxAge: const Age(years: 16),
             semiAuto: true,
           );
 
-          // Coach (born 1990) does NOT match the youth criteria, but is staff.
+          // Coach (36) does NOT match the youth criteria, but is staff.
           await client.groups.addMember(group.id, 'test_coach_s04');
 
           final members = await client.groups.getMembers(group.id);
@@ -716,8 +732,8 @@ void main() {
         () async {
           final group = await client.groups.createGroup(
             name: 'test_Bulk Semi 413d',
-            dobOnOrAfterUtc: DateTime.utc(2010),
-            dobOnOrBeforeUtc: DateTime.utc(2018, 12, 31),
+            minAge: const Age(years: 8),
+            maxAge: const Age(years: 16),
             semiAuto: true,
           );
 

@@ -83,6 +83,12 @@ abstract final class NotificationType {
   static const groupJoinRequest = 'group.join_request';
   static const groupJoinResponse = 'group.join_response';
   static const groupMemberAdded = 'group.member_added';
+
+  /// A semi-auto member no longer meets the group's criteria
+  /// (club_server#17, #7). Sent to admins once a day for each member who has
+  /// newly stopped matching; `data` carries `groupId`, `groupName` and
+  /// `membername`.
+  static const groupMemberIneligible = 'group.member_ineligible';
   static const groupMemberRemoved = 'group.member_removed';
   static const groupSettingsChanged = 'group.settings_changed';
 
@@ -143,6 +149,7 @@ abstract final class NotificationType {
     groupJoinRequest,
     groupJoinResponse,
     groupMemberAdded,
+    groupMemberIneligible,
     groupMemberRemoved,
     groupSettingsChanged,
     inquiryReceived,
