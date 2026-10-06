@@ -61,6 +61,54 @@ void main() {
       expect(off.copyWith(identityVerification: true), const Capabilities());
     });
 
+    test('Issue 6: defaultCountryCode reads the server value', () {
+      final caps = Capabilities.fromMap(const {'defaultCountryCode': '91'});
+      expect(caps.defaultCountryCode, '91');
+      expect(
+        Capabilities.fromJson('{"defaultCountryCode": "1"}').defaultCountryCode,
+        '1',
+      );
+    });
+
+    test('Issue 6: defaultCountryCode is null when the server reports none '
+        'or omits it', () {
+      // A deployment that sets no code answers null; a server that predates
+      // the field leaves the key out.
+      expect(
+        Capabilities.fromMap(const {
+          'defaultCountryCode': null,
+        }).defaultCountryCode,
+        isNull,
+      );
+      expect(
+        Capabilities.fromJson('{"creditSystem": false}').defaultCountryCode,
+        isNull,
+      );
+      expect(const Capabilities().defaultCountryCode, isNull);
+    });
+
+    test('Issue 6: defaultCountryCode round-trips, takes part in equality '
+        'and is cleared through copyWith', () {
+      const india = Capabilities(defaultCountryCode: '91');
+      expect(india.toMap()['defaultCountryCode'], '91');
+      expect(Capabilities.fromMap(india.toMap()), india);
+      expect(Capabilities.fromJson(india.toJson()), india);
+      expect(india, isNot(const Capabilities()));
+      expect(
+        india.hashCode,
+        const Capabilities(defaultCountryCode: '91').hashCode,
+      );
+      expect(india.copyWith(evaluations: true).defaultCountryCode, '91');
+      expect(
+        india.copyWith(defaultCountryCode: () => '44').defaultCountryCode,
+        '44',
+      );
+      expect(
+        india.copyWith(defaultCountryCode: () => null),
+        const Capabilities(),
+      );
+    });
+
     test('Issue 15: endpoint', () {
       expect(const CapabilitiesEndpoints().capabilities, '/capabilities');
     });
