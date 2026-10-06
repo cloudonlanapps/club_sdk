@@ -72,6 +72,41 @@ void main() {
       expect(data['membername'], 'amy');
     });
 
+    test('Issue 9: enrollment.member_ineligible is a known type', () {
+      expect(
+        NotificationType.enrollmentMemberIneligible,
+        'enrollment.member_ineligible',
+      );
+      expect(NotificationType.all, contains('enrollment.member_ineligible'));
+      expect(NotificationType.isKnown('enrollment.member_ineligible'), isTrue);
+    });
+
+    test('Issue 9: an enrollment.member_ineligible notification carries the '
+        'event and the member', () {
+      final n = AppNotification.fromMap(const <String, dynamic>{
+        'id': 4,
+        'username': 'admin',
+        'type': 'enrollment.member_ineligible',
+        'channel': 'in_app',
+        'payload': <String, dynamic>{
+          'v': 1,
+          'type': 'enrollment.member_ineligible',
+          'data': <String, dynamic>{
+            'eventId': 42,
+            'eventTitle': 'test_U12 programme',
+            'membername': 'amy',
+          },
+        },
+        'isRead': false,
+        'createdAtUtc': 1791244800000,
+      });
+      expect(n.type, NotificationType.enrollmentMemberIneligible);
+      final data = n.payload['data'] as Map<String, dynamic>;
+      expect(data['eventId'], 42);
+      expect(data['eventTitle'], 'test_U12 programme');
+      expect(data['membername'], 'amy');
+    });
+
     test('Issue 30: the trial-ended withdrawal reason is named', () {
       expect(Enrollment.trialCreditExhaustedReason, 'trialCreditExhausted');
     });

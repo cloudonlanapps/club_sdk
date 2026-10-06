@@ -44,6 +44,13 @@ abstract final class NotificationType {
   static const enrollmentCancelledAdmin = 'enrollment.cancelled_admin';
   static const enrollmentCancelledSelf = 'enrollment.cancelled_self';
   static const enrollmentClosed = 'enrollment.closed';
+
+  /// An enrolled member of a running programme no longer meets its gender
+  /// or age window (club_server#19, #9). Sent to admins once a day for each
+  /// member who has newly stopped matching; `data` carries `eventId`,
+  /// `eventTitle` and `membername`. The member stays enrolled, with
+  /// `Enrollment.eligible` false.
+  static const enrollmentMemberIneligible = 'enrollment.member_ineligible';
   static const enrollmentOpened = 'enrollment.opened';
   static const enrollmentRsvp = 'enrollment.rsvp';
 
@@ -128,6 +135,7 @@ abstract final class NotificationType {
     enrollmentCancelledAdmin,
     enrollmentCancelledSelf,
     enrollmentClosed,
+    enrollmentMemberIneligible,
     enrollmentOpened,
     enrollmentRsvp,
     enrollmentTrialEnded,

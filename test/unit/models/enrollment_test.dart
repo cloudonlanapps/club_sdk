@@ -170,4 +170,53 @@ void main() {
       expect(enroll.isTrial, false);
     });
   });
+
+  group('Issue 9: Enrollment.eligible', () {
+    // EnrollmentResponse (club_server#19): `eligible` is false while the
+    // member is enrolled and no longer meets the event's gender or window.
+    Map<String, dynamic> payload({bool? eligible}) => {
+      'id': 11,
+      'membername': 'amy',
+      'eventId': 42,
+      'status': 'assigned',
+      'isTrial': false,
+      'previousStatus': null,
+      'withdrawalReason': null,
+      'enrolledAtUtc': DateTime.utc(2026, 9).millisecondsSinceEpoch,
+      'withdrawnAtUtc': null,
+      'createdAtUtc': DateTime.utc(2026, 9).millisecondsSinceEpoch,
+      'updatedAtUtc': null,
+      'eligible': ?eligible,
+    };
+
+    test('fromMap reads eligible false', () {
+      expect(Enrollment.fromMap(payload(eligible: false)).eligible, isFalse);
+    });
+
+    test('fromMap reads eligible true', () {
+      expect(Enrollment.fromMap(payload(eligible: true)).eligible, isTrue);
+    });
+
+    test('eligible is true when the server omits it', () {
+      final old = payload();
+      expect(old.containsKey('eligible'), isFalse);
+      expect(Enrollment.fromMap(old).eligible, isTrue);
+    });
+
+    test('eligible round-trips through toMap and toJson', () {
+      final flagged = Enrollment.fromMap(payload(eligible: false));
+      expect(flagged.toMap()['eligible'], isFalse);
+      expect(Enrollment.fromMap(flagged.toMap()), flagged);
+      expect(Enrollment.fromJson(flagged.toJson()), flagged);
+    });
+
+    test('eligible takes part in equality and is set through copyWith', () {
+      final flagged = Enrollment.fromMap(payload(eligible: false));
+      final fine = Enrollment.fromMap(payload(eligible: true));
+      expect(flagged, isNot(fine));
+      expect(flagged.copyWith(eligible: true), fine);
+      expect(flagged.copyWith(eligible: true).hashCode, fine.hashCode);
+      expect(flagged.copyWith(isTrial: true).eligible, isFalse);
+    });
+  });
 }
