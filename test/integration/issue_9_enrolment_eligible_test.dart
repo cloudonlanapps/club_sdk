@@ -4,7 +4,6 @@ import 'package:test/test.dart';
 
 import '../utils/age_dates.dart';
 import '../utils/clear_test_artifacts.dart';
-import '../utils/event_time.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
 
@@ -53,25 +52,27 @@ void main() {
       await register(other);
       await register(invited);
 
-      // A programme for ages 10 to 14, strictly, with two members assigned
-      // and a third invited.
+      // A camp for ages 10 to 14, strictly, with two members assigned and a
+      // third invited. A camp, not a programme: where the credit system is
+      // on, assigning to a programme needs credit, and the flag is the same
+      // on every event type.
       final venue = await adminClient.venues.createVenue(name: 'test_i9_venue');
       final now = DateTime.now().toUtc();
       final start = DateTime.utc(now.year, now.month, now.day + 7, 6);
-      final programme = await adminClient.events.createEvent(
-        title: 'test_i9_programme',
+      final camp = await adminClient.events.createEvent(
+        title: 'test_i9_camp',
         description: 'enrolment eligibility',
-        type: EventType.programme,
+        type: EventType.camp,
         visibility: Visibility.public,
         venueId: venue.id,
         startTimeUtc: start,
         endTimeUtc: start.add(const Duration(hours: 1)),
-        rrule: weeklyOn(start),
+        rrule: 'FREQ=DAILY;COUNT=3',
         minAge: const Age(years: 10),
         maxAge: const Age(years: 14),
         strictAge: true,
       );
-      eventId = programme.id;
+      eventId = camp.id;
       await adminClient.enrollments.assign(eventId, member);
       await adminClient.enrollments.assign(eventId, other);
       await adminClient.enrollments.invite(eventId, invited);
