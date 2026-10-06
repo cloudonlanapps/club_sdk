@@ -36,6 +36,12 @@ abstract interface class MediaSource {
   ///   `['admin', 'coach']`, etc. When omitted the server defaults to
   ///   `['public']`.
   /// - [encrypt] applies to images / pdf only; videos refuse encryption.
+  /// - [ownerUsername] uploads on behalf of that user (club_server#18, #8):
+  ///   they are recorded as `uploadedBy`, so `self` access, the right to
+  ///   change or delete the file and `listMyFiles` are theirs. Admins and the
+  ///   super admin only; anyone else naming another user gets 403, and an
+  ///   unknown or deleted user answers 404 `USER_NOT_FOUND`. Naming yourself
+  ///   is the same as leaving it out.
   ///
   /// An image or PDF the converter rejects (a corrupt file) answers 422
   /// `MEDIA_CONVERSION_FAILED` and no media item is created
@@ -49,6 +55,7 @@ abstract interface class MediaSource {
     double? start,
     List<String>? accessRoles,
     bool encrypt,
+    String? ownerUsername,
   });
 
   /// Get media metadata by ID. Returns 404 for non-owners that are not

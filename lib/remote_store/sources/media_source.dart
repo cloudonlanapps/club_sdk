@@ -67,6 +67,7 @@ class RemoteMediaSource implements MediaSource {
     double? start,
     List<String>? accessRoles,
     bool encrypt = false,
+    String? ownerUsername,
   }) async {
     final fields = <String, String>{
       'preserveOriginal': preserveOriginal.toString(),
@@ -74,6 +75,7 @@ class RemoteMediaSource implements MediaSource {
       if (duration != null) 'duration': duration.toString(),
       if (start != null) 'start': start.toString(),
       if (accessRoles != null) 'accessRoles': jsonEncode(accessRoles),
+      'ownerUsername': ?ownerUsername,
     };
 
     final response = await _store.uploadMultipart(
