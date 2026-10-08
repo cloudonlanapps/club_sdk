@@ -39,11 +39,22 @@ class ServerException extends SdkException {
     this.details,
   }) : super(message, code: code);
 
+  /// The key of [details] under which a schema rejection names the fields
+  /// the server refused.
+  static const refusedFieldsKey = 'fields';
+
   final int statusCode;
 
-  /// Structured payload from the server's `detail.details` object, when
-  /// present. Used for error codes that carry contextual data (e.g.
+  /// What the server sent beside `code` and `message`, when it sent
+  /// anything. Used for error codes that carry contextual data (e.g.
   /// `MEMBERS_INELIGIBLE` carries `membernames`).
+  ///
+  /// A schema rejection (422 `VALIDATION_ERROR`) carries one entry here,
+  /// [refusedFieldsKey]: a list with a map for each field the server
+  /// refused, in the server's order. Each map holds `loc`, the path to the
+  /// field (`['body', 'email']`, or `['body', 'timetable', 1, 'startMinute']`
+  /// for a nested one), `msg`, the reason, and `type`, the server's name for
+  /// the rule. The value that was sent is not kept.
   final Map<String, dynamic>? details;
 
   @override

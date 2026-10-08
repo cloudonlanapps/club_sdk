@@ -160,4 +160,154 @@ void main() {
       expect(exc.details!['group_id'], 7);
     });
   });
+
+  group('mapHttpError, a schema rejection (422 with a list detail)', () {
+    test('Issue 19: names the one field the server refuses', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'value_error',
+            'loc': ['body', 'email'],
+            'msg': 'value is not a valid email address',
+          },
+        ],
+      });
+      expect(exc.details, {
+        ServerException.refusedFieldsKey: [
+          {
+            'loc': ['body', 'email'],
+            'msg': 'value is not a valid email address',
+            'type': 'value_error',
+          },
+        ],
+      });
+    });
+
+    test('Issue 19: names every field the server refuses, in its order', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'missing',
+            'loc': ['body', 'firstName'],
+            'msg': 'Field required',
+          },
+          {
+            'type': 'string_too_short',
+            'loc': ['body', 'password'],
+            'msg': 'String should have at least 8 characters',
+          },
+        ],
+      });
+      expect(exc.details![ServerException.refusedFieldsKey], [
+        {
+          'loc': ['body', 'firstName'],
+          'msg': 'Field required',
+          'type': 'missing',
+        },
+        {
+          'loc': ['body', 'password'],
+          'msg': 'String should have at least 8 characters',
+          'type': 'string_too_short',
+        },
+      ]);
+    });
+
+    test('Issue 19: keeps the whole path of a nested field', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'int_parsing',
+            'loc': ['body', 'timetable', 1, 'startMinute'],
+            'msg': 'Input should be a valid integer',
+          },
+        ],
+      });
+      final fields =
+          exc.details![ServerException.refusedFieldsKey] as List<dynamic>;
+      expect((fields.single as Map<String, dynamic>)['loc'], [
+        'body',
+        'timetable',
+        1,
+        'startMinute',
+      ]);
+    });
+
+    test('Issue 19: leaves out the value that was sent', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'string_too_short',
+            'loc': ['body', 'password'],
+            'msg': 'String should have at least 8 characters',
+            'input': 'hunter2',
+            'ctx': {'min_length': 8},
+          },
+        ],
+      });
+      final fields =
+          exc.details![ServerException.refusedFieldsKey] as List<dynamic>;
+      expect((fields.single as Map<String, dynamic>).keys, [
+        'loc',
+        'msg',
+        'type',
+      ]);
+    });
+
+    test('Issue 19: the code is still VALIDATION_ERROR', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'missing',
+            'loc': ['body', 'firstName'],
+            'msg': 'Field required',
+          },
+        ],
+      });
+      expect(exc.statusCode, 422);
+      expect(exc.code, SdkErrorCode.validationError);
+    });
+
+    test('Issue 19: the message is still the reasons joined', () {
+      final exc = mapHttpError(422, const {
+        'detail': [
+          {
+            'type': 'missing',
+            'loc': ['body', 'firstName'],
+            'msg': 'Field required',
+          },
+          {
+            'type': 'string_too_short',
+            'loc': ['body', 'password'],
+            'msg': 'String should have at least 8 characters',
+          },
+        ],
+      });
+      expect(
+        exc.message,
+        'Field required; String should have at least 8 characters',
+      );
+    });
+
+    test('Issue 19: an entry that names no field is in the message only', () {
+      final exc = mapHttpError(422, const {
+        'detail': ['Something is wrong'],
+      });
+      expect(exc.message, 'Something is wrong');
+      expect(exc.details, isNull);
+    });
+
+    test('Issue 19: a domain refusal with its own code is unchanged', () {
+      final exc = mapHttpError(422, const {
+        'detail': {
+          'code': 'MEMBERS_INELIGIBLE',
+          'message': 'Some members do not meet new criteria',
+          'membernames': ['alice'],
+        },
+      });
+      expect(exc.code, SdkErrorCode.membersIneligible);
+      expect(exc.details, {
+        'membernames': ['alice'],
+      });
+    });
+  });
 }

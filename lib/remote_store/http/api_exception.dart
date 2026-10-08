@@ -9,6 +9,10 @@ import '../../sdk/exceptions/exceptions.dart';
 /// {"detail": {"code": "ERROR_CODE", "message": "Human readable message"}}
 /// {"detail": [{"loc": [...], "msg": "...", "type": "..."}]}
 /// ```
+///
+/// The last is a schema rejection: its code is `VALIDATION_ERROR`, its
+/// message the reasons joined, and its `details` name each refused field
+/// under [ServerException.refusedFieldsKey].
 ServerException mapHttpError(int statusCode, Map<String, dynamic> body) {
   Map<String, dynamic>? error;
   if (body['error'] is Map<String, dynamic>) {
@@ -28,7 +32,18 @@ ServerException mapHttpError(int statusCode, Map<String, dynamic> body) {
           return e.toString();
         })
         .join('; ');
-    error = {'code': 'VALIDATION_ERROR', 'message': messages};
+    // Keep which field each reason is about (#19). The value that was sent
+    // (`input`) is left behind: it may be a password.
+    final fields = [
+      for (final e in details)
+        if (e is Map<String, dynamic> && e['loc'] is List)
+          {'loc': e['loc'], 'msg': e['msg'], 'type': e['type']},
+    ];
+    error = {
+      'code': SdkErrorCode.validationError,
+      'message': messages,
+      if (fields.isNotEmpty) ServerException.refusedFieldsKey: fields,
+    };
   }
 
   var code = error?['code'] as String? ?? '';
