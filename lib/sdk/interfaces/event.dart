@@ -285,8 +285,16 @@ abstract interface class EventSource {
   /// [terminate]); a one-off answers 422 `INVALID_STATE` (use [drop]).
   /// Enrollment rows are left unchanged — derive availability from the
   /// event's `untilTimeUtc` / occurrence status, not enrollment state.
+  ///
+  /// [version] is the event version the caller last loaded
+  /// (club_server#13, #1), here and on [undoCancelSeries], [terminate],
+  /// [extend] and [extendIndefinitely]: each replaces the cutoff another
+  /// admin may be moving at the same moment. A stale one is refused with
+  /// `StaleVersionException`, the cutoff stays as it was and nobody is
+  /// notified; a successful call bumps the version.
   Future<Event> cancelSeries(
     int eventId, {
+    required int version,
     required String reason,
     required DateTime effectiveDateTimeUtc,
   });
@@ -296,7 +304,10 @@ abstract interface class EventSource {
   ///
   /// Returns 400 `EVENT_NOT_CANCELLED` when the event is not currently
   /// cancelled.
-  Future<Event> undoCancelSeries(int eventId);
+  ///
+  /// [version] is the event version the caller last loaded, as on
+  /// [cancelSeries]; a stale one is refused with `StaleVersionException`.
+  Future<Event> undoCancelSeries(int eventId, {required int version});
 
   // ══════════════════════════════════════════════════════════════════════════
   // LIFECYCLE VERBS BY TYPE (#16)
@@ -307,8 +318,12 @@ abstract interface class EventSource {
   /// until then, and any credit bound to it is released once the cutoff
   /// has passed. 422 `CUTOFF_TOO_SOON` when less than 30 minutes ahead;
   /// 400 `INVALID_EVENT_TYPE` for a camp or one-off.
+  ///
+  /// [version] is the event version the caller last loaded, as on
+  /// [cancelSeries]; a stale one is refused with `StaleVersionException`.
   Future<Event> terminate(
     int eventId, {
+    required int version,
     required String reason,
     required DateTime cutoffTimeUtc,
   });
@@ -316,15 +331,26 @@ abstract interface class EventSource {
   /// Moves a terminated **programme**'s cutoff to [cutoffTimeUtc]
   /// (`POST …/extend`), later or earlier. 400 `INVALID_EVENT_TYPE` for a
   /// camp or one-off.
+  ///
+  /// [version] is the event version the caller last loaded, as on
+  /// [cancelSeries]; a stale one is refused with `StaleVersionException`.
   Future<Event> extend(
     int eventId, {
+    required int version,
     required DateTime cutoffTimeUtc,
     String? reason,
   });
 
   /// Clears a terminated **programme**'s cutoff
   /// (`POST …/extend-indefinitely`), so it runs open-ended again.
-  Future<Event> extendIndefinitely(int eventId, {String? reason});
+  ///
+  /// [version] is the event version the caller last loaded, as on
+  /// [cancelSeries]; a stale one is refused with `StaleVersionException`.
+  Future<Event> extendIndefinitely(
+    int eventId, {
+    required int version,
+    String? reason,
+  });
 
   /// Drops a **one-off** (`POST …/drop`): its single occurrence gets a
   /// cancelled override (read it back through `OccurrenceSource`; the

@@ -304,6 +304,7 @@ void main() {
           expect(
             () => client.events.cancelSeries(
               99999,
+              version: 1,
               reason: 'Cancelled',
               effectiveDateTimeUtc: DateTime.utc(2030),
             ),

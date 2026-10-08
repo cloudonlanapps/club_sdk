@@ -62,11 +62,17 @@ void main() {
   group('Issue 16: lifecycle verbs', () {
     test('Issue 16: terminate posts reason and cutoff', () async {
       final h = harness();
-      await h.source.terminate(42, reason: 'r', cutoffTimeUtc: cutoff);
+      await h.source.terminate(
+        42,
+        version: 5,
+        reason: 'r',
+        cutoffTimeUtc: cutoff,
+      );
       final r = h.requests.single;
       expect(r.method, 'POST');
       expect(r.url.path, endsWith('/events/by_id/42/terminate'));
       expect(bodyOf(r), {
+        'version': 5,
         'reason': 'r',
         'cutoffTimeUtc': cutoff.millisecondsSinceEpoch,
       });
@@ -74,21 +80,22 @@ void main() {
 
     test('Issue 16: extend posts the cutoff and an optional reason', () async {
       final h = harness();
-      await h.source.extend(42, cutoffTimeUtc: cutoff);
+      await h.source.extend(42, version: 5, cutoffTimeUtc: cutoff);
       expect(h.requests.single.url.path, endsWith('/events/by_id/42/extend'));
       expect(bodyOf(h.requests.single), {
+        'version': 5,
         'cutoffTimeUtc': cutoff.millisecondsSinceEpoch,
       });
     });
 
     test('Issue 16: extendIndefinitely posts to its route', () async {
       final h = harness();
-      await h.source.extendIndefinitely(42, reason: 'back on');
+      await h.source.extendIndefinitely(42, version: 5, reason: 'back on');
       expect(
         h.requests.single.url.path,
         endsWith('/events/by_id/42/extend-indefinitely'),
       );
-      expect(bodyOf(h.requests.single), {'reason': 'back on'});
+      expect(bodyOf(h.requests.single), {'version': 5, 'reason': 'back on'});
     });
 
     test('Issue 16: drop posts a reason, reinstate only the version '

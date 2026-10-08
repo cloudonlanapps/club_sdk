@@ -120,6 +120,7 @@ void main() {
         //    occurrence is left (programme R1).
         await client.events.terminate(
           event.id,
+          version: event.version,
           reason: 'Change of plans',
           cutoffTimeUtc: eventStart,
         );
@@ -159,6 +160,7 @@ void main() {
         // camp-only, #16)
         await client.events.terminate(
           event.id,
+          version: event.version,
           reason: 'No longer needed',
           cutoffTimeUtc: eventStart,
         );

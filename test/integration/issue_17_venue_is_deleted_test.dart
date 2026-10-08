@@ -100,6 +100,7 @@ void main() {
       );
       final cancelled = await sudo.events.cancelSeries(
         camp.id,
+        version: camp.version,
         reason: 'rink closed',
         effectiveDateTimeUtc: start.add(const Duration(days: 1)),
       );

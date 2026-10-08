@@ -61,12 +61,14 @@ class ServerException extends SdkException {
   String toString() => 'ServerException($statusCode): [$code] $message';
 }
 
-/// 409 `STALE_VERSION`: the event or occurrence was changed since the
-/// caller loaded it (club_server#292, #25; occurrences club_server#430, #1).
+/// 409 `STALE_VERSION`: the event, occurrence or marketing block was
+/// changed since the caller loaded it (club_server#292, #25; occurrences
+/// club_server#430, #1; cutoff verbs and marketing club_server#13, #1).
 ///
 /// Carries its current [version], and when it was changed and by whom, so
 /// an app can tell the user before reloading. An occurrence nobody has
-/// changed is at version 1 with no [updatedAtUtc] or [updatedBy].
+/// changed, and an event with no marketing block, is at version 1 with no
+/// [updatedAtUtc] or [updatedBy].
 class StaleVersionException extends ServerException {
   const StaleVersionException({
     required super.message,
@@ -94,7 +96,7 @@ class StaleVersionException extends ServerException {
     );
   }
 
-  /// The current version of the event or occurrence.
+  /// The current version of the event, occurrence or marketing block.
   final int version;
 
   /// When it was last changed, or null when it never has been.

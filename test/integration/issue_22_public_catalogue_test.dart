@@ -257,6 +257,7 @@ void main() {
         final stored = await admin.eventMarketing.setEventMarketing(
           publicEventId,
           block,
+          version: EventMarketing.unwrittenVersion,
         );
         expect(stored.durationText, '3 days');
         expect(stored.scheduleText, 'Mon-Wed, 6-8am');
@@ -272,6 +273,7 @@ void main() {
         final replaced = await admin.eventMarketing.setEventMarketing(
           publicEventId,
           const EventMarketing(durationText: '4 days'),
+          version: read.version,
         );
         expect(replaced.durationText, '4 days');
         expect(replaced.scheduleText, isNull);
@@ -316,7 +318,11 @@ void main() {
     test('22.14: clearing the block removes it', () async {
       if (skipUnless(enabled: marketingOn, module: 'event marketing')) return;
 
-      await admin.eventMarketing.clearEventMarketing(publicEventId);
+      final block = await admin.eventMarketing.getEventMarketing(publicEventId);
+      await admin.eventMarketing.clearEventMarketing(
+        publicEventId,
+        version: block.version,
+      );
       await expectLater(
         admin.eventMarketing.getEventMarketing(publicEventId),
         throwsA(
