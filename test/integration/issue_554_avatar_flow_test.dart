@@ -72,7 +72,7 @@ void main() {
     );
 
     test(
-      'Issue 554: replace flow attaches new media before soft-deleting prior',
+      'Issue 554: attaching a new avatar replaces the prior one',
       () async {
         final first = await adminClient.media.upload(
           fileBytes: testPngBytes,
@@ -111,16 +111,9 @@ void main() {
             mediaUuid: second.uuid,
           );
 
-          // Soft-delete prior only after the new attach succeeds. Server
-          // refuses softDelete while linked, so detach the prior link first.
-          for (final prior in priorSnapshot) {
-            await adminClient.userMedia.detach(
-              sudoUsername,
-              tag,
-              prior.mediaUuid,
-            );
-            await adminClient.media.softDelete(first.id);
-          }
+          // The server keeps a user to one avatar (club_server#28): the
+          // attach removed the prior link and soft-deleted its file, so
+          // there is nothing left to detach or delete.
 
           final after = await adminClient.userMedia.listByTag(
             sudoUsername,
@@ -128,6 +121,8 @@ void main() {
           );
           expect(after, hasLength(1));
           expect(after.single.mediaUuid, second.uuid);
+          final prior = await adminClient.media.getById(first.id);
+          expect(prior.deletedAtUtc, isNotNull);
         } finally {
           try {
             await adminClient.userMedia.detachTag(sudoUsername, tag);

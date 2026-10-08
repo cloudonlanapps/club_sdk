@@ -51,6 +51,12 @@ abstract interface class OwnerMediaSource<OwnerId> {
 }
 
 /// Per-user media. Owner ID is the username (string).
+///
+/// A user has one avatar (club_server#28): [attach] under the tag
+/// `user_avatar` removes the user's other links under that tag, whether or
+/// not the caller may view their files, and soft-deletes each file whose
+/// link was removed unless another link still uses it. A caller replacing a
+/// profile photo uploads and attaches; it detaches and deletes nothing.
 abstract interface class UserMediaSource implements OwnerMediaSource<String> {}
 
 /// Per-event media. Owner ID is the event id (int).
