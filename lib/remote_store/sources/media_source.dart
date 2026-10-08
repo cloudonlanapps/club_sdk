@@ -95,6 +95,12 @@ class RemoteMediaSource implements MediaSource {
   }
 
   @override
+  Future<Media> getByUuid(String uuid) async {
+    final response = await _store.get(endpoints.media.byUuid(uuid));
+    return Media.fromMap(response);
+  }
+
+  @override
   Future<Media> patch(int id, {required List<String> accessRoles}) async {
     final response = await _store.patch(
       endpoints.media.byId(id),

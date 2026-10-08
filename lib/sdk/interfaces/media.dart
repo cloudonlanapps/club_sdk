@@ -62,6 +62,15 @@ abstract interface class MediaSource {
   /// admin/coach.
   Future<Media> getById(int id);
 
+  /// Get media metadata by [uuid], the identifier a media link carries
+  /// (club_server#27). The calls that change a file ([patch], [softDelete],
+  /// [restore], [hardDelete]) take its id, which this returns.
+  ///
+  /// Same callers and answer as [getById]: the uploader, an admin or a
+  /// coach, a soft-deleted record included. Anyone else, and a uuid no file
+  /// has, get 404 `MEDIA_NOT_FOUND`.
+  Future<Media> getByUuid(String uuid);
+
   /// Update mutable fields on a media record. Currently only [accessRoles]
   /// is editable.
   ///

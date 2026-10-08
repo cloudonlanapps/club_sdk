@@ -8,6 +8,7 @@ class MediaEndpoints {
   String get myFiles => '/media/myfiles';
   String get upload => '/media';
   String byId(int id) => '/media/by_id/$id';
+  String byUuid(String uuid) => '/media/by_uuid/$uuid';
   String download(String uuid) => '/media/by_id/$uuid/download';
 
   /// The download route with a trailing [filename] (club_server#424, #426):
