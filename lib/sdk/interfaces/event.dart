@@ -358,8 +358,8 @@ abstract interface class EventSource {
     int limit = 20,
   });
 
-  /// Soft deletes an event.
-  /// Only admin can delete events. Cancelled events cannot be deleted.
+  /// Soft deletes an event, cancelled or not.
+  /// Only admin can delete events.
   ///
   /// Returns the soft-deleted event (with `deletedAtUtc` populated) as
   /// echoed by the server, so callers can update local state from the
@@ -367,7 +367,8 @@ abstract interface class EventSource {
   Future<Event> deleteEvent(int eventId);
 
   /// Restores a soft-deleted event.
-  /// 422 `NOTHING_TO_RESTORE` if it is not deleted.
+  /// 422 `NOTHING_TO_RESTORE` if it is not deleted; 400 `VENUE_IS_DELETED`
+  /// (`SdkErrorCode.venueIsDeleted`) while its venue is soft-deleted.
   Future<Event> restoreEvent(int eventId);
 
   /// Permanently deletes an event and all its data.

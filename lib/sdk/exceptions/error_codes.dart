@@ -7,6 +7,9 @@ abstract final class SdkErrorCode {
   // 400 Bad Request
   // ═══════════════════════════════════════════════════════════════════════════
   static const validationError = 'VALIDATION_ERROR';
+  // Restoring an event whose venue is soft-deleted: restore the venue
+  // first.
+  static const venueIsDeleted = 'VENUE_IS_DELETED';
   // A date of birth that is not 00:00:00 UTC, on registration, profile
   // update and reapply (club_server#506). Sent with status 422.
   static const invalidDobNotUtcMidnight = 'INVALID_DOB_NOT_UTC_MIDNIGHT';
