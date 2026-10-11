@@ -39,23 +39,36 @@ class ServerException extends SdkException {
     this.details,
   }) : super(message, code: code);
 
+  /// The key of [details] under which a schema rejection names the fields
+  /// the server refused.
+  static const refusedFieldsKey = 'fields';
+
   final int statusCode;
 
-  /// Structured payload from the server's `detail.details` object, when
-  /// present. Used for error codes that carry contextual data (e.g.
+  /// What the server sent beside `code` and `message`, when it sent
+  /// anything. Used for error codes that carry contextual data (e.g.
   /// `MEMBERS_INELIGIBLE` carries `membernames`).
+  ///
+  /// A schema rejection (422 `VALIDATION_ERROR`) carries one entry here,
+  /// [refusedFieldsKey]: a list with a map for each field the server
+  /// refused, in the server's order. Each map holds `loc`, the path to the
+  /// field (`['body', 'email']`, or `['body', 'timetable', 1, 'startMinute']`
+  /// for a nested one), `msg`, the reason, and `type`, the server's name for
+  /// the rule. The value that was sent is not kept.
   final Map<String, dynamic>? details;
 
   @override
   String toString() => 'ServerException($statusCode): [$code] $message';
 }
 
-/// 409 `STALE_VERSION`: the event or occurrence was changed since the
-/// caller loaded it (club_server#292, #25; occurrences club_server#430, #1).
+/// 409 `STALE_VERSION`: the event, occurrence or marketing block was
+/// changed since the caller loaded it (club_server#292, #25; occurrences
+/// club_server#430, #1; cutoff verbs and marketing club_server#13, #1).
 ///
 /// Carries its current [version], and when it was changed and by whom, so
 /// an app can tell the user before reloading. An occurrence nobody has
-/// changed is at version 1 with no [updatedAtUtc] or [updatedBy].
+/// changed, and an event with no marketing block, is at version 1 with no
+/// [updatedAtUtc] or [updatedBy].
 class StaleVersionException extends ServerException {
   const StaleVersionException({
     required super.message,
@@ -83,7 +96,7 @@ class StaleVersionException extends ServerException {
     );
   }
 
-  /// The current version of the event or occurrence.
+  /// The current version of the event, occurrence or marketing block.
   final int version;
 
   /// When it was last changed, or null when it never has been.

@@ -12,7 +12,7 @@ import 'promotional_offer.dart';
 /// An event's extended marketing block (club_server#410, #22): the
 /// commercial detail behind the deployment-gated Event Marketing module.
 ///
-/// This is the writable body and the read projection in one. The server's
+/// This is the written fields and the read projection in one. The server's
 /// responses add the event's identity beside these fields (`eventId` on
 /// the authenticated read, `publicId` on the public one); the SDK does not
 /// model that because every call already knows which event it asked for,
@@ -21,8 +21,9 @@ import 'promotional_offer.dart';
 /// either key, so a response parses as the block it carries.
 ///
 /// A `PUT` replaces the whole row: a field left `null` here is cleared on
-/// the server. Currency is not a field; the server stores INR and never
-/// exposes it.
+/// the server. [version], [updatedAtUtc] and [updatedBy] are what the staff
+/// read adds; they are not written from here. Currency is not a field; the
+/// server stores INR and never exposes it.
 @immutable
 class EventMarketing {
   const EventMarketing({
@@ -40,6 +41,9 @@ class EventMarketing {
     this.offers,
     this.clubMembership,
     this.facilities,
+    this.version = unwrittenVersion,
+    this.updatedAtUtc,
+    this.updatedBy,
   });
 
   factory EventMarketing.fromMap(Map<String, dynamic> map) {
@@ -83,6 +87,14 @@ class EventMarketing {
                 .map((e) => Facility.fromMap(e as Map<String, dynamic>))
                 .toList()
           : null,
+      version: map[versionKey] as int? ?? unwrittenVersion,
+      updatedAtUtc: map[updatedAtKey] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map[updatedAtKey] as int,
+              isUtc: true,
+            )
+          : null,
+      updatedBy: map[updatedByKey] as String?,
     );
   }
 
@@ -132,6 +144,35 @@ class EventMarketing {
   /// Facilities on offer.
   final List<Facility>? facilities;
 
+  /// The version of an event's block before anyone has written one, and
+  /// again after it is removed. The first write is made at this version
+  /// and stores the block at the next.
+  static const unwrittenVersion = 1;
+
+  /// The map key of [version].
+  static const versionKey = 'version';
+
+  /// The map key of [updatedAtUtc].
+  static const updatedAtKey = 'updatedAt';
+
+  /// The map key of [updatedBy].
+  static const updatedByKey = 'updatedBy';
+
+  /// The block's own version, apart from the event's (club_server#13, #1):
+  /// what `EventMarketingSource.setEventMarketing` and
+  /// `clearEventMarketing` are given. Every write moves it one on. The
+  /// public reads do not carry it, and a block the caller builds has not
+  /// been written, so both are at [unwrittenVersion].
+  final int version;
+
+  /// When the block was last written; `null` on a public read and on a
+  /// block the caller builds.
+  final DateTime? updatedAtUtc;
+
+  /// Who last wrote the block; `null` when unknown, on a public read and
+  /// on a block the caller builds.
+  final String? updatedBy;
+
   /// The name [effectiveFees] gives the single [fee] when no structure
   /// is set.
   static const singleFeeName = 'Fee';
@@ -172,6 +213,9 @@ class EventMarketing {
     List<PromotionalOffer>? Function()? offers,
     ClubMembership? Function()? clubMembership,
     List<Facility>? Function()? facilities,
+    int? version,
+    DateTime? Function()? updatedAtUtc,
+    String? Function()? updatedBy,
   }) {
     return EventMarketing(
       durationText: durationText != null ? durationText() : this.durationText,
@@ -200,6 +244,9 @@ class EventMarketing {
           ? clubMembership()
           : this.clubMembership,
       facilities: facilities != null ? facilities() : this.facilities,
+      version: version ?? this.version,
+      updatedAtUtc: updatedAtUtc != null ? updatedAtUtc() : this.updatedAtUtc,
+      updatedBy: updatedBy != null ? updatedBy() : this.updatedBy,
     );
   }
 
@@ -220,6 +267,9 @@ class EventMarketing {
       'offers': offers?.map((e) => e.toMap()).toList(),
       'clubMembership': clubMembership?.toMap(),
       'facilities': facilities?.map((e) => e.toMap()).toList(),
+      versionKey: version,
+      updatedAtKey: updatedAtUtc?.millisecondsSinceEpoch,
+      updatedByKey: updatedBy,
     };
   }
 
@@ -253,7 +303,10 @@ class EventMarketing {
         _packageEquality.equals(other.packageOffers, packageOffers) &&
         _offerEquality.equals(other.offers, offers) &&
         other.clubMembership == clubMembership &&
-        _facilityEquality.equals(other.facilities, facilities);
+        _facilityEquality.equals(other.facilities, facilities) &&
+        other.version == version &&
+        other.updatedAtUtc == updatedAtUtc &&
+        other.updatedBy == updatedBy;
   }
 
   @override
@@ -271,5 +324,8 @@ class EventMarketing {
       _packageEquality.hash(packageOffers) ^
       _offerEquality.hash(offers) ^
       clubMembership.hashCode ^
-      _facilityEquality.hash(facilities);
+      _facilityEquality.hash(facilities) ^
+      version.hashCode ^
+      updatedAtUtc.hashCode ^
+      updatedBy.hashCode;
 }

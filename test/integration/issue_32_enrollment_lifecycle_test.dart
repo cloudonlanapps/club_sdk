@@ -774,6 +774,7 @@ void main() {
           await expectLater(
             adminClient.events.cancelSeries(
               k.id,
+              version: k.version,
               reason: 'no ice',
               effectiveDateTimeUtc: k.startTimeUtc.add(const Duration(days: 1)),
             ),
@@ -821,6 +822,7 @@ void main() {
             await expectLater(
               adminClient.events.cancelSeries(
                 l.id,
+                version: l.version,
                 reason: 'no ice',
                 effectiveDateTimeUtc: l.startTimeUtc,
               ),

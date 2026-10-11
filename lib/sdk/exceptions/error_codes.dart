@@ -115,9 +115,12 @@ abstract final class SdkErrorCode {
   // `ServerException.details`.
   static const timeConflict = 'TIME_CONFLICT';
   // Optimistic locking: the `version` sent is not the current one — of the
-  // event for an update, correction, split or reschedule (club_server#292,
-  // #434; SDK #25, #5), or of the occurrence for an occurrence change, drop
-  // or reinstate (club_server#430, #1). Mapped to `StaleVersionException`,
+  // event for an update, correction, split, reschedule or cutoff verb
+  // (cancel, undo-cancel, terminate, extend, extend-indefinitely;
+  // club_server#292, #434, #13; SDK #25, #5, #1), of the occurrence for an
+  // occurrence change, drop or reinstate (club_server#430, #1), or of the
+  // marketing block for its replace or removal (club_server#13, #1).
+  // Mapped to `StaleVersionException`,
   // which carries the current version and writer.
   static const staleVersion = 'STALE_VERSION';
   // Event reschedule refused: per-occurrence overrides exist. The offending

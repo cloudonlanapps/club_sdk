@@ -173,6 +173,7 @@ void main() {
         // --- T3: Cancellation (terminate at the first occurrence) ---
         await client.events.terminate(
           event.id,
+          version: event.version,
           reason: 'Internal reschedule',
           cutoffTimeUtc: eventStart,
         );
@@ -222,6 +223,7 @@ void main() {
 
         await client.events.terminate(
           event.id,
+          version: event.version,
           reason: 'Synthesis test',
           cutoffTimeUtc: firstStart,
         );

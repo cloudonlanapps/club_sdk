@@ -235,6 +235,7 @@ void main() {
           final cutoff = start.add(const Duration(days: 7));
           await client.events.terminate(
             event.id,
+            version: event.version,
             reason: 'Testing cancellation',
             cutoffTimeUtc: cutoff,
           );

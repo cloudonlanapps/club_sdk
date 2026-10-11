@@ -260,12 +260,16 @@ void main() {
         // The first occurrence start is a valid session boundary.
         final cancelled = await client.events.cancelSeries(
           camp.id,
+          version: camp.version,
           reason: 'Venue flooded',
           effectiveDateTimeUtc: start,
         );
         expect(cancelled.status, EventStatus.cancelled);
 
-        final restored = await client.events.undoCancelSeries(camp.id);
+        final restored = await client.events.undoCancelSeries(
+          camp.id,
+          version: cancelled.version,
+        );
         expect(restored.status, EventStatus.active);
       },
     );
@@ -283,6 +287,7 @@ void main() {
         expect(
           () => client.events.cancelSeries(
             camp.id,
+            version: camp.version,
             reason: 'Bad time',
             effectiveDateTimeUtc: start.add(const Duration(hours: 1)),
           ),
@@ -303,7 +308,7 @@ void main() {
         final camp = await createCamp(start: DateTime.utc(2027, 7, 1, 10));
 
         expect(
-          () => client.events.undoCancelSeries(camp.id),
+          () => client.events.undoCancelSeries(camp.id, version: camp.version),
           throwsA(
             isA<ServerException>().having(
               (e) => e.code,

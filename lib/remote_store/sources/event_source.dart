@@ -324,12 +324,14 @@ class RemoteEventSource implements EventSource {
   @override
   Future<Event> cancelSeries(
     int eventId, {
+    required int version,
     required String reason,
     required DateTime effectiveDateTimeUtc,
   }) async {
     final response = await _store.post(
       endpoints.events.cancel(eventId),
       body: {
+        'version': version,
         'reason': reason,
         'effectiveDateTimeUtc': effectiveDateTimeUtc.millisecondsSinceEpoch,
       },
@@ -338,20 +340,25 @@ class RemoteEventSource implements EventSource {
   }
 
   @override
-  Future<Event> undoCancelSeries(int eventId) async {
-    final response = await _store.post(endpoints.events.undoCancel(eventId));
+  Future<Event> undoCancelSeries(int eventId, {required int version}) async {
+    final response = await _store.post(
+      endpoints.events.undoCancel(eventId),
+      body: {'version': version},
+    );
     return Event.fromMap(response);
   }
 
   @override
   Future<Event> terminate(
     int eventId, {
+    required int version,
     required String reason,
     required DateTime cutoffTimeUtc,
   }) async {
     final response = await _store.post(
       endpoints.events.terminate(eventId),
       body: {
+        'version': version,
         'reason': reason,
         'cutoffTimeUtc': cutoffTimeUtc.millisecondsSinceEpoch,
       },
@@ -362,12 +369,14 @@ class RemoteEventSource implements EventSource {
   @override
   Future<Event> extend(
     int eventId, {
+    required int version,
     required DateTime cutoffTimeUtc,
     String? reason,
   }) async {
     final response = await _store.post(
       endpoints.events.extend(eventId),
       body: {
+        'version': version,
         'cutoffTimeUtc': cutoffTimeUtc.millisecondsSinceEpoch,
         'reason': ?reason,
       },
@@ -376,10 +385,14 @@ class RemoteEventSource implements EventSource {
   }
 
   @override
-  Future<Event> extendIndefinitely(int eventId, {String? reason}) async {
+  Future<Event> extendIndefinitely(
+    int eventId, {
+    required int version,
+    String? reason,
+  }) async {
     final response = await _store.post(
       endpoints.events.extendIndefinitely(eventId),
-      body: {'reason': ?reason},
+      body: {'version': version, 'reason': ?reason},
     );
     return Event.fromMap(response);
   }

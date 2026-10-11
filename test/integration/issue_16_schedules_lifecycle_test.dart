@@ -192,6 +192,7 @@ void main() {
         final cutoff = event.startTimeUtc.add(const Duration(days: 21));
         final terminated = await client.events.terminate(
           event.id,
+          version: event.version,
           reason: 'season over',
           cutoffTimeUtc: cutoff,
         );
@@ -212,12 +213,16 @@ void main() {
         final later = cutoff.add(const Duration(days: 7));
         final extended = await client.events.extend(
           event.id,
+          version: terminated.version,
           cutoffTimeUtc: later,
           reason: 'one more week',
         );
         expect(extended.untilTimeUtc, later);
 
-        final open = await client.events.extendIndefinitely(event.id);
+        final open = await client.events.extendIndefinitely(
+          event.id,
+          version: extended.version,
+        );
         expect(open.untilTimeUtc, isNull);
         expect(open.status, EventStatus.active);
       },
@@ -228,6 +233,7 @@ void main() {
       await expectLater(
         client.events.cancelSeries(
           p.id,
+          version: p.version,
           reason: 'x',
           effectiveDateTimeUtc: p.startTimeUtc.add(const Duration(days: 7)),
         ),
@@ -243,6 +249,7 @@ void main() {
       await expectLater(
         client.events.cancelSeries(
           o.id,
+          version: o.version,
           reason: 'x',
           effectiveDateTimeUtc: anchor,
         ),

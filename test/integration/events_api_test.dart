@@ -569,6 +569,7 @@ void main() {
           final cutoff = start.add(const Duration(days: 7));
           final cancelled = await client.events.terminate(
             event.id,
+            version: event.version,
             reason: 'R',
             cutoffTimeUtc: cutoff,
           );

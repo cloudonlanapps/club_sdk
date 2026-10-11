@@ -230,6 +230,7 @@ void main() {
 
         await h.source.cancelSeries(
           42,
+          version: 5,
           reason: 'R',
           effectiveDateTimeUtc: effective,
         );
@@ -247,7 +248,7 @@ void main() {
       () async {
         final h = _harness();
 
-        await h.source.undoCancelSeries(42);
+        await h.source.undoCancelSeries(42, version: 5);
 
         final req = h.requests.single;
         expect(req.method, 'POST');

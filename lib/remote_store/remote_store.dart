@@ -375,9 +375,12 @@ class RemoteStore {
   /// Returns the parsed JSON body on 200 responses (some endpoints respond
   /// with the deleted/revoked entity), or `null` on 204 No Content. Callers
   /// that don't need the body may ignore the return value.
-  Future<Map<String, dynamic>?> delete(String path) async {
+  Future<Map<String, dynamic>?> delete(
+    String path, {
+    Map<String, String>? queryParams,
+  }) async {
     return _executeWithRetry(() async {
-      final uri = _buildUri(path);
+      final uri = _buildUri(path, queryParams);
       final response = await _httpClient
           .delete(uri, headers: _headers)
           .timeout(timeout);
