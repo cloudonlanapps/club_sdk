@@ -20,9 +20,9 @@ class Inquiry {
     required this.kind,
     required this.name,
     required this.email,
-    required this.message,
     required this.createdAtUtc,
     this.phone,
+    this.message,
     this.extra,
     this.handledAtUtc,
     this.handledBy,
@@ -36,7 +36,7 @@ class Inquiry {
       name: map['name'] as String,
       email: map['email'] as String,
       phone: map['phone'] as String?,
-      message: map['message'] as String,
+      message: map['message'] as String?,
       extra: map['extra'] != null
           ? Map<String, dynamic>.from(map['extra'] as Map)
           : null,
@@ -59,7 +59,10 @@ class Inquiry {
   final String name;
   final String email;
   final String? phone;
-  final String message;
+
+  /// What the submitter wrote; null when the form sent none
+  /// (club_server#41, #22).
+  final String? message;
 
   /// Whatever the form carried beyond the named fields.
   final Map<String, dynamic>? extra;
@@ -81,7 +84,7 @@ class Inquiry {
     String? name,
     String? email,
     String? Function()? phone,
-    String? message,
+    String? Function()? message,
     Map<String, dynamic>? Function()? extra,
     DateTime? createdAtUtc,
     DateTime? Function()? handledAtUtc,
@@ -93,7 +96,7 @@ class Inquiry {
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone != null ? phone() : this.phone,
-      message: message ?? this.message,
+      message: message != null ? message() : this.message,
       extra: extra != null ? extra() : this.extra,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       handledAtUtc: handledAtUtc != null ? handledAtUtc() : this.handledAtUtc,

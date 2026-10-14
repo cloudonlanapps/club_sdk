@@ -244,6 +244,12 @@ abstract interface class EventSource {
   /// response is the **same event** (same id) with its new current
   /// schedule; read the history with [listSchedules].
   ///
+  /// A [startTimeUtc] before [effectiveDateTimeUtc] moves the boundary back
+  /// to it, so the new terms' session on that day is kept, unless an
+  /// occurrence lies between the two (club_server#40, #23). At the current
+  /// schedule's **first** occurrence nothing has run under it, so that
+  /// schedule is rewritten in place and no new one opens (club_server#42).
+  ///
   /// [effectiveDateTimeUtc] must be an occurrence start of the current
   /// schedule (400 `EFFECTIVE_TIME_NOT_SESSION_BOUNDARY`) at least 30
   /// minutes ahead (422 `CUTOFF_TOO_SOON`). A programme clash on the new
@@ -375,7 +381,8 @@ abstract interface class EventSource {
   Future<Event> reinstate(int eventId, {required int version});
 
   /// The event's timetable as a sequence of schedules, oldest first (#16).
-  /// A camp or one-off has exactly one; a programme one per split.
+  /// A camp or one-off has exactly one; a programme one per split, except a
+  /// split at a schedule's first occurrence, which rewrites it (#23).
   Future<List<EventSchedule>> listSchedules(int eventId);
 
   /// Lists soft-deleted events, one page at a time, with the total (#51).
