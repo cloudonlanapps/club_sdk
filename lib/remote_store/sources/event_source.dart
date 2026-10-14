@@ -72,6 +72,7 @@ class RemoteEventSource implements EventSource {
     String? organizerName,
     List<String>? coachNames,
     String? rrule,
+    List<Gender>? genders,
     Gender? gender,
     Age? minAge,
     Age? maxAge,
@@ -97,7 +98,7 @@ class RemoteEventSource implements EventSource {
         'organizerName': ?organizerName,
         'coachNames': ?coachNames,
         'rrule': ?rrule,
-        if (gender != null) 'gender': gender.serverValue,
+        'genders': ?gendersForCreate(genders, gender),
         if (minAge != null) 'minAge': minAge.toMap(),
         if (maxAge != null) 'maxAge': maxAge.toMap(),
         'strictAge': ?strictAge,
@@ -157,6 +158,7 @@ class RemoteEventSource implements EventSource {
     Visibility? visibility,
     String? organizerName,
     List<String>? Function()? coachNames,
+    List<Gender> Function()? genders,
     Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,
@@ -182,7 +184,7 @@ class RemoteEventSource implements EventSource {
       'organizerName': ?organizerName,
       // The server clears coaches on [] and ignores null (#48).
       if (coachNames != null) 'coachNames': coachNames() ?? const <String>[],
-      if (gender != null) 'gender': gender()?.serverValue,
+      'genders': ?gendersForUpdate(genders, gender),
       // A getter returning null sends an explicit null, which clears the
       // bound; the server keeps a bound that is left out (club_server#16).
       if (minAge != null) 'minAge': minAge()?.toMap(),
@@ -246,6 +248,7 @@ class RemoteEventSource implements EventSource {
     String? title,
     String? description,
     Visibility? visibility,
+    List<Gender> Function()? genders,
     Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,
@@ -264,7 +267,7 @@ class RemoteEventSource implements EventSource {
       'title': ?title,
       'description': ?description,
       if (visibility != null) 'visibility': visibility.name,
-      if (gender != null) 'gender': gender()?.serverValue,
+      'genders': ?gendersForUpdate(genders, gender),
       // A getter returning null sends an explicit null, which clears the
       // bound; the server keeps a bound that is left out (club_server#16).
       if (minAge != null) 'minAge': minAge()?.toMap(),

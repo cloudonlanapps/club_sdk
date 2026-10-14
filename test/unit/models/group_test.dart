@@ -255,7 +255,7 @@ void main() {
         dobOnOrAfterUtc: dobAfter,
         dobOnOrBeforeUtc: dobBefore,
         createdAtUtc: now,
-        gender: Gender.male,
+        genders: const [Gender.male],
         deletedAtUtc: deletedAt,
       );
 
@@ -275,7 +275,7 @@ void main() {
       test('toMap/fromMap roundtrip preserves all fields', () {
         final restored = Group.fromMap(fullGroup.toMap());
         expect(restored, fullGroup);
-        expect(restored.gender, Gender.male);
+        expect(restored.genders, [Gender.male]);
         expect(restored.dobOnOrAfterUtc, dobAfter);
         expect(restored.dobOnOrBeforeUtc, dobBefore);
         expect(restored.deletedAtUtc, deletedAt);
@@ -294,7 +294,7 @@ void main() {
           'createdAtUtc': now.millisecondsSinceEpoch,
         };
         final g = Group.fromMap(map);
-        expect(g.gender, isNull);
+        expect(g.genders, isEmpty);
         expect(g.dobOnOrAfterUtc, isNull);
         expect(g.dobOnOrBeforeUtc, isNull);
         expect(g.deletedAtUtc, isNull);
@@ -309,7 +309,7 @@ void main() {
           dobOnOrAfterUtc: dobAfter,
           dobOnOrBeforeUtc: dobBefore,
           createdAtUtc: now,
-          gender: Gender.male,
+          genders: const [Gender.male],
           deletedAtUtc: deletedAt,
         );
         expect(fullGroup, sameGroup);
@@ -318,7 +318,7 @@ void main() {
 
       test('different gender makes groups unequal', () {
         final differentGender = fullGroup.copyWith(
-          gender: () => Gender.female,
+          genders: const [Gender.female],
         );
         expect(fullGroup, isNot(differentGender));
       });
@@ -339,7 +339,7 @@ void main() {
 
       test('copyWith can set new nullable fields', () {
         final updated = testGroup.copyWith(
-          gender: () => Gender.female,
+          genders: const [Gender.female],
           deletedAtUtc: () => deletedAt,
         );
         expect(updated.gender, Gender.female);
@@ -348,10 +348,10 @@ void main() {
 
       test('copyWith can clear new nullable fields to null', () {
         final cleared = fullGroup.copyWith(
-          gender: () => null,
+          genders: const [],
           deletedAtUtc: () => null,
         );
-        expect(cleared.gender, isNull);
+        expect(cleared.genders, isEmpty);
         expect(cleared.deletedAtUtc, isNull);
       });
     });

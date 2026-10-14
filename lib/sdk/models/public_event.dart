@@ -36,7 +36,7 @@ class PublicEvent {
     this.rrule,
     this.untilTimeUtc,
     this.sessions,
-    this.gender,
+    this.genders = const [],
     this.minAge,
     this.maxAge,
     this.strictAge = false,
@@ -70,9 +70,7 @@ class PublicEvent {
                 .map((s) => EventSession.fromMap(s as Map<String, dynamic>))
                 .toList()
           : null,
-      gender: map['gender'] != null
-          ? Gender.fromName(map['gender'] as String)
-          : null,
+      genders: gendersFromMap(map),
       minAge: map['minAge'] != null
           ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
           : null,
@@ -130,7 +128,15 @@ class PublicEvent {
 
   // Eligibility is shown as the event's band and window; the reader has no
   // identity to match against.
-  final Gender? gender;
+  /// Who is eligible by gender (club_server#25, #26): a member whose
+  /// gender is in the list. Empty is no gender criterion.
+  final List<Gender> genders;
+
+  /// The one gender of a criterion of exactly one, `null` otherwise: the
+  /// single value of the API before [genders].
+  ///
+  /// @deprecated Use [genders] instead. Removed after one release.
+  Gender? get gender => genders.length == 1 ? genders.single : null;
 
   /// The age band (club_server#16, #7): the youngest and oldest age
   /// admitted, each optional, and whether the check is strict. Strict
@@ -186,7 +192,7 @@ class PublicEvent {
     DateTime? endTimeUtc,
     DateTime? Function()? untilTimeUtc,
     List<EventSession>? Function()? sessions,
-    Gender? Function()? gender,
+    List<Gender>? genders,
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,
@@ -214,7 +220,7 @@ class PublicEvent {
       endTimeUtc: endTimeUtc ?? this.endTimeUtc,
       untilTimeUtc: untilTimeUtc != null ? untilTimeUtc() : this.untilTimeUtc,
       sessions: sessions != null ? sessions() : this.sessions,
-      gender: gender != null ? gender() : this.gender,
+      genders: genders ?? this.genders,
       minAge: minAge != null ? minAge() : this.minAge,
       maxAge: maxAge != null ? maxAge() : this.maxAge,
       strictAge: strictAge ?? this.strictAge,
@@ -251,7 +257,7 @@ class PublicEvent {
       'endTimeUtc': endTimeUtc.millisecondsSinceEpoch,
       'untilTimeUtc': untilTimeUtc?.millisecondsSinceEpoch,
       'sessions': sessions?.map((s) => s.toMap()).toList(),
-      'gender': gender?.serverValue,
+      'genders': gendersToServer(genders),
       'minAge': minAge?.toMap(),
       'maxAge': maxAge?.toMap(),
       'strictAge': strictAge,
@@ -282,6 +288,8 @@ class PublicEvent {
   static const _profileListEquality = ListEquality<PublicProfile>();
   static const _sessionListEquality = ListEquality<EventSession>();
 
+  static const _genderListEquality = ListEquality<Gender>();
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -296,7 +304,7 @@ class PublicEvent {
         other.endTimeUtc == endTimeUtc &&
         other.untilTimeUtc == untilTimeUtc &&
         _sessionListEquality.equals(other.sessions, sessions) &&
-        other.gender == gender &&
+        _genderListEquality.equals(other.genders, genders) &&
         other.minAge == minAge &&
         other.maxAge == maxAge &&
         other.strictAge == strictAge &&
@@ -326,7 +334,7 @@ class PublicEvent {
       endTimeUtc.hashCode ^
       untilTimeUtc.hashCode ^
       _sessionListEquality.hash(sessions) ^
-      gender.hashCode ^
+      _genderListEquality.hash(genders) ^
       minAge.hashCode ^
       maxAge.hashCode ^
       strictAge.hashCode ^

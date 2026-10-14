@@ -58,6 +58,10 @@ abstract interface class EventSource {
   /// [minAge], [maxAge] and [strictAge] are the age band (club_server#16,
   /// #7); the server works out the window of birth dates and reports it on
   /// the event. A minimum greater than the maximum is 422 `INVALID_STATE`.
+  ///
+  /// [genders] are the genders the event admits (club_server#25); empty or
+  /// omitted is no gender criterion. [gender], one gender, is deprecated and
+  /// removed after one release; giving both is an `ArgumentError`.
   Future<Event> createEvent({
     required String title,
     required String description,
@@ -69,6 +73,7 @@ abstract interface class EventSource {
     String? organizerName,
     List<String>? coachNames,
     String? rrule,
+    List<Gender>? genders,
     Gender? gender,
     Age? minAge,
     Age? maxAge,
@@ -133,6 +138,10 @@ abstract interface class EventSource {
   /// [minAge] and [maxAge] take getters: one returning `null` clears the
   /// bound, an omitted getter leaves it alone (club_server#16, #7).
   /// [strictAge] left `null` is unchanged.
+  ///
+  /// [genders] takes a getter: one returning an empty list clears the gender
+  /// criterion, an omitted getter leaves it alone (club_server#25). [gender]
+  /// is deprecated, as on [createEvent].
   Future<Event> updateEvent(
     int eventId, {
     required int version,
@@ -141,6 +150,7 @@ abstract interface class EventSource {
     Visibility? visibility,
     String? organizerName,
     List<String>? Function()? coachNames,
+    List<Gender> Function()? genders,
     Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,
@@ -213,8 +223,9 @@ abstract interface class EventSource {
   /// [version] is the event version the caller last loaded (#25); a stale
   /// one is refused with `StaleVersionException`.
   ///
-  /// [minAge], [maxAge] and [strictAge] correct the age band as on
-  /// [updateEvent] (club_server#16, #7).
+  /// [minAge], [maxAge] and [strictAge] correct the age band, and
+  /// [genders] the gender criterion, as on [updateEvent] (club_server#16,
+  /// #7, #25).
   ///
   /// Throws `ServerException` with `INVALID_EVENT_TYPE` if the event
   /// is a camp or one-off (use [updateEvent]).
@@ -224,6 +235,7 @@ abstract interface class EventSource {
     String? title,
     String? description,
     Visibility? visibility,
+    List<Gender> Function()? genders,
     Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,

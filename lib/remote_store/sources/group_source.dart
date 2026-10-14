@@ -48,6 +48,7 @@ class RemoteGroupSource implements GroupSource {
     Age? minAge,
     Age? maxAge,
     bool? strictAge,
+    List<Gender>? genders,
     Gender? gender,
     bool? semiAuto,
   }) async {
@@ -59,7 +60,7 @@ class RemoteGroupSource implements GroupSource {
         if (minAge != null) 'minAge': minAge.toMap(),
         if (maxAge != null) 'maxAge': maxAge.toMap(),
         'strictAge': ?strictAge,
-        if (gender != null) 'gender': gender.serverValue,
+        'genders': ?gendersForCreate(genders, gender),
         'semiAuto': ?semiAuto,
       },
     );
@@ -74,6 +75,7 @@ class RemoteGroupSource implements GroupSource {
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,
+    List<Gender> Function()? genders,
     Gender? Function()? gender,
     bool? semiAuto,
   }) async {
@@ -94,8 +96,9 @@ class RemoteGroupSource implements GroupSource {
     if (strictAge != null) {
       body['strictAge'] = strictAge;
     }
-    if (gender != null) {
-      body['gender'] = gender()?.serverValue;
+    final sentGenders = gendersForUpdate(genders, gender);
+    if (sentGenders != null) {
+      body['genders'] = sentGenders;
     }
     if (semiAuto != null) {
       body['semiAuto'] = semiAuto;

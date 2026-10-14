@@ -167,7 +167,8 @@ void main() {
       expect(body['version'], 3);
       expect(body['title'], 'T2');
       expect(body['visibility'], 'private');
-      expect(body['gender'], 'female');
+      expect(body['genders'], ['female']);
+      expect(body.containsKey('gender'), isFalse);
       expect(body['minAge'], {'years': 11, 'months': 0, 'days': 0});
       expect(body.containsKey('maxAge'), isTrue);
       expect(body['maxAge'], isNull);

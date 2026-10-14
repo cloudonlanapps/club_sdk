@@ -43,7 +43,7 @@ class EventInput {
     this.eventId,
     this.organizerName,
     this.rrule,
-    this.gender,
+    this.genders = const [],
     this.minAge,
     this.maxAge,
     this.strictAge = false,
@@ -70,9 +70,7 @@ class EventInput {
         map['endTimeUtc'] as int,
         isUtc: true,
       ),
-      gender: map['gender'] != null
-          ? Gender.fromName(map['gender'] as String)
-          : null,
+      genders: gendersFromMap(map),
       minAge: map['minAge'] != null
           ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
           : null,
@@ -110,7 +108,7 @@ class EventInput {
       rrule: event.rrule,
       startTimeUtc: event.startTimeUtc,
       endTimeUtc: event.endTimeUtc,
-      gender: event.gender,
+      genders: event.genders,
       minAge: event.minAge,
       maxAge: event.maxAge,
       strictAge: event.strictAge,
@@ -144,7 +142,15 @@ class EventInput {
   // Structured eligibility — see [Event] for semantics. The age band is what
   // a form edits; the window of birth dates it comes to is the server's to
   // work out and is not accepted on a write (club_server#16, #7).
-  final Gender? gender;
+  /// Who is eligible by gender (club_server#25, #26): a member whose
+  /// gender is in the list. Empty is no gender criterion.
+  final List<Gender> genders;
+
+  /// The one gender of a criterion of exactly one, `null` otherwise: the
+  /// single value of the API before [genders].
+  ///
+  /// @deprecated Use [genders] instead. Removed after one release.
+  Gender? get gender => genders.length == 1 ? genders.single : null;
   final Age? minAge;
   final Age? maxAge;
   final bool strictAge;
@@ -176,7 +182,7 @@ class EventInput {
       endTimeUtc: endTimeUtc,
       createdAtUtc: now,
       updatedAtUtc: now,
-      gender: gender,
+      genders: genders,
       minAge: minAge,
       maxAge: maxAge,
       strictAge: strictAge,
@@ -197,7 +203,7 @@ class EventInput {
     String? Function()? rrule,
     DateTime? startTimeUtc,
     DateTime? endTimeUtc,
-    Gender? Function()? gender,
+    List<Gender>? genders,
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,
@@ -218,7 +224,7 @@ class EventInput {
       rrule: rrule != null ? rrule() : this.rrule,
       startTimeUtc: startTimeUtc ?? this.startTimeUtc,
       endTimeUtc: endTimeUtc ?? this.endTimeUtc,
-      gender: gender != null ? gender() : this.gender,
+      genders: genders ?? this.genders,
       minAge: minAge != null ? minAge() : this.minAge,
       maxAge: maxAge != null ? maxAge() : this.maxAge,
       strictAge: strictAge ?? this.strictAge,
@@ -240,7 +246,7 @@ class EventInput {
       'rrule': rrule,
       'startTimeUtc': startTimeUtc.millisecondsSinceEpoch,
       'endTimeUtc': endTimeUtc.millisecondsSinceEpoch,
-      'gender': gender?.serverValue,
+      'genders': gendersToServer(genders),
       'minAge': minAge?.toMap(),
       'maxAge': maxAge?.toMap(),
       'strictAge': strictAge,
@@ -261,6 +267,8 @@ class EventInput {
   static const _stringListEquality = ListEquality<String>();
   static const _sessionListEquality = ListEquality<EventSession>();
 
+  static const _genderListEquality = ListEquality<Gender>();
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -276,7 +284,7 @@ class EventInput {
         other.rrule == rrule &&
         other.startTimeUtc == startTimeUtc &&
         other.endTimeUtc == endTimeUtc &&
-        other.gender == gender &&
+        _genderListEquality.equals(other.genders, genders) &&
         other.minAge == minAge &&
         other.maxAge == maxAge &&
         other.strictAge == strictAge &&
@@ -297,7 +305,7 @@ class EventInput {
         rrule.hashCode ^
         startTimeUtc.hashCode ^
         endTimeUtc.hashCode ^
-        gender.hashCode ^
+        _genderListEquality.hash(genders) ^
         minAge.hashCode ^
         maxAge.hashCode ^
         strictAge.hashCode ^

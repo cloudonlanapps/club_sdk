@@ -37,7 +37,7 @@ class Event {
     this.coaches,
     this.rrule,
     this.untilTimeUtc,
-    this.gender,
+    this.genders = const [],
     this.minAge,
     this.maxAge,
     this.strictAge = false,
@@ -96,9 +96,7 @@ class Event {
               isUtc: true,
             )
           : null,
-      gender: map['gender'] != null
-          ? Gender.fromName(map['gender'] as String)
-          : null,
+      genders: gendersFromMap(map),
       minAge: map['minAge'] != null
           ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
           : null,
@@ -183,7 +181,15 @@ class Event {
 
   // Structured eligibility — replaces the old free-text `eligibility`/
   // `eligibilityNote` fields. `null` means no constraint on that axis.
-  final Gender? gender;
+  /// Who is eligible by gender (club_server#25, #26): a member whose
+  /// gender is in the list. Empty is no gender criterion.
+  final List<Gender> genders;
+
+  /// The one gender of a criterion of exactly one, `null` otherwise: the
+  /// single value of the API before [genders].
+  ///
+  /// @deprecated Use [genders] instead. Removed after one release.
+  Gender? get gender => genders.length == 1 ? genders.single : null;
 
   /// The age band (club_server#16, #7): the youngest and oldest age
   /// admitted, each optional, and whether the check is strict. Strict
@@ -270,7 +276,7 @@ class Event {
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
     DateTime? Function()? untilTimeUtc,
-    Gender? Function()? gender,
+    List<Gender>? genders,
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,
@@ -306,7 +312,7 @@ class Event {
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
       untilTimeUtc: untilTimeUtc != null ? untilTimeUtc() : this.untilTimeUtc,
-      gender: gender != null ? gender() : this.gender,
+      genders: genders ?? this.genders,
       minAge: minAge != null ? minAge() : this.minAge,
       maxAge: maxAge != null ? maxAge() : this.maxAge,
       strictAge: strictAge ?? this.strictAge,
@@ -351,7 +357,7 @@ class Event {
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
       'untilTimeUtc': untilTimeUtc?.millisecondsSinceEpoch,
-      'gender': gender?.serverValue,
+      'genders': gendersToServer(genders),
       'minAge': minAge?.toMap(),
       'maxAge': maxAge?.toMap(),
       'strictAge': strictAge,
@@ -384,6 +390,8 @@ class Event {
   static const _profileListEquality = ListEquality<PublicProfile>();
   static const _sessionListEquality = ListEquality<EventSession>();
 
+  static const _genderListEquality = ListEquality<Gender>();
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -404,7 +412,7 @@ class Event {
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.untilTimeUtc == untilTimeUtc &&
-        other.gender == gender &&
+        _genderListEquality.equals(other.genders, genders) &&
         other.minAge == minAge &&
         other.maxAge == maxAge &&
         other.strictAge == strictAge &&
@@ -440,7 +448,7 @@ class Event {
         createdAtUtc.hashCode ^
         updatedAtUtc.hashCode ^
         untilTimeUtc.hashCode ^
-        gender.hashCode ^
+        _genderListEquality.hash(genders) ^
         minAge.hashCode ^
         maxAge.hashCode ^
         strictAge.hashCode ^
