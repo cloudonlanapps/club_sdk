@@ -83,7 +83,10 @@ abstract interface class PublicSource {
   /// [token] is the value [getInquiryFormToken] returned. [website] is the
   /// honeypot: leave it null from an app, and bind it to a hidden field on
   /// a web form so a bot that fills everything gives itself away. [extra]
-  /// carries whatever else the form asked.
+  /// carries whatever else the form asked. [message] is optional: whether a
+  /// form needs one is the caller's to decide, and when it is null the
+  /// request carries none. An empty one is refused (422) (club_server#41,
+  /// #22).
   ///
   /// The server always answers 202 with no body, whether it kept the
   /// submission or dropped it, so a caller learns nothing about the spam
@@ -92,8 +95,8 @@ abstract interface class PublicSource {
     required InquiryKind kind,
     required String name,
     required String email,
-    required String message,
     required String token,
+    String? message,
     String? phone,
     Map<String, dynamic>? extra,
     String? website,
