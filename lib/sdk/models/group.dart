@@ -22,7 +22,7 @@ class Group {
     this.dobOnOrAfterUtc,
     this.dobOnOrBeforeUtc,
     this.eligibilityReferenceDayUtc,
-    this.gender,
+    this.genders = const [],
     this.deletedAtUtc,
     this.requested = false,
     this.memberCount = 0,
@@ -68,9 +68,7 @@ class Group {
         map['createdAtUtc'] as int,
         isUtc: true,
       ),
-      gender: map['gender'] != null
-          ? Gender.fromName(map['gender'] as String)
-          : null,
+      genders: gendersFromMap(map),
       deletedAtUtc: map['deletedAtUtc'] != null
           ? DateTime.fromMillisecondsSinceEpoch(
               map['deletedAtUtc'] as int,
@@ -111,7 +109,16 @@ class Group {
   /// moves forward each day. Null from a server that predates the age band.
   final DateTime? eligibilityReferenceDayUtc;
   final DateTime createdAtUtc;
-  final Gender? gender;
+
+  /// Who is eligible by gender (club_server#25, #26): a member whose
+  /// gender is in the list. Empty is no gender criterion.
+  final List<Gender> genders;
+
+  /// The one gender of a criterion of exactly one, `null` otherwise: the
+  /// single value of the API before [genders].
+  ///
+  /// @deprecated Use [genders] instead. Removed after one release.
+  Gender? get gender => genders.length == 1 ? genders.single : null;
   final DateTime? deletedAtUtc;
 
   /// True when the current viewer has a pending join request for this
@@ -152,7 +159,7 @@ class Group {
     DateTime? Function()? dobOnOrBeforeUtc,
     DateTime? Function()? eligibilityReferenceDayUtc,
     DateTime? createdAtUtc,
-    Gender? Function()? gender,
+    List<Gender>? genders,
     DateTime? Function()? deletedAtUtc,
     bool? requested,
     int? memberCount,
@@ -177,7 +184,7 @@ class Group {
           ? eligibilityReferenceDayUtc()
           : this.eligibilityReferenceDayUtc,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
-      gender: gender != null ? gender() : this.gender,
+      genders: genders ?? this.genders,
       deletedAtUtc: deletedAtUtc != null ? deletedAtUtc() : this.deletedAtUtc,
       requested: requested ?? this.requested,
       memberCount: memberCount ?? this.memberCount,
@@ -201,7 +208,7 @@ class Group {
       'eligibilityReferenceDayUtc':
           eligibilityReferenceDayUtc?.millisecondsSinceEpoch,
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
-      'gender': gender?.serverValue,
+      'genders': gendersToServer(genders),
       'deletedAtUtc': deletedAtUtc?.millisecondsSinceEpoch,
       'requested': requested,
       'memberCount': memberCount,
@@ -219,11 +226,13 @@ class Group {
         'minAge: $minAge, maxAge: $maxAge, strictAge: $strictAge, '
         'dobOnOrAfterUtc: $dobOnOrAfterUtc, '
         'dobOnOrBeforeUtc: $dobOnOrBeforeUtc, '
-        'gender: $gender, '
+        'genders: $genders, '
         'deletedAtUtc: $deletedAtUtc, '
         'requested: $requested, memberCount: $memberCount, '
         'ineligibleMemberCount: $ineligibleMemberCount)';
   }
+
+  static const _genderListEquality = ListEquality<Gender>();
 
   @override
   bool operator ==(Object other) {
@@ -241,7 +250,7 @@ class Group {
         other.dobOnOrBeforeUtc == dobOnOrBeforeUtc &&
         other.eligibilityReferenceDayUtc == eligibilityReferenceDayUtc &&
         other.createdAtUtc == createdAtUtc &&
-        other.gender == gender &&
+        _genderListEquality.equals(other.genders, genders) &&
         other.deletedAtUtc == deletedAtUtc &&
         other.requested == requested &&
         other.memberCount == memberCount &&
@@ -262,7 +271,7 @@ class Group {
       dobOnOrBeforeUtc.hashCode ^
       eligibilityReferenceDayUtc.hashCode ^
       createdAtUtc.hashCode ^
-      gender.hashCode ^
+      _genderListEquality.hash(genders) ^
       deletedAtUtc.hashCode ^
       requested.hashCode ^
       memberCount.hashCode ^
