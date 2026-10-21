@@ -664,16 +664,21 @@ class RemoteStore {
     _throwApiException(response);
   }
 
+  /// Throws the [ServerException] for a failed [response]. A body that is
+  /// not a JSON object (a proxy's HTML page, an empty body, a list) is read
+  /// as no body, so the error falls back by status (#37).
   Never _throwApiException(http.Response response) {
-    Map<String, dynamic>? body;
+    Object? decoded;
     try {
-      if (response.body.isNotEmpty) {
-        body = jsonDecode(response.body) as Map<String, dynamic>;
-      }
-    } on Object catch (_) {
-      // Body is not JSON, ignore
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      decoded = null;
     }
-    throw mapHttpError(response.statusCode, body ?? {});
+    throw mapHttpError(
+      response.statusCode,
+      decoded is Map<String, dynamic> ? decoded : const {},
+      path: response.request?.url.path,
+    );
   }
 
   /// Closes the HTTP client and releases resources.

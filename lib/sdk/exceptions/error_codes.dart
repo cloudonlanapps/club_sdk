@@ -287,10 +287,15 @@ abstract final class SdkErrorCode {
   // Client-side SDK codes (used with SdkError)
   // ═══════════════════════════════════════════════════════════════════════════
   static const rruleNotAllowed = 'RRULE_NOT_ALLOWED';
-  // A 2xx response whose body is not the JSON shape the call expects (a
-  // proxy's HTML page, a list where a map was expected). The server answered,
-  // so this is not an outage.
+  // A response whose body is not the JSON shape the call expects: a 2xx
+  // that is a proxy's HTML page or a list where a map was expected, or an
+  // error (other than 401, 403 and 502-504) with no readable code (#37). The
+  // server answered, so this is not an outage.
   static const invalidResponse = 'INVALID_RESPONSE';
+  // A 502, 503 or 504 with no readable code: the server is down behind a
+  // reverse proxy, which answered with its own HTML page or an empty body
+  // (#37).
+  static const serverUnavailable = 'SERVER_UNAVAILABLE';
   static const rruleConstraintViolation = 'RRULE_CONSTRAINT_VIOLATION';
   static const invalidEventType = 'INVALID_EVENT_TYPE';
 }
