@@ -296,6 +296,14 @@ abstract interface class EventSource {
   /// `CANCELLATION_LEAD_TIME_VIOLATED`); a super admin bypasses the past /
   /// lead-time rules. A programme answers 400 `INVALID_EVENT_TYPE` (use
   /// [terminate]); a one-off answers 422 `INVALID_STATE` (use [drop]).
+  ///
+  /// A camp already cancelled can be cancelled again from an **earlier**
+  /// occurrence start, under the same rules: the cutoff moves earlier and
+  /// members are told again. A time at or after the current cutoff is
+  /// refused with 400 `EVENT_ALREADY_CANCELLED`, and the cutoff stays; a
+  /// later end is reached by lifting the cutoff with [undoCancelSeries]
+  /// (club_server#51, #46).
+  ///
   /// Enrollment rows are left unchanged — derive availability from the
   /// event's `untilTimeUtc` / occurrence status, not enrollment state.
   ///

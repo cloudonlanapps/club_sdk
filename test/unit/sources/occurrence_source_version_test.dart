@@ -138,4 +138,51 @@ void main() {
       );
     });
   });
+
+  group('Issue 28: the occurrence cancel calls refuse a one-off', () {
+    http.Response refusal(String route) => http.Response(
+      jsonEncode({
+        'detail': {
+          'code': 'INVALID_STATE',
+          'message': 'A one-off is not cancelled per occurrence; use $route',
+        },
+      }),
+      422,
+      headers: {'content-type': 'application/json'},
+    );
+
+    test('cancelOccurrence surfaces the refusal as INVALID_STATE naming '
+        '/drop', () async {
+      final h = harness(respond: (_) => refusal('/drop'));
+      await expectLater(
+        RemoteOccurrenceSource(
+          h.store,
+        ).cancelOccurrence(42, occTime, version: 1, reason: 'ice'),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'statusCode', 422)
+              .having((e) => e.code, 'code', SdkErrorCode.invalidState)
+              .having((e) => e.message, 'message', contains('/drop')),
+        ),
+      );
+      expect(h.requests.single.url.path, endsWith('$occPath/cancel'));
+    });
+
+    test('undoCancelOccurrence surfaces the refusal as INVALID_STATE naming '
+        '/reinstate', () async {
+      final h = harness(respond: (_) => refusal('/reinstate'));
+      await expectLater(
+        RemoteOccurrenceSource(
+          h.store,
+        ).undoCancelOccurrence(42, occTime, version: 2),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'statusCode', 422)
+              .having((e) => e.code, 'code', SdkErrorCode.invalidState)
+              .having((e) => e.message, 'message', contains('/reinstate')),
+        ),
+      );
+      expect(h.requests.single.url.path, endsWith('$occPath/undo-cancel'));
+    });
+  });
 }

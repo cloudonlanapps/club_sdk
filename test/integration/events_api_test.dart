@@ -24,6 +24,7 @@ import '../utils/test_client.dart';
 /// - correctionOnEvent: 7.02
 /// - updateEventForAllFuture: 7.03
 /// - cancelSeries: 7.04
+/// - drop: 8.03
 /// - checkConflict: not tested
 /// - findAvailableSlots: not tested
 /// - getEventChain: not tested
@@ -38,7 +39,7 @@ import '../utils/test_client.dart';
 /// - getOccurrence: via event tests
 /// - listOccurrences: 9.08
 /// - rescheduleOccurrence: 8.02
-/// - cancelOccurrence: 8.03
+/// - cancelOccurrence: not tested here (camps and programmes only; s08)
 /// - restoreOccurrence: not tested
 ///
 /// Coverage against EnrollmentSource interface:
@@ -1182,7 +1183,9 @@ void main() {
         expect(schedules.single.venueId, v2Id);
       });
 
-      test('8.03: Cancel Occurrence - preserves history', () async {
+      // A one-off is called off with drop, not the occurrence cancel route,
+      // which refuses it (club_server#48, #28).
+      test('8.03: Drop a one-off - its occurrence reads cancelled', () async {
         final futureStart = nextStart();
         final event = await client.events.createEvent(
           title: 'test_History Test',
@@ -1193,9 +1196,8 @@ void main() {
           startTimeUtc: futureStart,
           endTimeUtc: futureStart.add(const Duration(hours: 1)),
         );
-        await client.occurrences.cancelOccurrence(
+        await client.events.drop(
           event.id,
-          futureStart,
           version: await occurrenceVersion(client, event.id, futureStart),
           reason: 'R',
         );
@@ -1204,6 +1206,7 @@ void main() {
           futureStart,
         );
         expect(occ.status, OccurrenceStatus.cancelled);
+        expect(occ.cancelReason, 'R');
       });
 
       test(
