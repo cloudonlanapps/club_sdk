@@ -55,7 +55,13 @@ abstract interface class OccurrenceSource {
     int? newVenueId,
   });
 
-  /// Cancels a specific occurrence.
+  /// Cancels one occurrence of a **camp** or **programme**
+  /// (`POST …/occurrences/{t}/cancel`).
+  ///
+  /// A one-off is not cancelled per occurrence: it is called off with
+  /// `EventSource.drop`, and this call refuses it with 422 `INVALID_STATE`
+  /// (`ServerException` with `SdkErrorCode.invalidState`), naming `/drop`
+  /// (club_server#48, #28).
   Future<void> cancelOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
@@ -63,7 +69,12 @@ abstract interface class OccurrenceSource {
     required String reason,
   });
 
-  /// Restores a cancelled occurrence (undo cancel).
+  /// Restores a cancelled occurrence of a **camp** or **programme**
+  /// (`POST …/occurrences/{t}/undo-cancel`).
+  ///
+  /// A dropped one-off is brought back with `EventSource.reinstate`, which
+  /// applies the one-off's own rules; this call refuses a one-off with 422
+  /// `INVALID_STATE`, naming `/reinstate` (club_server#48, #28).
   Future<void> undoCancelOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
