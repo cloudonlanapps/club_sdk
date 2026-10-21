@@ -101,8 +101,9 @@ class RemoteStore {
 
   /// Optional callback to transform URLs in API responses.
   ///
-  /// Called for every URL string in the response data after static URL
-  /// resolution.
+  /// Called for every media or static-file URL in the response data (an
+  /// absolute `http(s)` URL or a `/` path) after static URL resolution; a
+  /// bare filename such as `photo.jpg` is not passed to it.
   /// Use this for cache busting, CDN rewriting, or other URL transformations.
   ///
   /// Example (cache busting with timestamp format YYYYMMDDHHmmss):
@@ -583,7 +584,7 @@ class RemoteStore {
   /// 1. Resolves relative paths starting with `/static/` or `/public/` by
   ///    prefixing [staticBaseUrl].
   /// 2. Applies [urlTransformer] (when set) to URLs that look like media
-  ///    or static-file references.
+  ///    or static-file references; a bare filename is left as it is.
   ///
   /// Used by [_handleResponse] / [_handleListResponse] so every successful
   /// response from this store has its URL fields normalised before being
@@ -613,11 +614,22 @@ class RemoteStore {
     return data;
   }
 
+  /// Whether [url] is a media or static-file URL for [urlTransformer]: an
+  /// absolute `http(s)` URL or a path starting with `/`, that is under
+  /// `/static/` or `/public/` or ends in a media extension. A bare name such
+  /// as a media `filename` is never one (#32).
   bool _isTransformableUrl(String url) {
+    final lower = url.toLowerCase();
+    final isUrl =
+        lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        url.startsWith('/');
+    if (!isUrl) {
+      return false;
+    }
     if (url.contains('/static/') || url.contains('/public/')) {
       return true;
     }
-    final lowerUrl = url.toLowerCase();
     const mediaExtensions = [
       '.jpg',
       '.jpeg',
@@ -634,7 +646,7 @@ class RemoteStore {
       '.m3u8',
       '.json',
     ];
-    return mediaExtensions.any(lowerUrl.endsWith);
+    return mediaExtensions.any(lower.endsWith);
   }
 
   /// Decodes a 2xx body. A body that is not JSON is an `INVALID_RESPONSE`
