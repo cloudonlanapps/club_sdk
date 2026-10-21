@@ -634,7 +634,7 @@ void main() {
           venueId: venueId,
           startTimeUtc: start,
           endTimeUtc: start.add(const Duration(hours: 1)),
-          gender: Gender.female,
+          genders: const [Gender.female],
         );
 
         final result = await memberClient.myEvents.listMyEvents(member);
@@ -685,7 +685,7 @@ void main() {
         await adminClient.events.updateEvent(
           event.id,
           version: event.version,
-          gender: () => Gender.female,
+          genders: () => const [Gender.female],
         );
 
         final gClient = await createRemoteSecureClient(baseUrl: baseUrl);

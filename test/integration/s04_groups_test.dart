@@ -424,7 +424,7 @@ void main() {
       test('creating group with gender makes it auto', () async {
         final group = await client.groups.createGroup(
           name: 'test_Auto Gender Group 411b',
-          gender: Gender.male,
+          genders: const [Gender.male],
         );
         expect(group.kind, GroupKind.auto);
       });
@@ -515,7 +515,7 @@ void main() {
       test('removeMember from auto group throws', () async {
         final group = await client.groups.createGroup(
           name: 'test_Auto No Remove 411e',
-          gender: Gender.female,
+          genders: const [Gender.female],
         );
 
         expect(
@@ -580,7 +580,7 @@ void main() {
       test('gender-only group returns matching gender', () async {
         final group = await client.groups.createGroup(
           name: 'test_Males 412a',
-          gender: Gender.male,
+          genders: const [Gender.male],
         );
 
         final members = await client.groups.getMembers(group.id);
@@ -614,7 +614,7 @@ void main() {
       test('gender + age group returns intersection', () async {
         final group = await client.groups.createGroup(
           name: 'test_Boys 12 412c',
-          gender: Gender.male,
+          genders: const [Gender.male],
           minAge: const Age(years: 12),
           maxAge: const Age(years: 12, months: 6),
           strictAge: true,

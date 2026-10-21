@@ -92,7 +92,7 @@ void main() {
 
     var eventCounter = 0;
     Future<Event> createEvent({
-      Gender? gender,
+      List<Gender>? genders,
       Age? maxAge,
     }) async {
       eventCounter += 1;
@@ -107,7 +107,7 @@ void main() {
         venueId: venueId,
         startTimeUtc: start,
         endTimeUtc: start.add(const Duration(hours: 1)),
-        gender: gender,
+        genders: genders,
         maxAge: maxAge,
       );
     }
@@ -122,7 +122,7 @@ void main() {
     });
 
     test('Issue 272: gender constraint filters wrong-gender users', () async {
-      final event = await createEvent(gender: Gender.female);
+      final event = await createEvent(genders: const [Gender.female]);
       final eligible = await client.events.listEligible(event.id);
       final names = eligible.map((e) => e.username).toSet();
       expect(names.contains('test_female_i272'), isTrue);

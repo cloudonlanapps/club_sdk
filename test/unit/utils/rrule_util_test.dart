@@ -366,6 +366,91 @@ void main() {
       });
     });
 
+    group('Issue 33: expand reports hasMore only when a session follows', () {
+      test('Issue 33: a series that ended at untilUtc has no more '
+          'occurrences', () {
+        final util = RruleUtil();
+        final result = util.expand(
+          rrule: 'FREQ=DAILY',
+          dtStart: DateTime.utc(2026, 1, 1, 9),
+          fromUtc: DateTime.utc(2026, 1, 1),
+          toUtc: DateTime.utc(2026, 3, 1),
+          untilUtc: DateTime.utc(2026, 1, 3, 9),
+        );
+        expect(result.occurrences.length, 3);
+        // Expected: nothing follows the cutoff, so hasMore is false and a
+        // paginating caller stops. Actual: hasMore is true with a cursor.
+        expect(result.hasMore, isFalse);
+        expect(result.nextCursor, isNull);
+      });
+
+      test('Issue 33: a page that ends before untilUtc has more', () {
+        final result = util.expand(
+          rrule: 'FREQ=DAILY',
+          dtStart: DateTime.utc(2026, 1, 1, 9),
+          fromUtc: DateTime.utc(2026, 1, 1),
+          toUtc: DateTime.utc(2026, 1, 4),
+          untilUtc: DateTime.utc(2026, 1, 10, 9),
+        );
+        expect(result.occurrences.length, 3);
+        expect(result.hasMore, isTrue);
+        expect(result.nextCursor, DateTime.utc(2026, 1, 3, 9));
+      });
+
+      test('Issue 33: a COUNT rule that ends inside the page has no more', () {
+        final result = util.expand(
+          rrule: 'FREQ=DAILY;COUNT=3',
+          dtStart: DateTime.utc(2026, 1, 1, 9),
+          fromUtc: DateTime.utc(2026, 1, 1),
+          toUtc: DateTime.utc(2026, 3, 1),
+          excludeDates: [DateTime.utc(2026, 1, 2, 9)],
+        );
+        expect(result.occurrences.length, 3);
+        expect(result.hasMore, isFalse);
+        expect(result.nextCursor, isNull);
+      });
+
+      test('Issue 33: a rule UNTIL that ends inside the page has no more', () {
+        final result = util.expand(
+          rrule: 'FREQ=DAILY;UNTIL=20260103T090000Z',
+          dtStart: DateTime.utc(2026, 1, 1, 9),
+          fromUtc: DateTime.utc(2026, 1, 1),
+          toUtc: DateTime.utc(2026, 3, 1),
+        );
+        expect(result.occurrences.length, 3);
+        expect(result.hasMore, isFalse);
+      });
+
+      test('Issue 33: a limit reached on the last session has no more', () {
+        final result = util.expand(
+          rrule: 'FREQ=DAILY;COUNT=5',
+          dtStart: DateTime.utc(2026, 1, 1, 9),
+          fromUtc: DateTime.utc(2026, 1, 1),
+          toUtc: DateTime.utc(2026, 3, 1),
+          limit: 5,
+        );
+        expect(result.occurrences.length, 5);
+        expect(result.hasMore, isFalse);
+        expect(result.nextCursor, isNull);
+      });
+
+      test('Issue 33: the look-ahead cap still reports more', () {
+        final result = util.expand(
+          rrule: 'FREQ=WEEKLY;BYDAY=MO',
+          dtStart: DateTime.utc(2026, 1, 5, 10),
+          fromUtc: DateTime.utc(2026),
+          toUtc: DateTime.utc(2029),
+          eventType: EventType.programme,
+        );
+        expect(
+          result.occurrences.last.isBefore(DateTime.utc(2027, 1, 6)),
+          isTrue,
+        );
+        expect(result.hasMore, isTrue);
+        expect(result.nextCursor, result.occurrences.last);
+      });
+    });
+
     group('getNextOccurrences', () {
       test('returns correct number of upcoming occurrences', () {
         final occurrences = util.getNextOccurrences(

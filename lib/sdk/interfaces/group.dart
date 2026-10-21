@@ -34,8 +34,7 @@ abstract interface class GroupSource {
   /// gender is in it; empty or omitted is no gender criterion
   /// (club_server#26). The server works out today's window of birth dates
   /// and reports it on the group. A minimum greater than the maximum is 422
-  /// `INVALID_STATE`. [gender], one gender, is deprecated and removed after
-  /// one release; giving both is an `ArgumentError`.
+  /// `INVALID_STATE`.
   Future<Group> createGroup({
     required String name,
     String? description,
@@ -43,7 +42,6 @@ abstract interface class GroupSource {
     Age? maxAge,
     bool? strictAge,
     List<Gender>? genders,
-    Gender? gender,
     bool? semiAuto,
   });
 
@@ -53,8 +51,7 @@ abstract interface class GroupSource {
   /// present. A [minAge] or [maxAge] getter returning `null` clears that
   /// bound; an omitted one leaves it alone. [strictAge] left `null` is
   /// unchanged. A [genders] getter returning an empty list clears the gender
-  /// criterion; an omitted one leaves it alone. [gender] is deprecated, as on
-  /// [createGroup].
+  /// criterion; an omitted one leaves it alone.
   Future<Group> updateGroup(
     int id, {
     String? name,
@@ -63,7 +60,6 @@ abstract interface class GroupSource {
     Age? Function()? maxAge,
     bool? strictAge,
     List<Gender> Function()? genders,
-    Gender? Function()? gender,
     bool? semiAuto,
   });
 
