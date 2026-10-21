@@ -51,6 +51,11 @@ const Symbol _refreshZoneKey = #clubSdkTokenRefresh;
 /// request timeouts, retry logic (safe requests on 5xx, timeouts and
 /// connection failures), and automatic token refresh.
 class RemoteStore {
+  /// Creates a store for [baseUrl].
+  ///
+  /// A [client] passed in stays the caller's: [dispose] leaves it open, and
+  /// the caller closes it. Without one, the store makes its own and
+  /// [dispose] closes it (#43).
   RemoteStore({
     required this.baseUrl,
     http.Client? client,
@@ -61,7 +66,8 @@ class RemoteStore {
     this.urlTransformer,
     this.onServerReachable,
     this.onServerUnreachable,
-  }) : _httpClient = client ?? createDefaultHttpClient();
+  }) : _httpClient = client ?? createDefaultHttpClient(),
+       _ownsClient = client == null;
 
   /// The base URL for all API requests (e.g., 'https://api.myexampleclub.com/v1')
   final String baseUrl;
@@ -131,6 +137,9 @@ class RemoteStore {
   final void Function()? onServerUnreachable;
 
   final http.Client _httpClient;
+
+  /// Whether [_httpClient] was made by this store, so [dispose] closes it.
+  final bool _ownsClient;
 
   /// The token refresh in progress, shared by every request that got a 401
   /// while it runs; `null` when none is running (#29).
@@ -693,8 +702,12 @@ class RemoteStore {
     );
   }
 
-  /// Closes the HTTP client and releases resources.
+  /// Releases the store's resources: closes its HTTP client if the store
+  /// made it. A client passed to the constructor is left open for the
+  /// caller, who owns it (#43).
   void dispose() {
-    _httpClient.close();
+    if (_ownsClient) {
+      _httpClient.close();
+    }
   }
 }
