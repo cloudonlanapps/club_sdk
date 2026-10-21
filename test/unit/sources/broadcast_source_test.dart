@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:club_sdk_2/club_sdk_2.dart' show ServerException;
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:club_sdk_2/remote_store/sources/broadcast_source.dart';
 import 'package:club_sdk_2/sdk/models/broadcast.dart';
@@ -80,39 +81,71 @@ void main() {
       },
     );
 
-    test(
-      'Issue 737: asserts locally when email is true without subject',
-      () async {
-        final h = _harness();
+    for (final (label, subject, body) in [
+      ('without a subject', null, 'body only'),
+      ('without a body', 'subject only', null),
+    ]) {
+      test(
+        'Issue 35: email $label is sent to the server, not asserted locally',
+        () async {
+          final h = _harness();
 
-        expect(
-          () => h.source.createBroadcast(
+          await h.source.createBroadcast(
             audienceSelector: const AudienceSelector.allUsers(),
             payload: _payload,
             email: true,
-            emailBody: 'body only',
-          ),
-          throwsA(isA<AssertionError>()),
-        );
-        expect(h.requests, isEmpty, reason: 'must fail before the round-trip');
-      },
-    );
+            emailSubject: subject,
+            emailBody: body,
+          );
 
+          final sent =
+              jsonDecode(h.requests.single.body) as Map<String, dynamic>;
+          expect(sent['email'], isTrue);
+          expect(sent['emailSubject'], subject);
+          expect(sent['emailBody'], body);
+        },
+      );
+    }
+  });
+
+  // The server is the one judge of this rule: the SDK sends the request and
+  // surfaces the server's 422, the same in debug and release builds.
+  // Before #35 the call threw AssertionError before any request (debug only).
+  group("Issue 35 (R8): the email rule is the server's", () {
     test(
-      'Issue 737: asserts locally when email is true without body',
+      'Issue 35: email without a subject reaches the server and surfaces '
+      'its 422',
       () async {
-        final h = _harness();
-
-        expect(
-          () => h.source.createBroadcast(
-            audienceSelector: const AudienceSelector.allUsers(),
-            payload: _payload,
-            email: true,
-            emailSubject: 'subject only',
+        final store = RemoteStore(
+          baseUrl: 'https://example.test/v1',
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'detail': [
+                  {
+                    'type': 'value_error',
+                    'loc': ['body'],
+                    'msg':
+                        'Value error, emailSubject and emailBody are '
+                        'required when email is true',
+                  },
+                ],
+              }),
+              422,
+              headers: {'content-type': 'application/json'},
+            ),
           ),
-          throwsA(isA<AssertionError>()),
         );
-        expect(h.requests, isEmpty, reason: 'must fail before the round-trip');
+        await expectLater(
+          RemoteBroadcastSource(store).createBroadcast(
+            audienceSelector: const AudienceSelector.allUsers(),
+            payload: const {'title': 'x'},
+            email: true,
+          ),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 'status', 422),
+          ),
+        );
       },
     );
   });

@@ -140,6 +140,9 @@ abstract final class SdkErrorCode {
   // 422 Unprocessable Entity
   // ═══════════════════════════════════════════════════════════════════════════
   static const invalidState = 'INVALID_STATE';
+  // Audit-log read with only one of resource_type and resource_id: they
+  // come together (#35).
+  static const invalidResourceScope = 'INVALID_RESOURCE_SCOPE';
   // Hard delete of an item that was not soft-deleted first — group, user,
   // template, evaluation, media item or event (club_server#526). Replaces
   // `MEDIA_NOT_DELETED` and the per-endpoint `NOT_DELETED` / `INVALID_STATE`.

@@ -19,8 +19,11 @@ import '../models/audit_log.dart';
 abstract interface class AuditLogSource {
   /// List audit rows newest-first.
   ///
-  /// [resourceType] and [resourceId] must be supplied together or the server
-  /// returns 422.
+  /// [resourceType] and [resourceId] must be supplied together. The server
+  /// is the judge of this rule: a request with only one is sent, and the
+  /// server's 422 surfaces as a `ServerException` with code
+  /// `INVALID_RESOURCE_SCOPE` (`SdkErrorCode.invalidResourceScope`), the same
+  /// in debug and release builds (#35).
   Future<AuditLogPage> list({
     int offset = 0,
     int limit = 50,

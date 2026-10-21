@@ -10,9 +10,10 @@ abstract interface class BroadcastSource {
   /// Create a broadcast and fan it out synchronously.
   ///
   /// When [email] is true the broadcast is also delivered by email and
-  /// [emailSubject] and [emailBody] are required (the server returns 422
-  /// otherwise; [emailBody] is rendered as markdown). Implementations must
-  /// assert this precondition before the round-trip.
+  /// [emailSubject] and [emailBody] are required; [emailBody] is rendered as
+  /// markdown. The server is the judge of this rule: a request without them
+  /// is sent, and the server's 422 surfaces as a `ServerException`, the same
+  /// in debug and release builds (#35).
   Future<Broadcast> createBroadcast({
     required AudienceSelector audienceSelector,
     required Map<String, dynamic> payload,
