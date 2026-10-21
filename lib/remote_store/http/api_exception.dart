@@ -13,7 +13,16 @@ import '../../sdk/exceptions/exceptions.dart';
 /// The last is a schema rejection: its code is `VALIDATION_ERROR`, its
 /// message the reasons joined, and its `details` name each refused field
 /// under [ServerException.refusedFieldsKey].
-ServerException mapHttpError(int statusCode, Map<String, dynamic> body) {
+///
+/// A body with no readable `code` (none, or not a string) falls back by
+/// status through [inferCodeFromStatus]; one with no readable `message`
+/// reads `HTTP <status> from <path>` ([path] is the request's, when known)
+/// (#37).
+ServerException mapHttpError(
+  int statusCode,
+  Map<String, dynamic> body, {
+  String? path,
+}) {
   Map<String, dynamic>? error;
   if (body['error'] is Map<String, dynamic>) {
     error = body['error'] as Map<String, dynamic>;
@@ -46,17 +55,24 @@ ServerException mapHttpError(int statusCode, Map<String, dynamic> body) {
     };
   }
 
-  var code = error?['code'] as String? ?? '';
-  var message = error?['message'] as String? ?? 'Unknown error';
+  final rawCode = error?['code'];
+  final rawMessage = error?['message'];
+  var code = rawCode is String && rawCode.isNotEmpty ? rawCode : null;
+  var message = rawMessage is String && rawMessage.isNotEmpty
+      ? rawMessage
+      : null;
 
   // A blocking programme clash on create / split / reinstate answers 409
   // with the conflict report itself as `detail` (`hasConflict`,
   // `venueConflicts`, `userConflicts`) and no code (#16). Give it one so
   // callers can branch, and keep the report in `details`.
-  if (statusCode == 409 && code.isEmpty && error?['hasConflict'] == true) {
+  if (statusCode == 409 && code == null && error?['hasConflict'] == true) {
     code = SdkErrorCode.timeConflict;
     message = 'The schedule clashes with another programme';
   }
+
+  code ??= inferCodeFromStatus(statusCode);
+  message ??= path == null ? 'HTTP $statusCode' : 'HTTP $statusCode from $path';
 
   // Preserve any extra structured fields the server returned alongside
   // `code` / `message` (e.g. `membernames` for MEMBERS_INELIGIBLE).
@@ -91,13 +107,20 @@ ServerException mapHttpError(int statusCode, Map<String, dynamic> body) {
 
 /// Infers an SDK error code from the HTTP status code
 /// when the server response doesn't include a structured code.
+///
+/// 502, 503 and 504 are a server down behind its reverse proxy; any other
+/// status with no code is a response the SDK cannot read (#37).
 String inferCodeFromStatus(int statusCode) {
   switch (statusCode) {
     case 401:
       return SdkErrorCode.notAuthenticated;
     case 403:
       return SdkErrorCode.insufficientPermission;
+    case 502:
+    case 503:
+    case 504:
+      return SdkErrorCode.serverUnavailable;
     default:
-      return '';
+      return SdkErrorCode.invalidResponse;
   }
 }

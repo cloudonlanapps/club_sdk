@@ -33,7 +33,7 @@ class Enrollment {
       id: map['id'] as int,
       membername: map['membername'] as String,
       eventId: map['eventId'] as int,
-      status: EnrollmentStatus.values.byName(map['status'] as String),
+      status: EnrollmentStatus.fromName(map['status'] as String),
       isTrial: map['isTrial'] as bool? ?? false,
       previousStatus: map['previousStatus'] as String?,
       withdrawalReason: map['withdrawalReason'] as String?,

@@ -140,11 +140,20 @@ abstract interface class EnrollmentSource {
   // QUERIES
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// Gets a user's enrollment status for an event.
+  /// Gets a user's enrollment status for an event, or `null` when they have
+  /// no enrollment in it.
+  ///
+  /// Reads the same per-member route as [getEnrollment], one record rather
+  /// than the roster: a member may read their own, staff anyone's; anyone
+  /// else gets a 403 `ServerException`. Errors other than
+  /// `ENROLLMENT_NOT_FOUND` propagate.
   Future<EnrollmentStatus?> getEnrollmentStatus(int eventId, String username);
 
   /// Gets the full enrollment record for a user in an event.
   ///
+  /// Reads the per-member route (`GET /myevents/by_id/{username}/{eventId}/
+  /// enrollments`): a member may read their own record, and admins, coaches
+  /// and the super admin anyone's; anyone else gets a 403 `ServerException`.
   /// Throws `ServerException` with `ENROLLMENT_NOT_FOUND` if not found.
   Future<Enrollment> getEnrollment(int eventId, String username);
 

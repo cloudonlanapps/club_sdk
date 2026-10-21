@@ -602,4 +602,21 @@ void main() {
       expect(fromMap.smsEnabled, false);
     });
   });
+
+  group('Issue 31: NotificationChannel reads the server default "app"', () {
+    test('Issue 31: "app" is inApp, and the known spellings are unchanged', () {
+      // Passes today only through the orElse fallback; pins it on purpose.
+      expect(NotificationChannel.fromName('app'), NotificationChannel.inApp);
+      expect(NotificationChannel.fromName('in_app'), NotificationChannel.inApp);
+      expect(NotificationChannel.fromName('inApp'), NotificationChannel.inApp);
+      expect(NotificationChannel.fromName('email'), NotificationChannel.email);
+    });
+
+    test('Issue 31: any other channel name falls back to inApp', () {
+      expect(
+        NotificationChannel.fromName('carrier_pigeon'),
+        NotificationChannel.inApp,
+      );
+    });
+  });
 }

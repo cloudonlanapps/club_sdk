@@ -22,10 +22,6 @@ class RemoteAuditLogSource implements AuditLogSource {
     String? resourceId,
     int verbose = 1,
   }) async {
-    assert(
-      (resourceType == null) == (resourceId == null),
-      'resourceType and resourceId must be provided together',
-    );
     final queryParams = <String, String>{
       'offset': offset.toString(),
       'limit': limit.toString(),

@@ -171,10 +171,19 @@ void main() {
     });
 
     test('Issue 207: resource scope needs both type and id', () async {
-      // The client guards the paired-param contract before the round-trip.
-      expect(
-        () => adminClient.auditLog.list(resourceType: 'venue'),
-        throwsA(isA<AssertionError>()),
+      // The server guards the paired-param contract (#35): the SDK sends the
+      // request and surfaces the 422.
+      await expectLater(
+        adminClient.auditLog.list(resourceType: 'venue'),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'statusCode', 422)
+              .having(
+                (e) => e.code,
+                'code',
+                SdkErrorCode.invalidResourceScope,
+              ),
+        ),
       );
     });
 

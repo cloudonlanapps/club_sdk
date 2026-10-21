@@ -19,14 +19,6 @@ class RemoteBroadcastSource implements BroadcastSource {
     String? emailSubject,
     String? emailBody,
   }) async {
-    assert(
-      !email ||
-          (emailSubject != null &&
-              emailSubject.isNotEmpty &&
-              emailBody != null &&
-              emailBody.isNotEmpty),
-      'emailSubject and emailBody are required when email is true',
-    );
     final body = <String, dynamic>{
       'audienceSelector': audienceSelector.toMap(),
       'payload': payload,

@@ -63,7 +63,7 @@ class Occurrence {
       organizerDisplayName: map['organizerDisplayName'] as String?,
       isRescheduled: (map['isRescheduled'] as bool?) ?? false,
       enrollmentStatus: map['enrollmentStatus'] != null
-          ? EnrollmentStatus.values.byName(map['enrollmentStatus'] as String)
+          ? EnrollmentStatus.fromName(map['enrollmentStatus'] as String)
           : null,
       attendanceStatus: map['attendanceStatus'] != null
           ? AttendanceStatus.values.byName(map['attendanceStatus'] as String)

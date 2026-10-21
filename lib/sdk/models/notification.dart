@@ -11,14 +11,25 @@ enum NotificationChannel {
   otp,
   inApp;
 
+  /// Parses a channel name: the server's `app`, `in_app` or `inApp`, or
+  /// another channel's name, in any case.
+  ///
+  /// Any other string reads as [inApp]: the admin endpoint accepts free text
+  /// as a channel, and one odd row must not break the inbox (#31).
   factory NotificationChannel.fromName(String name) {
     final normalized = name.toLowerCase().replaceAll('_', '');
-    if (normalized == 'inapp') return NotificationChannel.inApp;
+    if (normalized == serverInAppName || normalized == 'inapp') {
+      return NotificationChannel.inApp;
+    }
     return NotificationChannel.values.firstWhere(
       (e) => e.name == normalized,
       orElse: () => NotificationChannel.inApp,
     );
   }
+
+  /// The server's wire name for [inApp]: every notification the server makes
+  /// has this channel (#31).
+  static const serverInAppName = 'app';
 }
 
 /// Server-side categories of actionable notifications. The server filters by

@@ -26,9 +26,9 @@ typedef UrlTransformer = String Function(String url);
 /// the club (`ACCOUNT_LEFT`) gets the same answer from `/auth/refresh`, so
 /// refreshing is pointless for them and loops the same way (#40).
 const Set<String> _unrefreshable = {
-  'INVALID_CREDENTIALS',
-  'ACCOUNT_BLOCKED',
-  'INVALID_REFRESH_TOKEN',
+  SdkErrorCode.invalidCredentials,
+  SdkErrorCode.accountBlocked,
+  SdkErrorCode.invalidRefreshToken,
   SdkErrorCode.userNotFound,
   SdkErrorCode.accountLeft,
 };
@@ -40,12 +40,22 @@ const Set<String> _featureOffCodes = {
   SdkErrorCode.encryptionNotConfigured,
 };
 
+/// Zone key set while `onTokenExpired` runs. A 401 on a request made from
+/// inside the refresh (one that refreshes through this same store) is not
+/// refreshed again: it would wait on its own refresh for ever (#29).
+const Symbol _refreshZoneKey = #clubSdkTokenRefresh;
+
 /// HTTP client wrapper for remote API communication.
 ///
 /// Handles authentication headers, JSON serialization, error mapping,
 /// request timeouts, retry logic (safe requests on 5xx, timeouts and
 /// connection failures), and automatic token refresh.
 class RemoteStore {
+  /// Creates a store for [baseUrl].
+  ///
+  /// A [client] passed in stays the caller's: [dispose] leaves it open, and
+  /// the caller closes it. Without one, the store makes its own and
+  /// [dispose] closes it (#43).
   RemoteStore({
     required this.baseUrl,
     http.Client? client,
@@ -56,7 +66,8 @@ class RemoteStore {
     this.urlTransformer,
     this.onServerReachable,
     this.onServerUnreachable,
-  }) : _httpClient = client ?? createDefaultHttpClient();
+  }) : _httpClient = client ?? createDefaultHttpClient(),
+       _ownsClient = client == null;
 
   /// The base URL for all API requests (e.g., 'https://api.myexampleclub.com/v1')
   final String baseUrl;
@@ -88,12 +99,17 @@ class RemoteStore {
   /// Callback invoked when a 401 error occurs.
   /// Should return a new access token if refresh succeeds, or null to fail.
   /// The store will automatically retry the request with the new token.
+  ///
+  /// Requests that get a 401 while a refresh is running wait for that same
+  /// refresh rather than starting their own, so the callback runs once per
+  /// expiry however many requests were in flight (#29).
   final Future<String?> Function()? onTokenExpired;
 
   /// Optional callback to transform URLs in API responses.
   ///
-  /// Called for every URL string in the response data after static URL
-  /// resolution.
+  /// Called for every media or static-file URL in the response data (an
+  /// absolute `http(s)` URL or a `/` path) after static URL resolution; a
+  /// bare filename such as `photo.jpg` is not passed to it.
   /// Use this for cache busting, CDN rewriting, or other URL transformations.
   ///
   /// Example (cache busting with timestamp format YYYYMMDDHHmmss):
@@ -121,6 +137,13 @@ class RemoteStore {
   final void Function()? onServerUnreachable;
 
   final http.Client _httpClient;
+
+  /// Whether [_httpClient] was made by this store, so [dispose] closes it.
+  final bool _ownsClient;
+
+  /// The token refresh in progress, shared by every request that got a 401
+  /// while it runs; `null` when none is running (#29).
+  Future<String?>? _refreshing;
 
   /// Authentication token for subsequent requests.
   String? authToken;
@@ -437,6 +460,7 @@ class RemoteStore {
     }
 
     while (true) {
+      final sentToken = authToken;
       try {
         final result = await request();
         // A response came back → the server is reachable.
@@ -453,8 +477,13 @@ class RemoteStore {
         if (e.statusCode == 401 &&
             onTokenExpired != null &&
             !_unrefreshable.contains(e.code) &&
-            !refreshed) {
-          final newToken = await onTokenExpired!();
+            !refreshed &&
+            Zone.current[_refreshZoneKey] != true) {
+          // A request sent with a token that another request has since
+          // refreshed retries with the new one instead of refreshing again.
+          final newToken = authToken != null && authToken != sentToken
+              ? authToken
+              : await _refreshToken();
           if (newToken != null) {
             authToken = newToken;
             // Retry once with the new token. Guarded by `refreshed` so a 401
@@ -507,6 +536,15 @@ class RemoteStore {
     }
   }
 
+  /// Runs [onTokenExpired] once for every request that is waiting on it.
+  ///
+  /// The first 401 starts the refresh; a 401 that arrives while it runs
+  /// awaits the same future. It is cleared when it completes (a token,
+  /// `null` or an error), so the next expiry starts a fresh refresh.
+  Future<String?> _refreshToken() => _refreshing ??= Future<String?>.sync(
+    () => runZoned(onTokenExpired!, zoneValues: {_refreshZoneKey: true}),
+  ).whenComplete(() => _refreshing = null);
+
   Uri _buildUri(String path, [Map<String, String>? queryParams]) {
     final fullPath = '$baseUrl$path';
     final uri = Uri.parse(fullPath);
@@ -555,7 +593,7 @@ class RemoteStore {
   /// 1. Resolves relative paths starting with `/static/` or `/public/` by
   ///    prefixing [staticBaseUrl].
   /// 2. Applies [urlTransformer] (when set) to URLs that look like media
-  ///    or static-file references.
+  ///    or static-file references; a bare filename is left as it is.
   ///
   /// Used by [_handleResponse] / [_handleListResponse] so every successful
   /// response from this store has its URL fields normalised before being
@@ -585,11 +623,22 @@ class RemoteStore {
     return data;
   }
 
+  /// Whether [url] is a media or static-file URL for [urlTransformer]: an
+  /// absolute `http(s)` URL or a path starting with `/`, that is under
+  /// `/static/` or `/public/` or ends in a media extension. A bare name such
+  /// as a media `filename` is never one (#32).
   bool _isTransformableUrl(String url) {
+    final lower = url.toLowerCase();
+    final isUrl =
+        lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        url.startsWith('/');
+    if (!isUrl) {
+      return false;
+    }
     if (url.contains('/static/') || url.contains('/public/')) {
       return true;
     }
-    final lowerUrl = url.toLowerCase();
     const mediaExtensions = [
       '.jpg',
       '.jpeg',
@@ -606,7 +655,7 @@ class RemoteStore {
       '.m3u8',
       '.json',
     ];
-    return mediaExtensions.any(lowerUrl.endsWith);
+    return mediaExtensions.any(lower.endsWith);
   }
 
   /// Decodes a 2xx body. A body that is not JSON is an `INVALID_RESPONSE`
@@ -636,20 +685,29 @@ class RemoteStore {
     _throwApiException(response);
   }
 
+  /// Throws the [ServerException] for a failed [response]. A body that is
+  /// not a JSON object (a proxy's HTML page, an empty body, a list) is read
+  /// as no body, so the error falls back by status (#37).
   Never _throwApiException(http.Response response) {
-    Map<String, dynamic>? body;
+    Object? decoded;
     try {
-      if (response.body.isNotEmpty) {
-        body = jsonDecode(response.body) as Map<String, dynamic>;
-      }
-    } on Object catch (_) {
-      // Body is not JSON, ignore
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      decoded = null;
     }
-    throw mapHttpError(response.statusCode, body ?? {});
+    throw mapHttpError(
+      response.statusCode,
+      decoded is Map<String, dynamic> ? decoded : const {},
+      path: response.request?.url.path,
+    );
   }
 
-  /// Closes the HTTP client and releases resources.
+  /// Releases the store's resources: closes its HTTP client if the store
+  /// made it. A client passed to the constructor is left open for the
+  /// caller, who owns it (#43).
   void dispose() {
-    _httpClient.close();
+    if (_ownsClient) {
+      _httpClient.close();
+    }
   }
 }
