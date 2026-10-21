@@ -28,7 +28,14 @@ enum EnrollmentStatus {
   assignedTrial,
   withdrawn,
   withdrawRequested,
-  removed,
+  removed;
+
+  /// Parses the server's wire name. The one parser for every enrollment
+  /// status the SDK reads, so an unknown status behaves the same
+  /// everywhere: it is an [ArgumentError], never read as another status
+  /// (#31).
+  factory EnrollmentStatus.fromName(String name) =>
+      EnrollmentStatus.values.byName(name);
 }
 
 /// Attendance status for a user in an occurrence.

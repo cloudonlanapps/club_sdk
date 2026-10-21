@@ -219,4 +219,33 @@ void main() {
       expect(flagged.copyWith(isTrial: true).eligible, isFalse);
     });
   });
+
+  group('Issue 31: EnrollmentStatus.fromName', () {
+    test('Issue 31: reads every wire name', () {
+      for (final status in EnrollmentStatus.values) {
+        expect(EnrollmentStatus.fromName(status.name), status);
+      }
+    });
+
+    test('Issue 31: an unknown name is an ArgumentError', () {
+      expect(
+        () => EnrollmentStatus.fromName('waitlisted'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('Issue 31: Enrollment.fromMap with an unknown status is the same '
+        'ArgumentError', () {
+      expect(
+        () => Enrollment.fromMap(const {
+          'id': 1,
+          'membername': 'alice',
+          'eventId': 7,
+          'status': 'waitlisted',
+          'createdAtUtc': 0,
+        }),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
 }

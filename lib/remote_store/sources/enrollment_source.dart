@@ -250,13 +250,7 @@ class RemoteEnrollmentSource implements EnrollmentSource {
     );
     final enrollments = response['enrollments'] as Map<String, dynamic>? ?? {};
     return enrollments.map(
-      (key, value) => MapEntry(
-        key,
-        EnrollmentStatus.values.firstWhere(
-          (e) => e.name == (value as String),
-          orElse: () => EnrollmentStatus.rejected,
-        ),
-      ),
+      (key, value) => MapEntry(key, EnrollmentStatus.fromName(value as String)),
     );
   }
 

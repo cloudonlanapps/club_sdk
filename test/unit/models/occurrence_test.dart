@@ -348,4 +348,24 @@ void main() {
       expect(a.copyWith().venueName, 'Main Rink');
     });
   });
+
+  group('Issue 31: an unknown enrollmentStatus', () {
+    test('Issue 31: Occurrence.fromMap with an unknown enrollmentStatus is '
+        'the same ArgumentError as EnrollmentStatus.fromName', () {
+      final t = DateTime.utc(2027, 6, 1, 9);
+      expect(
+        () => Occurrence.fromMap({
+          'eventId': 7,
+          'occurrenceTimeUtc': t.millisecondsSinceEpoch,
+          'startTimeUtc': t.millisecondsSinceEpoch,
+          'endTimeUtc': t.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+          'venueId': 1,
+          'status': 'scheduled',
+          'enrollmentStatus': 'waitlisted',
+          'version': 1,
+        }),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
 }
