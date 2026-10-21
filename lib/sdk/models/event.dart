@@ -37,6 +37,8 @@ class Event {
     this.coaches,
     this.rrule,
     this.untilTimeUtc,
+    this.isPast,
+    this.hasEnded,
     this.genders = const [],
     this.minAge,
     this.maxAge,
@@ -96,6 +98,8 @@ class Event {
               isUtc: true,
             )
           : null,
+      isPast: map['isPast'] as bool?,
+      hasEnded: map['hasEnded'] as bool?,
       genders: gendersFromMap(map),
       minAge: map['minAge'] != null
           ? Age.fromMap(map['minAge'] as Map<String, dynamic>)
@@ -181,6 +185,25 @@ class Event {
   /// extend-indefinitely and undo-cancel. A dropped one-off keeps no cutoff:
   /// its single occurrence carries a cancelled override instead.
   final DateTime? untilTimeUtc;
+
+  /// The server's answer, as of the response, to "has every occurrence
+  /// finished, cancelled or not?" (club_server#53, lifecycle L24): the
+  /// exit-side rule. An open-ended programme is never past; one stopped
+  /// early by a cutoff, or a camp whose remaining days are all cancelled,
+  /// has ended but is not past. `null` from a server that does not send it.
+  ///
+  /// It is not recomputed: an [Event] held across its last occurrence's end
+  /// keeps the old value until it is read again. `isPastEvent` prefers it.
+  final bool? isPast;
+
+  /// The server's answer, as of the response, to "is no live occurrence
+  /// left at or after now?" (club_server#53, lifecycle L7, L24): the rule
+  /// join-side actions (invite, assign, assign-trial, request, accept) are
+  /// refused on. `null` from a server that does not send it.
+  ///
+  /// Like [isPast] it can go stale; read the event again to refresh it.
+  /// `canEnrollOnEvent` and `canAssignTrial` prefer it.
+  final bool? hasEnded;
 
   // Structured eligibility — replaces the old free-text `eligibility`/
   // `eligibilityNote` fields. `null` means no constraint on that axis.
@@ -273,6 +296,8 @@ class Event {
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
     DateTime? Function()? untilTimeUtc,
+    bool? Function()? isPast,
+    bool? Function()? hasEnded,
     List<Gender>? genders,
     Age? Function()? minAge,
     Age? Function()? maxAge,
@@ -309,6 +334,8 @@ class Event {
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
       untilTimeUtc: untilTimeUtc != null ? untilTimeUtc() : this.untilTimeUtc,
+      isPast: isPast != null ? isPast() : this.isPast,
+      hasEnded: hasEnded != null ? hasEnded() : this.hasEnded,
       genders: genders ?? this.genders,
       minAge: minAge != null ? minAge() : this.minAge,
       maxAge: maxAge != null ? maxAge() : this.maxAge,
@@ -354,6 +381,8 @@ class Event {
       'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
       'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
       'untilTimeUtc': untilTimeUtc?.millisecondsSinceEpoch,
+      'isPast': isPast,
+      'hasEnded': hasEnded,
       'genders': gendersToServer(genders),
       'minAge': minAge?.toMap(),
       'maxAge': maxAge?.toMap(),
@@ -380,7 +409,8 @@ class Event {
   @override
   String toString() {
     return 'Event(id: $id, title: $title, type: $type, '
-        'visibility: $visibility, status: $status)';
+        'visibility: $visibility, status: $status, isPast: $isPast, '
+        'hasEnded: $hasEnded)';
   }
 
   static const _stringListEquality = ListEquality<String>();
@@ -409,6 +439,8 @@ class Event {
         other.createdAtUtc == createdAtUtc &&
         other.updatedAtUtc == updatedAtUtc &&
         other.untilTimeUtc == untilTimeUtc &&
+        other.isPast == isPast &&
+        other.hasEnded == hasEnded &&
         _genderListEquality.equals(other.genders, genders) &&
         other.minAge == minAge &&
         other.maxAge == maxAge &&
@@ -445,6 +477,8 @@ class Event {
         createdAtUtc.hashCode ^
         updatedAtUtc.hashCode ^
         untilTimeUtc.hashCode ^
+        isPast.hashCode ^
+        hasEnded.hashCode ^
         _genderListEquality.hash(genders) ^
         minAge.hashCode ^
         maxAge.hashCode ^

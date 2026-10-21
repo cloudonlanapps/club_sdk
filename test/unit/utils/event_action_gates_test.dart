@@ -667,4 +667,82 @@ void main() {
       expect(isPastEvent(event, now: DateTime.utc(2030, 6, 7, 7, 1)), isTrue);
     });
   });
+
+  group('Issue 34: the gates prefer the server lifecycle flags', () {
+    final admin = UserPrivate(
+      username: 'a',
+      displayName: 'a',
+      status: UserStatus.active,
+      isSuperAdmin: false,
+      roles: const UserRoles(isAdmin: true),
+      createdAtUtc: DateTime.utc(2024),
+    );
+    // Locally past: a one-off that ended in 2020.
+    final locallyPast = _event(
+      type: EventType.oneOff,
+      startTimeUtc: DateTime.utc(2020),
+      endTimeUtc: DateTime.utc(2020, 1, 1, 1),
+    );
+    // Locally open: a programme that starts in 2030, no cutoff.
+    final locallyOpen = _event(rrule: 'FREQ=WEEKLY;BYDAY=TU');
+
+    test('Issue 34: isPastEvent returns isPast false although the local '
+        'computation says past', () {
+      expect(isPastEvent(locallyPast.copyWith(isPast: () => false)), isFalse);
+    });
+
+    test('Issue 34: isPastEvent returns isPast true although the local '
+        'computation says not past', () {
+      expect(isPastEvent(locallyOpen.copyWith(isPast: () => true)), isTrue);
+    });
+
+    test('Issue 34: isPastEvent falls back to the local computation without '
+        'isPast', () {
+      expect(isPastEvent(locallyPast), isTrue);
+      expect(isPastEvent(locallyOpen), isFalse);
+    });
+
+    test('Issue 34: canEnrollOnEvent refuses when hasEnded is true on a '
+        'locally open event', () {
+      final event = locallyOpen.copyWith(
+        isPast: () => false,
+        hasEnded: () => true,
+      );
+      expect(canEnrollOnEvent(event, admin), isFalse);
+    });
+
+    test('Issue 34: canEnrollOnEvent allows when hasEnded is false on a '
+        'locally past event', () {
+      final event = locallyPast.copyWith(
+        isPast: () => true,
+        hasEnded: () => false,
+      );
+      expect(canEnrollOnEvent(event, admin), isTrue);
+    });
+
+    test('Issue 34: canEnrollOnEvent allows when hasEnded is false past a '
+        'local cutoff', () {
+      final event = locallyOpen.copyWith(
+        untilTimeUtc: () => DateTime.utc(2020),
+        hasEnded: () => false,
+      );
+      expect(canEnrollOnEvent(event, admin), isTrue);
+    });
+
+    test('Issue 34: canEnrollOnEvent falls back to the local gates without '
+        'hasEnded', () {
+      expect(canEnrollOnEvent(locallyPast, admin), isFalse);
+      expect(canEnrollOnEvent(locallyOpen, admin), isTrue);
+    });
+
+    test('Issue 34: a super-admin may enroll on an event that has ended', () {
+      final event = locallyOpen.copyWith(hasEnded: () => true);
+      expect(canEnrollOnEvent(event, _user(isSuperAdmin: true)), isTrue);
+    });
+
+    test('Issue 34: canAssignTrial refuses on a programme that has ended', () {
+      final event = locallyOpen.copyWith(hasEnded: () => true);
+      expect(canAssignTrial(event, admin), isFalse);
+    });
+  });
 }
