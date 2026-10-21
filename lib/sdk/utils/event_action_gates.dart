@@ -1,6 +1,17 @@
-import 'package:club_sdk_2/club_sdk_2.dart';
+import '../exceptions/error_codes.dart';
+import '../exceptions/exceptions.dart';
+import '../models/enrollment.dart';
+import '../models/enums.dart';
+import '../models/event.dart';
+import '../models/user.dart';
+import 'rrule_util.dart';
 
 /// The effective end time of an event's last occurrence.
+///
+/// Meaningful only for a one-off or a COUNT-bounded series (a camp). An
+/// open-ended rule (a programme: no COUNT) has no last occurrence, and the
+/// value returned for one is not a series end; [isPastEvent] does not call
+/// this for such a rule (#30).
 ///
 /// For a one-off event (`event.rrule` is null/empty) this is simply
 /// `event.endTimeUtc` — the single occurrence's end.
@@ -8,21 +19,15 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 /// For a recurring series (`event.rrule` set, e.g. `FREQ=DAILY;COUNT=5`
 /// on a camp) this expands the rrule, takes the last occurrence's start,
 /// and adds the per-occurrence session duration
-/// (`endTimeUtc - startTimeUtc`). The series is considered ended only
-/// when that last-occurrence end has passed.
+/// (`endTimeUtc - startTimeUtc`).
 ///
-/// When `untilTimeUtc` is set (a cancelled-mid-series event — see
-/// [isEventSeriesCancelled]) it is used as the UPPER BOUND of the rrule
-/// expansion, so the last occurrence is the cancellation-truncated one
-/// rather than the natural series end. This is distinct from using
-/// `untilTimeUtc` as a series-end *fallback* when `endTimeUtc` is
-/// missing, which would be wrong: the rrule remains the only source of
-/// truth for an uncancelled series' end (hence the 5-year ceiling when
-/// `untilTimeUtc` is null). See #688.
+/// When `untilTimeUtc` is set (a series stopped by a cutoff — see
+/// [isEventSeriesCancelled]) it is used as the upper bound of the rrule
+/// expansion, so the last occurrence is the cutoff-truncated one rather
+/// than the natural series end (#688).
 ///
 /// Defensive: if the rrule fails to parse, falls back to
-/// `event.endTimeUtc` so a malformed rrule degrades to the
-/// pre-fix behaviour rather than crashing.
+/// `event.endTimeUtc` so a malformed rrule degrades rather than crashes.
 DateTime lastOccurrenceEndUtc(Event event) {
   final sessionDuration = event.endTimeUtc.difference(event.startTimeUtc);
   final rrule = event.rrule;
@@ -33,13 +38,10 @@ DateTime lastOccurrenceEndUtc(Event event) {
     final (parsed, exdates) = util.parseRruleWithExdates(rrule);
     if (parsed.isEmpty) return event.endTimeUtc;
 
-    // Expand over a generous window so COUNT-bounded rules (most camps)
-    // hit their natural last occurrence, and UNTIL-bounded rules (some
-    // programmes) terminate at the rule's own until clause. For a
-    // cancelled-mid-series event, `untilTimeUtc` caps the expansion at
-    // the cancellation point. The 5-year ceiling is a safety bound for
-    // unbounded, uncancelled rules — club event series are all
-    // short-lived and won't approach it.
+    // Expand over a generous window so COUNT-bounded rules hit their
+    // natural last occurrence. A cutoff (`untilTimeUtc`) caps the
+    // expansion. No eventType is passed: a type's look-ahead would cap
+    // the window further.
     final result = util.expand(
       rrule: parsed,
       dtStart: event.startTimeUtc,
@@ -57,15 +59,26 @@ DateTime lastOccurrenceEndUtc(Event event) {
   }
 }
 
-/// Whether the event's last occurrence has ended.
+/// Whether every occurrence of the event has finished. Mirrors the
+/// server's `is_past` (`services/lifecycle.py`).
 ///
-/// For a recurring series this is "the last occurrence's end is in
-/// the past", computed by expanding the rrule. See
-/// [lastOccurrenceEndUtc]. The previous implementation used
-/// `event.endTimeUtc` (which is only the *first* occurrence's end on
-/// a series) and so reported camps as past after day 1 — see #686.
-bool isPastEvent(Event event, {DateTime? now}) =>
-    lastOccurrenceEndUtc(event).isBefore((now ?? DateTime.now()).toUtc());
+/// An event whose rrule has no `COUNT` (a programme) is never past: it
+/// has no last occurrence, and the answer is given without expanding the
+/// rule (#30). This holds whatever `untilTimeUtc` is — a programme
+/// stopped by a cutoff is "cancelled" ([isEventSeriesCancelled]), not
+/// "past", since a cutoff closes joins, not exits.
+///
+/// A one-off or a COUNT-bounded series (a camp) is past once its last
+/// occurrence has ended ([lastOccurrenceEndUtc]), not its first (#686).
+bool isPastEvent(Event event, {DateTime? now}) {
+  final rrule = event.rrule;
+  if (rrule != null &&
+      rrule.isNotEmpty &&
+      !rrule.toUpperCase().contains('COUNT=')) {
+    return false;
+  }
+  return lastOccurrenceEndUtc(event).isBefore((now ?? DateTime.now()).toUtc());
+}
 
 /// Whether the event has stopped: a cutoff (`untilTimeUtc`) is set and has
 /// been reached (#16).
@@ -97,8 +110,10 @@ bool isOccurrenceCancelled(
 /// Whether [actingUser] can perform a join-side enrollment action (invite,
 /// assign, assign-trial, approve-request, accept, request) on [event].
 ///
-/// Super-admins always pass. Otherwise rejects past events and cancelled
-/// series, mirroring the server's join-side guards.
+/// Super-admins always pass. Otherwise rejects past events ([isPastEvent],
+/// the server's `is_past`) and series stopped by a cutoff
+/// ([isEventSeriesCancelled]), mirroring the server's join-side guards. A
+/// programme is never past; once its cutoff is reached it is cancelled.
 bool canEnrollOnEvent(Event event, UserPrivate actingUser, {DateTime? now}) {
   if (actingUser.isSuperAdmin) return true;
   if (isPastEvent(event, now: now)) return false;

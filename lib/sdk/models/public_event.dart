@@ -132,12 +132,6 @@ class PublicEvent {
   /// gender is in the list. Empty is no gender criterion.
   final List<Gender> genders;
 
-  /// The one gender of a criterion of exactly one, `null` otherwise: the
-  /// single value of the API before [genders].
-  ///
-  /// @deprecated Use [genders] instead. Removed after one release.
-  Gender? get gender => genders.length == 1 ? genders.single : null;
-
   /// The age band (club_server#16, #7): the youngest and oldest age
   /// admitted, each optional, and whether the check is strict. Strict
   /// admits ages exactly [minAge] to [maxAge] on the reference day; relaxed,

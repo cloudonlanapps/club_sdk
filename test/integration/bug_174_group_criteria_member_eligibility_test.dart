@@ -147,7 +147,7 @@ void main() {
           group.id,
           minAge: () => null,
           maxAge: () => null,
-          gender: () => null,
+          genders: () => const [],
           semiAuto: false,
         );
         expect(updated.kind, GroupKind.manual);
@@ -155,7 +155,7 @@ void main() {
         expect(updated.maxAge, isNull);
         expect(updated.dobOnOrAfterUtc, isNull);
         expect(updated.dobOnOrBeforeUtc, isNull);
-        expect(updated.gender, isNull);
+        expect(updated.genders, isEmpty);
 
         // Member must still be on the group.
         final members = await client.groups.getMembers(group.id);

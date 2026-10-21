@@ -13,6 +13,8 @@ linter:
   rules:
     # Documentation comments on public APIs are not enforced.
     public_member_api_docs: false
-    # Use relative imports within the same package (prefer_relative_imports is
-    # left enabled by very_good_analysis to enforce this).
+    # Use relative imports within the same package. very_good_analysis
+    # enables always_use_package_imports (the opposite rule) and not
+    # prefer_relative_imports, so turn the one off and the other on.
     always_use_package_imports: false
+    prefer_relative_imports: true

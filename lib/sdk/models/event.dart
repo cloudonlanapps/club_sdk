@@ -161,11 +161,14 @@ class Event {
   final int venueId;
   final String? organizerName;
 
-  /// @deprecated Use [coaches] instead. Will be removed in future version.
+  /// Who coaches the event: the usernames of every assigned coach. This is
+  /// what the attendance gate (`canManageAttendance`) and event create /
+  /// update work with.
   final List<String>? coachNames;
 
-  /// Full coach profiles with publicId, displayName, bio, etc.
-  /// Populated by server - use this instead of coachNames for display.
+  /// How to show the coaches: the public profiles of the assigned coaches
+  /// who consented to a public profile (no usernames), populated by the
+  /// server. Not a replacement for [coachNames], which lists every coach.
   final List<PublicProfile>? coaches;
   final String? rrule;
   final DateTime startTimeUtc;
@@ -184,12 +187,6 @@ class Event {
   /// Who is eligible by gender (club_server#25, #26): a member whose
   /// gender is in the list. Empty is no gender criterion.
   final List<Gender> genders;
-
-  /// The one gender of a criterion of exactly one, `null` otherwise: the
-  /// single value of the API before [genders].
-  ///
-  /// @deprecated Use [genders] instead. Removed after one release.
-  Gender? get gender => genders.length == 1 ? genders.single : null;
 
   /// The age band (club_server#16, #7): the youngest and oldest age
   /// admitted, each optional, and whether the check is strict. Strict

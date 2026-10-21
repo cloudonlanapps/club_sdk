@@ -88,17 +88,5 @@ void main() {
       expect(cleared.genders, isEmpty);
       expect((await client.groups.getGroup(created.id)).genders, isEmpty);
     });
-
-    test(
-      'Issue 14: the deprecated gender is stored as a list of one',
-      () async {
-        final created = await client.groups.createGroup(
-          name: 'test_I14 single',
-          gender: Gender.female,
-        );
-        expect(created.genders, [Gender.female]);
-        expect(created.gender, Gender.female);
-      },
-    );
   });
 }

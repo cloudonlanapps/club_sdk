@@ -60,8 +60,7 @@ abstract interface class EventSource {
   /// the event. A minimum greater than the maximum is 422 `INVALID_STATE`.
   ///
   /// [genders] are the genders the event admits (club_server#25); empty or
-  /// omitted is no gender criterion. [gender], one gender, is deprecated and
-  /// removed after one release; giving both is an `ArgumentError`.
+  /// omitted is no gender criterion.
   Future<Event> createEvent({
     required String title,
     required String description,
@@ -74,7 +73,6 @@ abstract interface class EventSource {
     List<String>? coachNames,
     String? rrule,
     List<Gender>? genders,
-    Gender? gender,
     Age? minAge,
     Age? maxAge,
     bool? strictAge,
@@ -140,8 +138,7 @@ abstract interface class EventSource {
   /// [strictAge] left `null` is unchanged.
   ///
   /// [genders] takes a getter: one returning an empty list clears the gender
-  /// criterion, an omitted getter leaves it alone (club_server#25). [gender]
-  /// is deprecated, as on [createEvent].
+  /// criterion, an omitted getter leaves it alone (club_server#25).
   Future<Event> updateEvent(
     int eventId, {
     required int version,
@@ -151,7 +148,6 @@ abstract interface class EventSource {
     String? organizerName,
     List<String>? Function()? coachNames,
     List<Gender> Function()? genders,
-    Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,
@@ -236,7 +232,6 @@ abstract interface class EventSource {
     String? description,
     Visibility? visibility,
     List<Gender> Function()? genders,
-    Gender? Function()? gender,
     Age? Function()? minAge,
     Age? Function()? maxAge,
     bool? strictAge,

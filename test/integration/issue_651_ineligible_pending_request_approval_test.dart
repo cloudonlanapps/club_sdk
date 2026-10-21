@@ -120,7 +120,7 @@ void main() {
       final flipped = await adminClient.groups.updateGroup(
         group.id,
         semiAuto: true,
-        gender: () => Gender.male,
+        genders: () => const [Gender.male],
       );
       expect(flipped.kind, GroupKind.semiAuto);
       await adminClient.auth.logout();

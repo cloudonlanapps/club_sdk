@@ -80,7 +80,7 @@ void main() {
         name: semiGroupName,
         minAge: const Age(years: 10),
         maxAge: const Age(years: 15),
-        gender: Gender.male,
+        genders: const [Gender.male],
         semiAuto: true,
       );
       semiGroupId = semi.id;

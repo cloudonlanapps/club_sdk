@@ -53,30 +53,13 @@ List<String> gendersToServer(List<Gender> genders) => [
   for (final gender in genders) gender.serverValue,
 ];
 
-/// The `genders` a create sends: [genders], or the deprecated single
-/// [gender] as a list of one; `null` when neither is given. Giving both is
-/// an [ArgumentError], as the server refuses both (club_server#25, #26).
-List<String>? gendersForCreate(List<Gender>? genders, Gender? gender) {
-  if (genders != null && gender != null) {
-    throw ArgumentError('Send genders or the deprecated gender, not both');
-  }
-  if (genders != null) return gendersToServer(genders);
-  return gender == null ? null : [gender.serverValue];
-}
+/// The `genders` a create sends: [genders] as the server takes them, or
+/// `null` when not given.
+List<String>? gendersForCreate(List<Gender>? genders) =>
+    genders == null ? null : gendersToServer(genders);
 
-/// The `genders` an update sends: the list from [genders], or the
-/// deprecated single [gender] as a list of one (empty when it returns
-/// `null`); `null` when neither getter is given, which leaves the criterion
-/// alone. An empty list clears it. Giving both is an [ArgumentError].
-List<String>? gendersForUpdate(
-  List<Gender> Function()? genders,
-  Gender? Function()? gender,
-) {
-  if (genders != null && gender != null) {
-    throw ArgumentError('Send genders or the deprecated gender, not both');
-  }
-  if (genders != null) return gendersToServer(genders());
-  if (gender == null) return null;
-  final single = gender();
-  return single == null ? const [] : [single.serverValue];
-}
+/// The `genders` an update sends: the list from [genders], or `null` when
+/// the getter is not given, which leaves the criterion alone. An empty list
+/// clears it.
+List<String>? gendersForUpdate(List<Gender> Function()? genders) =>
+    genders == null ? null : gendersToServer(genders());

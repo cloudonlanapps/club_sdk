@@ -259,8 +259,8 @@ void main() {
         deletedAtUtc: deletedAt,
       );
 
-      test('construction with gender and deletedAtUtc', () {
-        expect(fullGroup.gender, Gender.male);
+      test('construction with genders and deletedAtUtc', () {
+        expect(fullGroup.genders, [Gender.male]);
         expect(fullGroup.deletedAtUtc, deletedAt);
       });
 
@@ -342,7 +342,7 @@ void main() {
           genders: const [Gender.female],
           deletedAtUtc: () => deletedAt,
         );
-        expect(updated.gender, Gender.female);
+        expect(updated.genders, [Gender.female]);
         expect(updated.deletedAtUtc, deletedAt);
       });
 
