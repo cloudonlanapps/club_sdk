@@ -176,12 +176,12 @@ void main() {
         event.id,
         version: event.version,
         title: 'test_I16 corrected',
-        gender: () => Gender.female,
+        genders: () => const [Gender.female],
         isFeatured: true,
       );
       expect(corrected.id, event.id);
       expect(corrected.title, 'test_I16 corrected');
-      expect(corrected.gender, Gender.female);
+      expect(corrected.genders, [Gender.female]);
       expect(corrected.isFeatured, isTrue);
     });
 

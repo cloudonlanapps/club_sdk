@@ -59,7 +59,7 @@ void main() {
         name: semiName,
         minAge: const Age(years: 10),
         maxAge: const Age(years: 15),
-        gender: Gender.male,
+        genders: const [Gender.male],
         semiAuto: true,
       );
       semiId = semi.id;

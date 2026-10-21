@@ -157,7 +157,7 @@ void main() {
         version: 3,
         title: 'T2',
         visibility: Visibility.private,
-        gender: () => Gender.female,
+        genders: () => const [Gender.female],
         minAge: () => const Age(years: 11),
         maxAge: () => null,
         isFeatured: true,

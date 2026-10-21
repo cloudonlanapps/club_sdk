@@ -86,7 +86,7 @@ void main() {
           visibility: Visibility.private,
           organizerName: 'Org',
           coachNames: () => ['c1'],
-          gender: () => Gender.male,
+          genders: () => const [Gender.male],
           minAge: () => const Age(years: 11),
           maxAge: () => const Age(years: 16),
           strictAge: true,

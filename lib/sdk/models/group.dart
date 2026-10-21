@@ -113,12 +113,6 @@ class Group {
   /// Who is eligible by gender (club_server#25, #26): a member whose
   /// gender is in the list. Empty is no gender criterion.
   final List<Gender> genders;
-
-  /// The one gender of a criterion of exactly one, `null` otherwise: the
-  /// single value of the API before [genders].
-  ///
-  /// @deprecated Use [genders] instead. Removed after one release.
-  Gender? get gender => genders.length == 1 ? genders.single : null;
   final DateTime? deletedAtUtc;
 
   /// True when the current viewer has a pending join request for this

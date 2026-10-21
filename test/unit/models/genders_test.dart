@@ -2,9 +2,9 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:test/test.dart';
 
 /// Issue 14: an event's and a group's gender criterion is a list
-/// (club_server#25, #26). Empty is no criterion. The single `gender` is
-/// read from a server from before the list, and stays for one release as
-/// the one gender of a list of one.
+/// (club_server#25, #26). Empty is no criterion. The single `gender` of a
+/// server from before the list is read as a list of one. Issue 39: the
+/// models no longer carry a single `gender`.
 void main() {
   const three = [Gender.male, Gender.other, Gender.preferNotToSay];
   const threeOnServer = ['male', 'other', 'prefer_not_to_say'];
@@ -49,19 +49,16 @@ void main() {
     test('Issue 14: reads the list the server sends', () {
       final event = Event.fromMap(eventMap({'genders': threeOnServer}));
       expect(event.genders, three);
-      expect(event.gender, isNull);
     });
 
     test('Issue 14: an empty list is no criterion', () {
       final event = Event.fromMap(eventMap({'genders': <String>[]}));
       expect(event.genders, isEmpty);
-      expect(event.gender, isNull);
     });
 
     test('Issue 14: reads the single gender of an older server', () {
       final event = Event.fromMap(eventMap({'gender': 'female'}));
       expect(event.genders, [Gender.female]);
-      expect(event.gender, Gender.female);
     });
 
     test('Issue 14: no gender key at all is no criterion', () {
@@ -97,7 +94,6 @@ void main() {
       );
       final older = PublicEvent.fromMap(publicEventMap({'gender': 'male'}));
       expect(older.genders, [Gender.male]);
-      expect(older.gender, Gender.male);
     });
   });
 
@@ -105,13 +101,11 @@ void main() {
     test('Issue 14: reads the list the server sends', () {
       final g = Group.fromMap(groupMap({'genders': threeOnServer}));
       expect(g.genders, three);
-      expect(g.gender, isNull);
     });
 
     test('Issue 14: reads the single gender of an older server', () {
       final g = Group.fromMap(groupMap({'gender': 'other'}));
       expect(g.genders, [Gender.other]);
-      expect(g.gender, Gender.other);
     });
 
     test('Issue 14: survives a map round trip and counts in equality', () {
@@ -119,6 +113,48 @@ void main() {
       expect(g.toMap()['genders'], threeOnServer);
       expect(Group.fromMap(g.toMap()), g);
       expect(g.copyWith(genders: const []), isNot(g));
+    });
+  });
+
+  // The single `gender` getter is gone (#39): read through `dynamic`, the
+  // member no longer exists.
+  group('Issue 39: no single gender getter', () {
+    test('Issue 39: Event has no gender', () {
+      final event = Event.fromMap(
+        eventMap({
+          'genders': ['male'],
+        }),
+      );
+      expect(() => (event as dynamic).gender, throwsNoSuchMethodError);
+    });
+
+    test('Issue 39: EventInput has no gender', () {
+      final input = EventInput.fromEvent(
+        Event.fromMap(
+          eventMap({
+            'genders': ['male'],
+          }),
+        ),
+      );
+      expect(() => (input as dynamic).gender, throwsNoSuchMethodError);
+    });
+
+    test('Issue 39: PublicEvent has no gender', () {
+      final event = PublicEvent.fromMap(
+        publicEventMap({
+          'genders': ['male'],
+        }),
+      );
+      expect(() => (event as dynamic).gender, throwsNoSuchMethodError);
+    });
+
+    test('Issue 39: Group has no gender', () {
+      final g = Group.fromMap(
+        groupMap({
+          'genders': ['male'],
+        }),
+      );
+      expect(() => (g as dynamic).gender, throwsNoSuchMethodError);
     });
   });
 }

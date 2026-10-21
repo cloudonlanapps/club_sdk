@@ -9,8 +9,8 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 /// Issue 14: event and group writes send `genders`, a list (club_server#25,
-/// #26). The deprecated single `gender` is sent as a list of one; the
-/// server never sees `gender`.
+/// #26); the server never sees `gender`. Issue 39: the deprecated single
+/// `gender` parameter is gone.
 ({RemoteEventSource events, RemoteGroupSource groups, List<http.Request> sent})
 _harness() {
   final sent = <http.Request>[];
@@ -60,7 +60,6 @@ void main() {
   Future<void> createEvent(
     RemoteEventSource events, {
     List<Gender>? genders,
-    Gender? gender,
   }) => events.createEvent(
     title: 'T',
     description: '',
@@ -70,7 +69,6 @@ void main() {
     startTimeUtc: start,
     endTimeUtc: start.add(const Duration(hours: 1)),
     genders: genders,
-    gender: gender,
   );
 
   group('Issue 14: event writes send genders', () {
@@ -88,24 +86,6 @@ void main() {
       expect(_bodyOf(h.sent.single).containsKey('genders'), isFalse);
     });
 
-    test('Issue 14: create with the deprecated gender sends a list of '
-        'one', () async {
-      final h = _harness();
-      await createEvent(h.events, gender: Gender.female);
-      final body = _bodyOf(h.sent.single);
-      expect(body['genders'], ['female']);
-      expect(body.containsKey('gender'), isFalse);
-    });
-
-    test('Issue 14: create with both is refused before sending', () async {
-      final h = _harness();
-      await expectLater(
-        createEvent(h.events, genders: three, gender: Gender.male),
-        throwsArgumentError,
-      );
-      expect(h.sent, isEmpty);
-    });
-
     test('Issue 14: update sends the list, an empty list to clear, and '
         'nothing when left out', () async {
       final h = _harness();
@@ -115,16 +95,6 @@ void main() {
       expect(_bodyOf(h.sent[0])['genders'], threeOnServer);
       expect(_bodyOf(h.sent[1])['genders'], isEmpty);
       expect(_bodyOf(h.sent[2]).containsKey('genders'), isFalse);
-    });
-
-    test('Issue 14: update with the deprecated gender sends a list of one, '
-        'and an empty list for null', () async {
-      final h = _harness();
-      await h.events.updateEvent(42, version: 1, gender: () => Gender.male);
-      await h.events.updateEvent(42, version: 1, gender: () => null);
-      expect(_bodyOf(h.sent[0])['genders'], ['male']);
-      expect(_bodyOf(h.sent[1])['genders'], isEmpty);
-      expect(_bodyOf(h.sent[1]).containsKey('gender'), isFalse);
     });
 
     test('Issue 14: correction sends the list', () async {
@@ -143,22 +113,6 @@ void main() {
       expect(body.containsKey('gender'), isFalse);
     });
 
-    test('Issue 14: create with the deprecated gender sends a list of '
-        'one', () async {
-      final h = _harness();
-      await h.groups.createGroup(name: 'G', gender: Gender.female);
-      expect(_bodyOf(h.sent.single)['genders'], ['female']);
-    });
-
-    test('Issue 14: create with both is refused before sending', () async {
-      final h = _harness();
-      await expectLater(
-        h.groups.createGroup(name: 'G', genders: three, gender: Gender.male),
-        throwsArgumentError,
-      );
-      expect(h.sent, isEmpty);
-    });
-
     test('Issue 14: update sends the list, an empty list to clear, and '
         'nothing when left out', () async {
       final h = _harness();
@@ -168,6 +122,75 @@ void main() {
       expect(_bodyOf(h.sent[0])['genders'], threeOnServer);
       expect(_bodyOf(h.sent[1])['genders'], isEmpty);
       expect(_bodyOf(h.sent[2]).containsKey('genders'), isFalse);
+    });
+  });
+
+  // The deprecated `gender` parameter is gone (#39): called through
+  // `dynamic`, the named argument no longer exists.
+  group('Issue 39: writes take no single gender', () {
+    test('Issue 39: createEvent takes no gender', () {
+      final h = _harness();
+      expect(
+        () => (h.events as dynamic).createEvent(
+          title: 'T',
+          description: '',
+          type: EventType.oneOff,
+          visibility: Visibility.public,
+          venueId: 1,
+          startTimeUtc: start,
+          endTimeUtc: start.add(const Duration(hours: 1)),
+          gender: Gender.male,
+        ),
+        throwsNoSuchMethodError,
+      );
+      expect(h.sent, isEmpty);
+    });
+
+    test('Issue 39: updateEvent takes no gender', () {
+      final h = _harness();
+      expect(
+        () => (h.events as dynamic).updateEvent(
+          42,
+          version: 1,
+          gender: () => Gender.male,
+        ),
+        throwsNoSuchMethodError,
+      );
+      expect(h.sent, isEmpty);
+    });
+
+    test('Issue 39: correctionOnEvent takes no gender', () {
+      final h = _harness();
+      expect(
+        () => (h.events as dynamic).correctionOnEvent(
+          42,
+          version: 1,
+          gender: () => Gender.male,
+        ),
+        throwsNoSuchMethodError,
+      );
+      expect(h.sent, isEmpty);
+    });
+
+    test('Issue 39: createGroup takes no gender', () {
+      final h = _harness();
+      expect(
+        () => (h.groups as dynamic).createGroup(
+          name: 'G',
+          gender: Gender.male,
+        ),
+        throwsNoSuchMethodError,
+      );
+      expect(h.sent, isEmpty);
+    });
+
+    test('Issue 39: updateGroup takes no gender', () {
+      final h = _harness();
+      expect(
+        () => (h.groups as dynamic).updateGroup(5, gender: () => Gender.male),
+        throwsNoSuchMethodError,
+      );
+      expect(h.sent, isEmpty);
     });
   });
 }
