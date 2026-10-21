@@ -1,4 +1,10 @@
-import 'package:club_sdk_2/club_sdk_2.dart';
+import '../exceptions/error_codes.dart';
+import '../exceptions/exceptions.dart';
+import '../models/enrollment.dart';
+import '../models/enums.dart';
+import '../models/event.dart';
+import '../models/user.dart';
+import 'rrule_util.dart';
 
 /// The effective end time of an event's last occurrence.
 ///
