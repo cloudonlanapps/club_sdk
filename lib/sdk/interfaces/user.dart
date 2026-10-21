@@ -193,6 +193,9 @@ abstract interface class UserSource {
 
   /// Remove a role from the user.
   ///
+  /// Returns the updated user, as the server answers the removal; no second
+  /// request is made (#42).
+  ///
   /// `super_admin` is refused with 422, as for [assignRole].
   Future<UserInfo> removeRole(String username, String role);
 

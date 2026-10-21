@@ -308,9 +308,10 @@ class RemoteUserSource implements UserSource {
 
   @override
   Future<UserInfo> removeRole(String username, String role) async {
-    await _store.delete(endpoints.users.removeRole(username, role));
-    // The endpoint should return the updated user; fetch it
-    return getUserInfo(username);
+    final response = await _store.delete(
+      endpoints.users.removeRole(username, role),
+    );
+    return UserInfo.fromMap(response!);
   }
 
   @override
