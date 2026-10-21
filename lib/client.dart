@@ -83,10 +83,10 @@ class SecureClient {
     required this.public,
   });
 
-  /// Authentication operations (login, logout, register).
   /// System preferences (super-admin).
   final AdminSource admin;
 
+  /// Authentication operations (login, logout, register).
   final AuthSource auth;
 
   /// User management operations (CRUD, roles, status).
@@ -122,9 +122,7 @@ class SecureClient {
   /// submit / list / cancel own join requests).
   final MyGroupsSource myGroups;
 
-  /// Pending action counts for users.
-
-  /// Notification operations.
+  /// Notification operations, including pending-action counts.
   final NotificationSource notifications;
 
   /// Admin-only broadcast operations.
