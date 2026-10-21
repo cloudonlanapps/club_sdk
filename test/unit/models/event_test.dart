@@ -362,4 +362,67 @@ void main() {
       expect(e.copyWith().minAge, const Age(years: 8));
     });
   });
+
+  group('Issue 34: the server lifecycle flags', () {
+    final at = DateTime.utc(2027, 1, 4, 10).millisecondsSinceEpoch;
+    Map<String, dynamic> map([Map<String, dynamic> flags = const {}]) => {
+      'id': 1,
+      'title': 'T',
+      'description': '',
+      'type': 'programme',
+      'visibility': 'public',
+      'venueId': 1,
+      'startTimeUtc': at,
+      'endTimeUtc': at,
+      'createdAtUtc': at,
+      'updatedAtUtc': at,
+      ...flags,
+    };
+
+    test('Issue 34: fromMap reads isPast and hasEnded', () {
+      final event = Event.fromMap(map({'isPast': false, 'hasEnded': true}));
+      expect(event.isPast, isFalse);
+      expect(event.hasEnded, isTrue);
+    });
+
+    test('Issue 34: fromMap reads both as null when the server omits '
+        'them', () {
+      final event = Event.fromMap(map());
+      expect(event.isPast, isNull);
+      expect(event.hasEnded, isNull);
+    });
+
+    test('Issue 34: both survive a map round trip', () {
+      final event = Event.fromMap(map({'isPast': true, 'hasEnded': true}));
+      expect(event.toMap()['isPast'], isTrue);
+      expect(event.toMap()['hasEnded'], isTrue);
+      expect(Event.fromMap(event.toMap()), event);
+    });
+
+    test('Issue 34: copyWith sets and clears them through getters', () {
+      final event = Event.fromMap(map());
+      final set = event.copyWith(isPast: () => true, hasEnded: () => false);
+      expect(set.isPast, isTrue);
+      expect(set.hasEnded, isFalse);
+      final cleared = set.copyWith(isPast: () => null, hasEnded: () => null);
+      expect(cleared.isPast, isNull);
+      expect(cleared.hasEnded, isNull);
+      expect(set.copyWith().isPast, isTrue);
+    });
+
+    test('Issue 34: both count in equality and hashCode', () {
+      final a = Event.fromMap(map({'isPast': false, 'hasEnded': false}));
+      final b = Event.fromMap(map({'isPast': false, 'hasEnded': false}));
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a.copyWith(isPast: () => true), isNot(a));
+      expect(a.copyWith(hasEnded: () => true), isNot(a));
+    });
+
+    test('Issue 34: toString shows both', () {
+      final event = Event.fromMap(map({'isPast': false, 'hasEnded': true}));
+      expect(event.toString(), contains('isPast: false'));
+      expect(event.toString(), contains('hasEnded: true'));
+    });
+  });
 }

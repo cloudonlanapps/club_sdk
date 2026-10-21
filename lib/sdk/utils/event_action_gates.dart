@@ -59,8 +59,13 @@ DateTime lastOccurrenceEndUtc(Event event) {
   }
 }
 
-/// Whether every occurrence of the event has finished. Mirrors the
-/// server's `is_past` (`services/lifecycle.py`).
+/// Whether every occurrence of the event has finished, cancelled or not:
+/// the server's `is_past`.
+///
+/// The server sends the answer as [Event.isPast] (club_server#53, #34),
+/// and when it is present it is returned as is: it is the answer as of the
+/// response, and [now] does not move it (read the event again to refresh
+/// it). Without it, the answer is worked out locally:
 ///
 /// An event whose rrule has no `COUNT` (a programme) is never past: it
 /// has no last occurrence, and the answer is given without expanding the
@@ -71,6 +76,8 @@ DateTime lastOccurrenceEndUtc(Event event) {
 /// A one-off or a COUNT-bounded series (a camp) is past once its last
 /// occurrence has ended ([lastOccurrenceEndUtc]), not its first (#686).
 bool isPastEvent(Event event, {DateTime? now}) {
+  final serverIsPast = event.isPast;
+  if (serverIsPast != null) return serverIsPast;
   final rrule = event.rrule;
   if (rrule != null &&
       rrule.isNotEmpty &&
@@ -110,12 +117,18 @@ bool isOccurrenceCancelled(
 /// Whether [actingUser] can perform a join-side enrollment action (invite,
 /// assign, assign-trial, approve-request, accept, request) on [event].
 ///
-/// Super-admins always pass. Otherwise rejects past events ([isPastEvent],
-/// the server's `is_past`) and series stopped by a cutoff
-/// ([isEventSeriesCancelled]), mirroring the server's join-side guards. A
-/// programme is never past; once its cutoff is reached it is cancelled.
+/// Super-admins always pass. Otherwise it is the server's join guard: the
+/// event must not have ended, which the server sends as [Event.hasEnded]
+/// (no live occurrence left at or after now; club_server#53, #34). When
+/// present it is used as is, as of the response; [now] does not move it.
+///
+/// Without it, an approximation: rejects past events ([isPastEvent]) and
+/// series stopped by a cutoff ([isEventSeriesCancelled]). A programme is
+/// never past; once its cutoff is reached it is cancelled.
 bool canEnrollOnEvent(Event event, UserPrivate actingUser, {DateTime? now}) {
   if (actingUser.isSuperAdmin) return true;
+  final serverHasEnded = event.hasEnded;
+  if (serverHasEnded != null) return !serverHasEnded;
   if (isPastEvent(event, now: now)) return false;
   if (isEventSeriesCancelled(event, now: now)) return false;
   return true;
@@ -123,8 +136,9 @@ bool canEnrollOnEvent(Event event, UserPrivate actingUser, {DateTime? now}) {
 
 /// Whether [actingUser] can open the Assign Trial flow for [event].
 ///
-/// In addition to the join-side gate, trial assignment is restricted to
-/// programme events server-side (`INVALID_EVENT_TYPE` on camp/one-off).
+/// The join-side gate ([canEnrollOnEvent], so [Event.hasEnded] when the
+/// server sends it), and trial assignment is restricted to programme
+/// events server-side (`INVALID_EVENT_TYPE` on camp/one-off).
 bool canAssignTrial(Event event, UserPrivate actingUser, {DateTime? now}) =>
     event.type == EventType.programme &&
     canEnrollOnEvent(event, actingUser, now: now);

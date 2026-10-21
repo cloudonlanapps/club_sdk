@@ -90,7 +90,6 @@ export 'sdk/models/enums.dart'
     show
         AttendanceStatus,
         EnrollmentStatus,
-        EventLifecycleState,
         EventStatus,
         EventType,
         OccurrenceStatus,
