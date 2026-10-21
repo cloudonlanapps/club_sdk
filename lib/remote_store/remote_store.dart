@@ -26,9 +26,9 @@ typedef UrlTransformer = String Function(String url);
 /// the club (`ACCOUNT_LEFT`) gets the same answer from `/auth/refresh`, so
 /// refreshing is pointless for them and loops the same way (#40).
 const Set<String> _unrefreshable = {
-  'INVALID_CREDENTIALS',
-  'ACCOUNT_BLOCKED',
-  'INVALID_REFRESH_TOKEN',
+  SdkErrorCode.invalidCredentials,
+  SdkErrorCode.accountBlocked,
+  SdkErrorCode.invalidRefreshToken,
   SdkErrorCode.userNotFound,
   SdkErrorCode.accountLeft,
 };
@@ -39,6 +39,11 @@ const Set<String> _featureOffCodes = {
   ...SdkErrorCode.moduleDisabledCodes,
   SdkErrorCode.encryptionNotConfigured,
 };
+
+/// Zone key set while `onTokenExpired` runs. A 401 on a request made from
+/// inside the refresh (one that refreshes through this same store) is not
+/// refreshed again: it would wait on its own refresh for ever (#29).
+const Symbol _refreshZoneKey = #clubSdkTokenRefresh;
 
 /// HTTP client wrapper for remote API communication.
 ///
@@ -88,6 +93,10 @@ class RemoteStore {
   /// Callback invoked when a 401 error occurs.
   /// Should return a new access token if refresh succeeds, or null to fail.
   /// The store will automatically retry the request with the new token.
+  ///
+  /// Requests that get a 401 while a refresh is running wait for that same
+  /// refresh rather than starting their own, so the callback runs once per
+  /// expiry however many requests were in flight (#29).
   final Future<String?> Function()? onTokenExpired;
 
   /// Optional callback to transform URLs in API responses.
@@ -121,6 +130,10 @@ class RemoteStore {
   final void Function()? onServerUnreachable;
 
   final http.Client _httpClient;
+
+  /// The token refresh in progress, shared by every request that got a 401
+  /// while it runs; `null` when none is running (#29).
+  Future<String?>? _refreshing;
 
   /// Authentication token for subsequent requests.
   String? authToken;
@@ -437,6 +450,7 @@ class RemoteStore {
     }
 
     while (true) {
+      final sentToken = authToken;
       try {
         final result = await request();
         // A response came back → the server is reachable.
@@ -453,8 +467,13 @@ class RemoteStore {
         if (e.statusCode == 401 &&
             onTokenExpired != null &&
             !_unrefreshable.contains(e.code) &&
-            !refreshed) {
-          final newToken = await onTokenExpired!();
+            !refreshed &&
+            Zone.current[_refreshZoneKey] != true) {
+          // A request sent with a token that another request has since
+          // refreshed retries with the new one instead of refreshing again.
+          final newToken = authToken != null && authToken != sentToken
+              ? authToken
+              : await _refreshToken();
           if (newToken != null) {
             authToken = newToken;
             // Retry once with the new token. Guarded by `refreshed` so a 401
@@ -506,6 +525,15 @@ class RemoteStore {
       }
     }
   }
+
+  /// Runs [onTokenExpired] once for every request that is waiting on it.
+  ///
+  /// The first 401 starts the refresh; a 401 that arrives while it runs
+  /// awaits the same future. It is cleared when it completes (a token,
+  /// `null` or an error), so the next expiry starts a fresh refresh.
+  Future<String?> _refreshToken() => _refreshing ??= Future<String?>.sync(
+    () => runZoned(onTokenExpired!, zoneValues: {_refreshZoneKey: true}),
+  ).whenComplete(() => _refreshing = null);
 
   Uri _buildUri(String path, [Map<String, String>? queryParams]) {
     final fullPath = '$baseUrl$path';

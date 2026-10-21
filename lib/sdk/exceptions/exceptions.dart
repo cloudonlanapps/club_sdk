@@ -8,6 +8,8 @@
 /// string for display. See `SdkErrorCode` for all known code constants.
 library;
 
+import 'error_codes.dart';
+
 // ═════════════════════════════════════════════════════════════════════════════
 // BASE EXCEPTION
 // ═════════════════════════════════════════════════════════════════════════════
@@ -76,7 +78,7 @@ class StaleVersionException extends ServerException {
     this.updatedAtUtc,
     this.updatedBy,
     super.details,
-  }) : super(statusCode: 409, code: 'STALE_VERSION');
+  }) : super(statusCode: 409, code: SdkErrorCode.staleVersion);
 
   /// Builds from the server's error object (`detail`), whose extra fields
   /// are `version`, `updatedAt` (epoch ms) and `updatedBy`.
