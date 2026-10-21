@@ -549,4 +549,122 @@ void main() {
       );
     });
   });
+
+  group('Issue 30: isPastEvent mirrors the server is_past', () {
+    final admin = UserPrivate(
+      username: 'a',
+      displayName: 'a',
+      status: UserStatus.active,
+      isSuperAdmin: false,
+      roles: const UserRoles(isAdmin: true),
+      createdAtUtc: DateTime.utc(2024),
+    );
+
+    test('Issue 30: a weekly programme with no cutoff is never "past"', () {
+      final start = DateTime.now().toUtc().subtract(const Duration(days: 400));
+      final event = Event(
+        id: 1,
+        title: 't',
+        description: 'd',
+        type: EventType.programme,
+        visibility: Visibility.public,
+        venueId: 1,
+        startTimeUtc: start,
+        endTimeUtc: start.add(const Duration(hours: 1)),
+        createdAtUtc: start,
+        updatedAtUtc: start,
+        rrule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU',
+      );
+      // Expected: no COUNT, no UNTIL, no untilTimeUtc -> still running.
+      // Actual: expand() silently stops at 365 occurrences (~1 year), so
+      // lastOccurrenceEndUtc is in the past and the event reads as over.
+      expect(isPastEvent(event), isFalse);
+    });
+
+    Event programme(Duration age, String rrule, {DateTime? untilTimeUtc}) {
+      final start = DateTime.now().toUtc().subtract(age);
+      return _event(
+        startTimeUtc: start,
+        endTimeUtc: start.add(const Duration(hours: 1)),
+        untilTimeUtc: untilTimeUtc,
+        rrule: rrule,
+      );
+    }
+
+    const everyDay = 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU';
+
+    test('Issue 30: an admin may enroll on a 400-day-old daily programme', () {
+      final event = programme(const Duration(days: 400), everyDay);
+      expect(canEnrollOnEvent(event, admin), isTrue);
+    });
+
+    test('Issue 30: an admin may assign a trial on a 400-day-old daily '
+        'programme', () {
+      final event = programme(const Duration(days: 400), everyDay);
+      expect(canAssignTrial(event, admin), isTrue);
+    });
+
+    test('Issue 30: a weekly programme started 6 years ago is not past', () {
+      final event = programme(
+        const Duration(days: 365 * 6),
+        'FREQ=WEEKLY;BYDAY=MO',
+      );
+      expect(isPastEvent(event), isFalse);
+    });
+
+    test('Issue 30: a daily programme started 10 years ago is not past', () {
+      final event = programme(const Duration(days: 365 * 10), everyDay);
+      expect(isPastEvent(event), isFalse);
+    });
+
+    test('Issue 30: a programme rule without COUNT is not expanded', () {
+      // The rule cannot be expanded (BYDAY=XX); an expansion would fall
+      // back to endTimeUtc, ten years ago. Without COUNT the answer must
+      // come before any expansion, as the server's is_past does.
+      final event = programme(
+        const Duration(days: 365 * 10),
+        'FREQ=WEEKLY;BYDAY=XX',
+      );
+      expect(isPastEvent(event), isFalse);
+    });
+
+    test('Issue 30: a programme stopped by a past cutoff is not past', () {
+      final event = programme(
+        const Duration(days: 400),
+        everyDay,
+        untilTimeUtc: DateTime.now().toUtc().subtract(const Duration(days: 1)),
+      );
+      expect(isPastEvent(event), isFalse);
+    });
+
+    test('Issue 30: a programme stopped by a past cutoff is cancelled', () {
+      final event = programme(
+        const Duration(days: 400),
+        everyDay,
+        untilTimeUtc: DateTime.now().toUtc().subtract(const Duration(days: 1)),
+      );
+      expect(isEventSeriesCancelled(event), isTrue);
+    });
+
+    test('Issue 30: an admin may not enroll on a programme stopped by a '
+        'past cutoff', () {
+      final event = programme(
+        const Duration(days: 400),
+        everyDay,
+        untilTimeUtc: DateTime.now().toUtc().subtract(const Duration(days: 1)),
+      );
+      expect(canEnrollOnEvent(event, admin), isFalse);
+    });
+
+    test('Issue 30: a COUNT-bounded camp is past once its last day ends', () {
+      final event = _event(
+        type: EventType.camp,
+        startTimeUtc: DateTime.utc(2030, 6, 1, 6),
+        endTimeUtc: DateTime.utc(2030, 6, 1, 7),
+        rrule: 'FREQ=DAILY;COUNT=7',
+      );
+      expect(isPastEvent(event, now: DateTime.utc(2030, 6, 7, 6, 30)), isFalse);
+      expect(isPastEvent(event, now: DateTime.utc(2030, 6, 7, 7, 1)), isTrue);
+    });
+  });
 }
