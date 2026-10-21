@@ -1,3 +1,5 @@
+import '../../sdk/exceptions/error_codes.dart';
+import '../../sdk/exceptions/exceptions.dart';
 import '../../sdk/interfaces/enrollment.dart';
 import '../../sdk/models/credit_disposition.dart';
 import '../../sdk/models/enrollment.dart';
@@ -222,18 +224,20 @@ class RemoteEnrollmentSource implements EnrollmentSource {
     int eventId,
     String username,
   ) async {
-    final enrollments = await listEnrollments(eventId);
-    return enrollments[username];
+    try {
+      return (await getEnrollment(eventId, username)).status;
+    } on ServerException catch (e) {
+      if (e.code == SdkErrorCode.enrollmentNotFound) return null;
+      rethrow;
+    }
   }
 
   @override
   Future<Enrollment> getEnrollment(int eventId, String username) async {
-    // Per-member enrollment endpoint removed in Phase 3.
-    // Use myEvents.getMyEnrollment() for full enrollment details.
-    throw UnsupportedError(
-      'getEnrollment is no longer available on the admin API. '
-      'Use myEvents.getMyEnrollment(username, eventId) instead.',
+    final response = await _store.get(
+      endpoints.myEvents.enrollment(username, eventId),
     );
+    return Enrollment.fromMap(response);
   }
 
   @override
