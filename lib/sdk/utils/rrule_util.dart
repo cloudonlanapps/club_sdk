@@ -16,7 +16,9 @@ class RruleExpansionResult {
   /// List of occurrence start times (all in UTC).
   final List<DateTime> occurrences;
 
-  /// Whether there are more occurrences beyond the requested range/limit.
+  /// Whether a session follows the returned ones: the range or the limit
+  /// ended before the series did. False once the series has ended
+  /// (`untilUtc`, the rule's UNTIL or COUNT), so a paging caller stops.
   final bool hasMore;
 
   /// Cursor for pagination (the last occurrence time if hasMore is true).
@@ -187,7 +189,8 @@ class RruleUtil {
   ///
   /// Returns [RruleExpansionResult] containing:
   /// - `occurrences`: List of DateTime values in UTC
-  /// - `hasMore`: Whether there are more occurrences beyond the range/limit
+  /// - `hasMore`: Whether a session follows the range/limit; false once the
+  ///   series has ended. Reaching the event type's look-ahead reports true.
   ///
   /// **Note on COUNT and EXDATE behavior:**
   /// When both COUNT and excludeDates are present, COUNT represents the number
@@ -236,63 +239,53 @@ class RruleUtil {
       effectiveRule = _removeCountFromRule(rule);
     }
 
-    // Determine effective end date (earliest of toUtc, untilUtc, maxLookAhead)
-    var effectiveEnd = toUtc;
-    if (untilUtc != null && untilUtc.isBefore(effectiveEnd)) {
-      effectiveEnd = untilUtc;
-    }
-    if (config != null) {
-      final maxEnd = startUtc.add(Duration(days: config.maxLookAheadDays));
-      if (maxEnd.isBefore(effectiveEnd)) {
-        effectiveEnd = maxEnd;
-      }
-    }
+    // The type's look-ahead cap: sessions exist beyond it, so reaching it
+    // reports hasMore.
+    final lookAheadEnd = config != null
+        ? startUtc.add(Duration(days: config.maxLookAheadDays))
+        : null;
 
     // Get instances from the RRULE
     final instances = effectiveRule.getInstances(start: startUtc);
 
-    // Collect occurrences within the range
+    // Collect occurrences within the range. hasMore is set only when a
+    // session follows the page: the series' own end (untilUtc, the rule's
+    // UNTIL or COUNT) ends the loop with hasMore false (#33).
     final occurrences = <DateTime>[];
     var hasMore = false;
+    var pageFull = false;
     DateTime? lastOccurrence;
     var totalGenerated = 0; // Track total for COUNT enforcement
 
     for (final instance in instances) {
-      // Stop if we've exceeded the effective end date
-      if (instance.isAfter(effectiveEnd)) {
-        hasMore = true;
-        break;
-      }
+      // The series has ended: nothing follows.
+      if (untilUtc != null && instance.isAfter(untilUtc)) break;
 
       // Skip excluded dates
       if (excludeSet != null && excludeSet.contains(instance)) {
         continue;
       }
 
+      // A session follows the page (end of range, limit or look-ahead).
+      if (pageFull ||
+          !instance.isBefore(toUtc) ||
+          (lookAheadEnd != null && instance.isAfter(lookAheadEnd))) {
+        hasMore = true;
+        break;
+      }
+
       // Count this as a valid occurrence
       totalGenerated++;
 
       // Include if within the query range
-      if (!instance.isBefore(fromUtc) && instance.isBefore(toUtc)) {
+      if (!instance.isBefore(fromUtc)) {
         occurrences.add(instance);
         lastOccurrence = instance;
-
-        // Check limit
-        if (occurrences.length >= maxOccurrences) {
-          hasMore = true;
-          break;
-        }
+        if (occurrences.length >= maxOccurrences) pageFull = true;
       }
 
       // Enforce original COUNT (actual sessions, not calendar days)
       if (originalCount != null && totalGenerated >= originalCount) {
-        // We've generated enough actual sessions
-        break;
-      }
-
-      // Track if there are more occurrences after this range
-      if (!instance.isBefore(toUtc) && !instance.isAfter(effectiveEnd)) {
-        hasMore = true;
         break;
       }
     }
