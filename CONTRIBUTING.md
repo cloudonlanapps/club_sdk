@@ -26,8 +26,6 @@ This applies to bugs, features, refactors, docs, dependency bumps, test changes 
 5. Open PR linked to the issue ("Fixes #N")
    ↓
 6. Review → merge to main
-   ↓
-7. Tag a release on main when one is cut (manual)
 ```
 
 **Testing locally (step 4):** the `justfile` is the task runner (`just --list` for the menu). Every change is test-driven: write the failing test first (see [`docs/tdd_rules.md`](docs/tdd_rules.md)).
@@ -146,7 +144,7 @@ Always branch **from `main`**. Do the work in a git worktree, not the main check
 - **Never `--merge`.** The repo setting blocks merge commits.
 - **Do not delete the feature branch on merge.** Branches stay on the remote so the PR's commits remain reachable for archaeology.
 - Never push directly to `main`
-- **Releases are tags on `main`**, named `RELEASE_VERSION_<major>_<minor>_<patch>`. The version lives in `pubspec.yaml` only. Consumers (club_client's packages) take the SDK as a git dependency pinned by SHA, so a merge reaches them only when they bump the `ref:`.
+- **This package is not tagged.** Release tags are cut in club_server and club_client only. Consumers (club_client's packages) take the SDK as a git dependency pinned by SHA, so a merge reaches them only when they bump the `ref:`.
 
 ## 7. Closing issues
 
@@ -179,4 +177,3 @@ Conventions Claude must follow on this repo:
 2. **Always branch from `main`**, in a worktree.
 3. **Never push, open PRs, or merge without explicit user confirmation.**
 4. **Always link PRs to their issue** with `Fixes #N` in the PR body.
-5. **Never tag a release.** That's a human-only operation.
