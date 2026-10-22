@@ -192,6 +192,10 @@ abstract final class SdkErrorCode {
   static const alreadyBlocked = 'ALREADY_BLOCKED';
   static const alreadyDeleted = 'ALREADY_DELETED';
   static const alreadyLeft = 'ALREADY_LEFT';
+  // An admin blocking, marking as left or deleting their own account
+  // (club_server#62). The super admin gets 403 SUPER_ADMIN_PROTECTION
+  // instead.
+  static const cannotActOnSelf = 'CANNOT_ACT_ON_SELF';
   static const notBlocked = 'NOT_BLOCKED';
   static const notCancelled = 'NOT_CANCELLED';
   static const notLeft = 'NOT_LEFT';

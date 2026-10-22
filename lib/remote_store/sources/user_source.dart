@@ -198,8 +198,9 @@ class RemoteUserSource implements UserSource {
   }
 
   @override
-  Future<void> deleteUser(String username) async {
-    await _store.delete(endpoints.users.user(username));
+  Future<UserInfo> deleteUser(String username) async {
+    final response = await _store.delete(endpoints.users.user(username));
+    return UserInfo.fromMap(response!);
   }
 
   @override

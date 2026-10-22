@@ -97,11 +97,12 @@ abstract interface class UserSource {
     bool? isPublicProfile,
   });
 
-  /// Soft delete a user.
+  /// Soft delete a user and return them as the server now holds them,
+  /// with `deletedAtUtc` set (#53).
   ///
   /// 422 `ALREADY_DELETED` if the user is already soft-deleted; 404
   /// `USER_NOT_FOUND` if there is no such user (club_server#523).
-  Future<void> deleteUser(String username);
+  Future<UserInfo> deleteUser(String username);
 
   /// Permanently delete a user and all their data.
   /// Only super admin can perform this operation.
