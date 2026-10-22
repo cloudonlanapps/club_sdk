@@ -62,15 +62,6 @@ ServerException mapHttpError(
       ? rawMessage
       : null;
 
-  // A blocking programme clash on create / split / reinstate answers 409
-  // with the conflict report itself as `detail` (`hasConflict`,
-  // `venueConflicts`, `userConflicts`) and no code (#16). Give it one so
-  // callers can branch, and keep the report in `details`.
-  if (statusCode == 409 && code == null && error?['hasConflict'] == true) {
-    code = SdkErrorCode.timeConflict;
-    message = 'The schedule clashes with another programme';
-  }
-
   code ??= inferCodeFromStatus(statusCode);
   message ??= path == null ? 'HTTP $statusCode' : 'HTTP $statusCode from $path';
 
@@ -88,6 +79,9 @@ ServerException mapHttpError(
 
   if (code == SdkErrorCode.staleVersion) {
     return StaleVersionException.fromDetails(message, details);
+  }
+  if (code == SdkErrorCode.scheduleConflict) {
+    return ScheduleConflictException.fromDetails(message, details);
   }
   if (statusCode == 503 && SdkErrorCode.moduleDisabledCodes.contains(code)) {
     return ModuleDisabledException(

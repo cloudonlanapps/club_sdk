@@ -252,8 +252,10 @@ void main() {
           type: EventType.oneOff,
           visibility: Visibility.public,
           venueId: venue1Id,
-          startTimeUtc: now.add(const Duration(days: 40)),
-          endTimeUtc: now.add(const Duration(days: 40, hours: 1)),
+          // A weekday no programme here uses: a clash at the venue or
+          // organizer is refused (club_server#72, #56).
+          startTimeUtc: now.add(const Duration(days: 36)),
+          endTimeUtc: now.add(const Duration(days: 36, hours: 1)),
         );
 
         await client.enrollments.assign(
@@ -263,8 +265,8 @@ void main() {
 
         final occurrences = await client.myEvents.listMyOccurrences(
           'test_alice_s08',
-          fromTimeUtc: now.add(const Duration(days: 39)),
-          toTimeUtc: now.add(const Duration(days: 41)),
+          fromTimeUtc: now.add(const Duration(days: 35)),
+          toTimeUtc: now.add(const Duration(days: 37)),
         );
 
         expect(

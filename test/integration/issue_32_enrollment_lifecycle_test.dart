@@ -9,8 +9,10 @@
 // - A member who has already left cannot be removed again: 409 INVALID_STATE.
 // - A soft-deleted camp or one-off refuses every mutation with 404.
 // - Changing a camp's or one-off's organizer or coaches runs the clash gates.
-//   A camp or one-off never blocks on a clash, so the update stands and the
-//   clash is reported to the admins as event.conflict_detected, as on create.
+//   A clash is refused with 409 SCHEDULE_CONFLICT and nothing changes; sent
+//   again with acceptConflicts the update stands and the clash is reported
+//   to the admins as event.conflict_detected, as on create (club_server#72,
+//   #56).
 import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
@@ -895,8 +897,49 @@ void main() {
             (c as Map)['eventId'],
       ];
 
+      /// Updates [target]'s staff onto [blocker]'s: refused with the report
+      /// and nothing changed or reported, then accepted (club_server#72,
+      /// #56). Returns the accepted update.
+      Future<Event> refusedThenAccepted(
+        Event target,
+        Event blocker, {
+        String? organizerName,
+        List<String>? coachNames,
+      }) async {
+        Future<Event> update({bool accept = false}) =>
+            adminClient.events.updateEvent(
+              target.id,
+              version: target.version,
+              organizerName: organizerName,
+              coachNames: coachNames == null ? null : () => coachNames,
+              acceptConflicts: accept,
+            );
+        await expectLater(
+          update(),
+          throwsA(
+            isA<ScheduleConflictException>().having(
+              (e) => organizerName != null
+                  ? e.report.organizerConflicts.map((c) => c.eventId)
+                  : e.report.coachConflicts.map((c) => c.eventId),
+              'conflicts',
+              contains(blocker.id),
+            ),
+          ),
+        );
+        final unchanged = await adminClient.events.getEvent(target.id);
+        expect(unchanged.organizerName, _orgT);
+        expect(unchanged.coachNames ?? const <String>[], isEmpty);
+        expect(await conflictNotices(target), isEmpty);
+
+        final updated = await update(accept: true);
+        final notices = await conflictNotices(target);
+        expect(notices, isNotEmpty);
+        expect(conflictingIds(notices), contains(blocker.id));
+        return updated;
+      }
+
       test(
-        'a camp given a busy organizer is updated and the clash reported',
+        'a camp given a busy organizer is refused until accepted',
         () async {
           final start = nextSlot();
           final target = await camp(
@@ -908,9 +951,9 @@ void main() {
           final blocker = await blockerAt(start, 'camp organizer');
           expect(await conflictNotices(target), isEmpty);
 
-          final updated = await adminClient.events.updateEvent(
-            target.id,
-            version: target.version,
+          final updated = await refusedThenAccepted(
+            target,
+            blocker,
             organizerName: _busyOrg,
           );
           expect(updated.organizerName, _busyOrg);
@@ -918,14 +961,11 @@ void main() {
             (await adminClient.events.getEvent(target.id)).organizerName,
             _busyOrg,
           );
-          final notices = await conflictNotices(target);
-          expect(notices, isNotEmpty);
-          expect(conflictingIds(notices), contains(blocker.id));
         },
       );
 
       test(
-        'a one-off given a busy organizer is updated and the clash reported',
+        'a one-off given a busy organizer is refused until accepted',
         () async {
           final start = nextSlot();
           final target = await oneOff(
@@ -937,20 +977,17 @@ void main() {
           final blocker = await blockerAt(start, 'one-off organizer');
           expect(await conflictNotices(target), isEmpty);
 
-          final updated = await adminClient.events.updateEvent(
-            target.id,
-            version: target.version,
+          final updated = await refusedThenAccepted(
+            target,
+            blocker,
             organizerName: _busyOrg,
           );
           expect(updated.organizerName, _busyOrg);
-          final notices = await conflictNotices(target);
-          expect(notices, isNotEmpty);
-          expect(conflictingIds(notices), contains(blocker.id));
         },
       );
 
       test(
-        'a camp given a busy coach is updated and the clash reported',
+        'a camp given a busy coach is refused until accepted',
         () async {
           final start = nextSlot();
           final target = await camp(
@@ -962,20 +999,17 @@ void main() {
           final blocker = await blockerAt(start, 'camp coach');
           expect(await conflictNotices(target), isEmpty);
 
-          final updated = await adminClient.events.updateEvent(
-            target.id,
-            version: target.version,
-            coachNames: () => [_busyCoach],
+          final updated = await refusedThenAccepted(
+            target,
+            blocker,
+            coachNames: const [_busyCoach],
           );
           expect(updated.coachNames, [_busyCoach]);
-          final notices = await conflictNotices(target);
-          expect(notices, isNotEmpty);
-          expect(conflictingIds(notices), contains(blocker.id));
         },
       );
 
       test(
-        'a one-off given a busy coach is updated and the clash reported',
+        'a one-off given a busy coach is refused until accepted',
         () async {
           final start = nextSlot();
           final target = await oneOff(
@@ -987,15 +1021,12 @@ void main() {
           final blocker = await blockerAt(start, 'one-off coach');
           expect(await conflictNotices(target), isEmpty);
 
-          final updated = await adminClient.events.updateEvent(
-            target.id,
-            version: target.version,
-            coachNames: () => [_busyCoach],
+          final updated = await refusedThenAccepted(
+            target,
+            blocker,
+            coachNames: const [_busyCoach],
           );
           expect(updated.coachNames, [_busyCoach]);
-          final notices = await conflictNotices(target);
-          expect(notices, isNotEmpty);
-          expect(conflictingIds(notices), contains(blocker.id));
         },
       );
 

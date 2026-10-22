@@ -1,7 +1,8 @@
-// Only a programme-against-programme clash blocks creation (409). A one-off
-// overlapping on venue or organizer is created and the clash is reported: by
-// `checkConflict` beforehand and to the admins as `event.conflict_detected`
-// (#16).
+// A clash on venue, organizer or coach is refused with 409
+// SCHEDULE_CONFLICT and the report, whatever the event type
+// (club_server#72, #56). `checkConflict` reports it beforehand; once the
+// organizer re-sends with `acceptConflicts: true` the event is created and
+// the admins are told as `event.conflict_detected`.
 import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
@@ -23,8 +24,8 @@ import '../utils/test_client.dart';
 ///    (Overlaps A).
 /// 5. T1: Try to assign same Coach 'C1' to Event B.
 /// 6. T1: Try to invite/assign same User 'U1' to Event B.
-/// 7. Verification: The system should allow creation of B but provide hooks to
-///    detect the venue conflict, and ideally prevent/flag coach/member overlaps.
+/// 7. Verification: The system refuses B until the clash is accepted, and
+///    reports the venue and organizer conflicts.
 void main() {
   group('Workflow 7: The Double Booking Story', () {
     late SecureClient client;
@@ -194,10 +195,10 @@ void main() {
         contains(eventA.id),
       );
 
-      // A one-off overlap does not block creation (#16): the clash is
-      // created and reported to the admins as event.conflict_detected.
+      // A one-off overlap is refused with the report and nothing is
+      // written (club_server#72, #56).
       final unreadBefore = await client.notifications.getUnreadCount();
-      final overlapping = await client.events.createEvent(
+      Future<Event> overlap({bool accept = false}) => client.events.createEvent(
         title: 'test_Tennis Coach Conflict',
         description: 'Same coach, different venue',
         type: EventType.oneOff,
@@ -206,7 +207,26 @@ void main() {
         visibility: Visibility.public,
         startTimeUtc: eventBStart,
         endTimeUtc: eventBEnd,
+        acceptConflicts: accept,
       );
+      await expectLater(
+        overlap(),
+        throwsA(
+          isA<ScheduleConflictException>().having(
+            (e) => e.report.organizerConflicts.map((c) => c.eventId),
+            'organizerConflicts',
+            contains(eventA.id),
+          ),
+        ),
+      );
+      expect(
+        (await client.events.listEvents()).items.map((e) => e.title),
+        isNot(contains('test_Tennis Coach Conflict')),
+      );
+
+      // Accepted, it is created and reported to the admins as
+      // event.conflict_detected.
+      final overlapping = await overlap(accept: true);
       expect(overlapping.id, isNot(eventA.id));
       expect(
         await client.notifications.getUnreadCount(),

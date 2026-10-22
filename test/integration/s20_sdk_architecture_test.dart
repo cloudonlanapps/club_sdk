@@ -428,8 +428,10 @@ void main() {
             type: EventType.programme,
             visibility: Visibility.public,
             venueId: venueId,
-            startTimeUtc: now.add(const Duration(days: 200)),
-            endTimeUtc: now.add(const Duration(days: 200, hours: 1)),
+            // Four hours after 20.06's one-off on the same day: a clash at
+            // the venue or organizer is refused (club_server#72, #56).
+            startTimeUtc: now.add(const Duration(days: 200, hours: 4)),
+            endTimeUtc: now.add(const Duration(days: 200, hours: 5)),
             rrule: weeklyOn(now.add(const Duration(days: 200))),
           );
 
@@ -533,8 +535,8 @@ void main() {
       test(
         '20.11k: createEvent throws on venue conflict',
         () async {
-          // Only a programme-against-programme clash blocks creation with
-          // 409; a one-off overlap is reported, not refused (#16).
+          // A clash at the venue is refused with 409 SCHEDULE_CONFLICT and
+          // the full report (club_server#72, #56).
           final conflictTime = now.add(const Duration(days: 400, hours: 4));
           await client.events.createEvent(
             title: 'test_First Event S20',
@@ -559,9 +561,18 @@ void main() {
               rrule: weeklyOn(conflictTime),
             ),
             throwsA(
-              isA<ServerException>()
+              isA<ScheduleConflictException>()
                   .having((e) => e.statusCode, 'statusCode', 409)
-                  .having((e) => e.code, 'code', SdkErrorCode.timeConflict),
+                  .having(
+                    (e) => e.code,
+                    'code',
+                    SdkErrorCode.scheduleConflict,
+                  )
+                  .having(
+                    (e) => e.report.venueConflicts,
+                    'venueConflicts',
+                    isNotEmpty,
+                  ),
             ),
           );
         },

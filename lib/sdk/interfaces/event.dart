@@ -19,8 +19,10 @@ abstract interface class EventSource {
   // ══════════════════════════════════════════════════════════════════════════
 
   /// Probes a schedule of any type for venue / organizer / coach conflicts
-  /// WITHOUT creating it (#16). Only a programme-against-programme clash
-  /// blocks creation (409); everything else is reported here.
+  /// WITHOUT creating it (#16). The report has the shape a refused write
+  /// carries in `ScheduleConflictException.report`: every schedule write
+  /// refuses a clash unless it sends `acceptConflicts: true`
+  /// (club_server#72, #56).
   ///
   /// [excludeEventId] lets an in-place edit exclude its own occurrences.
   /// User-level conflicts are NOT included here — see the dedicated
@@ -61,6 +63,12 @@ abstract interface class EventSource {
   ///
   /// [genders] are the genders the event admits (club_server#25); empty or
   /// omitted is no gender criterion.
+  ///
+  /// The venue, organizer and coach gates run on this write for every event
+  /// type (club_server#72, #56). A clash throws `ScheduleConflictException`,
+  /// whose `report` names every clashing event, and nothing is written; send
+  /// the same call with [acceptConflicts] `true` to write it anyway (the
+  /// server then notifies the admins).
   Future<Event> createEvent({
     required String title,
     required String description,
@@ -83,6 +91,7 @@ abstract interface class EventSource {
     List<String>? highlights,
     List<String>? includes,
     List<EventSession>? sessions,
+    bool acceptConflicts,
   });
 
   /// Gets a single event by ID.
@@ -139,6 +148,12 @@ abstract interface class EventSource {
   ///
   /// [genders] takes a getter: one returning an empty list clears the gender
   /// criterion, an omitted getter leaves it alone (club_server#25).
+  ///
+  /// A change of [organizerName] or [coachNames] runs the venue, organizer
+  /// and coach gates (club_server#72, #56). A clash throws
+  /// `ScheduleConflictException`, whose `report` names every clashing event,
+  /// and nothing is written; send the same call with [acceptConflicts]
+  /// `true` to write it anyway (the server then notifies the admins).
   Future<Event> updateEvent(
     int eventId, {
     required int version,
@@ -158,6 +173,7 @@ abstract interface class EventSource {
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
     List<EventSession>? Function()? sessions,
+    bool acceptConflicts,
   });
 
   /// Moves a camp or one-off event's schedule in place via
@@ -188,6 +204,12 @@ abstract interface class EventSource {
   /// [updateEventForAllFuture]: a reschedule rewrites the timetable those
   /// edits read. A stale one is refused with `StaleVersionException` and
   /// nothing moves; a successful reschedule bumps the version.
+  ///
+  /// The venue, organizer and coach gates run on this write for every event
+  /// type (club_server#72, #56). A clash throws `ScheduleConflictException`,
+  /// whose `report` names every clashing event, and nothing is written; send
+  /// the same call with [acceptConflicts] `true` to write it anyway (the
+  /// server then notifies the admins).
   Future<Event> rescheduleEvent(
     int eventId, {
     required int version,
@@ -197,6 +219,7 @@ abstract interface class EventSource {
     int? venueId,
     List<EventSession>? Function()? sessions,
     bool resetOverrides,
+    bool acceptConflicts,
   });
 
   /// Corrects a programme's identity, eligibility and presentation for its
@@ -259,9 +282,8 @@ abstract interface class EventSource {
   ///
   /// [effectiveDateTimeUtc] must be an occurrence start of the current
   /// schedule (400 `EFFECTIVE_TIME_NOT_SESSION_BOUNDARY`) at least 30
-  /// minutes ahead (422 `CUTOFF_TOO_SOON`). A programme clash on the new
-  /// schedule is 409. Title, description and visibility are not accepted
-  /// here; they go through [correctionOnEvent].
+  /// minutes ahead (422 `CUTOFF_TOO_SOON`). Title, description and
+  /// visibility are not accepted here; they go through [correctionOnEvent].
   ///
   /// [version] is the event version the caller last loaded (#25); a stale
   /// one is refused with `StaleVersionException`.
@@ -273,6 +295,12 @@ abstract interface class EventSource {
   /// clears the coaches, an omitted getter leaves them alone (#48).
   /// [organizerName] cannot be cleared, since every event has an organizer:
   /// `null` leaves it unchanged.
+  ///
+  /// The venue, organizer and coach gates run on this write for every event
+  /// type (club_server#72, #56). A clash throws `ScheduleConflictException`,
+  /// whose `report` names every clashing event, and nothing is written; send
+  /// the same call with [acceptConflicts] `true` to write it anyway (the
+  /// server then notifies the admins).
   Future<Event> updateEventForAllFuture(
     int eventId, {
     required int version,
@@ -284,6 +312,7 @@ abstract interface class EventSource {
     DateTime? endTimeUtc,
     String? rrule,
     List<EventSession>? Function()? sessions,
+    bool acceptConflicts,
   });
 
   /// Cancels a **camp** from [effectiveDateTimeUtc] onward
@@ -393,7 +422,17 @@ abstract interface class EventSource {
   /// occurrence. 422 `INVALID_STATE` once the occasion has started.
   ///
   /// [version] is the occurrence's version, as for [drop].
-  Future<Event> reinstate(int eventId, {required int version});
+  ///
+  /// The venue, organizer and coach gates run on this write for every event
+  /// type (club_server#72, #56). A clash throws `ScheduleConflictException`,
+  /// whose `report` names every clashing event, and nothing is written; send
+  /// the same call with [acceptConflicts] `true` to write it anyway (the
+  /// server then notifies the admins).
+  Future<Event> reinstate(
+    int eventId, {
+    required int version,
+    bool acceptConflicts,
+  });
 
   /// The event's timetable as a sequence of schedules, oldest first (#16).
   /// A camp or one-off has exactly one; a programme one per split, except a

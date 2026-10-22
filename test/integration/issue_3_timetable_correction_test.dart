@@ -62,6 +62,12 @@ void main() {
       return create(EventType.programme, start, rrule: weeklyOn(start));
     }
 
+    /// A camp or one-off started [daysAgo] days ago, each at its own hour
+    /// after the programmes' hours: every schedule write refuses a venue or
+    /// organizer clash (club_server#72, #56).
+    var startedHour = 12;
+    DateTime startedAt(int daysAgo) => dayAt(-daysAgo, hour: startedHour++);
+
     Future<List<EventSchedule>> schedulesOf(int eventId) =>
         admin.events.listSchedules(eventId);
 
@@ -270,7 +276,7 @@ void main() {
       test("corrects a camp's timetable after the camp has started", () async {
         final camp = await create(
           EventType.camp,
-          dayAt(-1),
+          startedAt(1),
           rrule: 'FREQ=DAILY;COUNT=5',
         );
 
@@ -284,7 +290,7 @@ void main() {
       });
 
       test("corrects a one-off's timetable after it has started", () async {
-        final oneOff = await create(EventType.oneOff, dayAt(-2));
+        final oneOff = await create(EventType.oneOff, startedAt(2));
 
         await admin.events.updateEvent(
           oneOff.id,
@@ -297,7 +303,7 @@ void main() {
       test('a null sessions getter clears a camp timetable', () async {
         final camp = await create(
           EventType.camp,
-          dayAt(-1),
+          startedAt(1),
           rrule: 'FREQ=DAILY;COUNT=5',
         );
         final withTimetable = await admin.events.updateEvent(
@@ -317,7 +323,7 @@ void main() {
           'INVALID_SESSIONS_TOTAL', () async {
         final camp = await create(
           EventType.camp,
-          dayAt(-1),
+          startedAt(1),
           rrule: 'FREQ=DAILY;COUNT=5',
         );
         await expectLater(
@@ -330,7 +336,7 @@ void main() {
         );
         expect((await schedulesOf(camp.id)).single.sessions, isNull);
 
-        final oneOff = await create(EventType.oneOff, dayAt(-2));
+        final oneOff = await create(EventType.oneOff, startedAt(2));
         await expectLater(
           admin.events.updateEvent(
             oneOff.id,

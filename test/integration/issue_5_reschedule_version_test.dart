@@ -22,7 +22,10 @@ void main() {
 
     Future<Event> create(EventType type) {
       n += 1;
-      final start = dayAt(20 + n);
+      // Three days apart, so a three-day camp overlaps nothing: every
+      // schedule write refuses a venue or organizer clash
+      // (club_server#72, #56).
+      final start = dayAt(20 + 3 * n);
       return admin.events.createEvent(
         title: 'test_I5 ${type.name} $n',
         description: '',

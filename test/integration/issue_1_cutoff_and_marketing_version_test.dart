@@ -21,12 +21,14 @@ void main() {
     var seq = 0;
 
     /// Camps and programmes are organized by sudo, so each takes its own
-    /// venue and its own day: programmes clash on venue and on organizer.
+    /// venue and its own day: every event type clashes on organizer
+    /// (club_server#72, #56). A camp runs five days, so camps are five days
+    /// apart, and at an hour no programme uses.
     Future<int> newVenue() async =>
         (await admin.venues.createVenue(name: 'test_i1v_venue_${++seq}')).id;
 
     Future<Event> camp(String name) async {
-      final start = dayAt(20 + seq);
+      final start = dayAt(20 + 5 * seq, hour: 20);
       return admin.events.createEvent(
         title: 'test_i1v_$name',
         description: 'issue 1',

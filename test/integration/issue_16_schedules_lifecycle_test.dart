@@ -72,8 +72,12 @@ void main() {
       );
     }
 
+    /// One-offs take a day each after [anchor], off the programmes' weekday:
+    /// every schedule write refuses a venue or organizer clash
+    /// (club_server#72, #56).
+    var oneOffSeq = 0;
     Future<Event> oneOff(String title, {DateTime? start}) {
-      final s = start ?? anchor;
+      final s = start ?? anchor.add(Duration(days: ++oneOffSeq));
       return client.events.createEvent(
         title: title,
         description: '',
@@ -251,7 +255,7 @@ void main() {
           o.id,
           version: o.version,
           reason: 'x',
-          effectiveDateTimeUtc: anchor,
+          effectiveDateTimeUtc: o.startTimeUtc,
         ),
         throwsA(
           isA<ServerException>().having(
@@ -265,22 +269,23 @@ void main() {
 
     test('Issue 16: drop and reinstate a one-off', () async {
       final event = await oneOff('test_I16 drop');
+      final at = event.startTimeUtc;
       final dropped = await client.events.drop(
         event.id,
-        version: await occurrenceVersion(client, event.id, anchor),
+        version: await occurrenceVersion(client, event.id, at),
         reason: 'no ice',
       );
       expect(dropped.id, event.id);
       // A drop cancels the single occurrence; the event keeps no cutoff.
       expect(dropped.untilTimeUtc, isNull);
-      final occ = await client.occurrences.getOccurrence(event.id, anchor);
+      final occ = await client.occurrences.getOccurrence(event.id, at);
       expect(occ.status, OccurrenceStatus.cancelled);
       expect(
-        isOccurrenceCancelled(dropped, anchor, overrideStatus: occ.status),
+        isOccurrenceCancelled(dropped, at, overrideStatus: occ.status),
         isTrue,
       );
 
-      final droppedVersion = await occurrenceVersion(client, event.id, anchor);
+      final droppedVersion = await occurrenceVersion(client, event.id, at);
       await expectLater(
         client.events.drop(event.id, version: droppedVersion, reason: 'again'),
         throwsA(
@@ -294,10 +299,10 @@ void main() {
 
       final back = await client.events.reinstate(
         event.id,
-        version: await occurrenceVersion(client, event.id, anchor),
+        version: await occurrenceVersion(client, event.id, at),
       );
       expect(back.id, event.id);
-      final restored = await client.occurrences.getOccurrence(event.id, anchor);
+      final restored = await client.occurrences.getOccurrence(event.id, at);
       expect(restored.status, OccurrenceStatus.scheduled);
       final schedules = await client.events.listSchedules(event.id);
       expect(schedules, hasLength(1));

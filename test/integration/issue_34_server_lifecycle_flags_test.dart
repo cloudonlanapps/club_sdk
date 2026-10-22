@@ -76,14 +76,16 @@ void main() {
       await sudo.auth.logout();
     });
 
-    /// Each event gets its own venue and day, so none clash.
+    /// Each event gets its own venue, day and hour, so none clash: they
+    /// share sudo as organizer, and an open-ended programme repeats weekly
+    /// (club_server#72, #56).
     Future<Event> create(
       EventType type, {
       String? rrule,
       int days = 3,
     }) async {
       final n = ++seq;
-      final start = dayAt(days + 2 * n);
+      final start = dayAt(days + 2 * n, hour: 6 + n);
       final venue = await sudo.venues.createVenue(name: 'test_Venue I34 $n');
       return sudo.events.createEvent(
         title: 'test_I34 $n',

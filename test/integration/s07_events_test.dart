@@ -152,7 +152,10 @@ void main() {
 
     group('7.02: Correction on Event', () {
       test('updates programme event details', () async {
-        final start = now.add(const Duration(days: 1));
+        // Weekly programmes keep to evening hours the one-offs and camps
+        // here never use: a clash at the venue or organizer is refused
+        // (club_server#72, #56).
+        final start = now.add(const Duration(days: 1, hours: 9));
         final event = await client.events.createEvent(
           title: 'test_Original Title',
           description: 'Original Desc',
@@ -180,8 +183,9 @@ void main() {
       test(
         'updates all future occurrences',
         () async {
-          // Own weekday and hour: programmes clash on venue and organizer.
-          final start = now.add(const Duration(days: 2, hours: 2));
+          // Own weekday and hour: a clash on venue or organizer is refused
+          // (club_server#72, #56).
+          final start = now.add(const Duration(days: 2, hours: 7));
           final event = await client.events.createEvent(
             title: 'test_Series Event',
             description: 'D',
@@ -357,7 +361,9 @@ void main() {
       test('returns linked events', () async {
         // A split no longer creates a successor: the event keeps its id and
         // the history is its schedule list (#16).
-        final start = now.add(const Duration(days: 40));
+        // An evening slot, clear of the one-offs and camps (club_server#72,
+        // #56).
+        final start = now.add(const Duration(days: 40, hours: 9));
         final original = await client.events.createEvent(
           title: 'test_Chain Test',
           description: 'D',
@@ -416,8 +422,7 @@ void main() {
           endTimeUtc: DateTime.utc(2027, 4, 1, 12),
         );
 
-        // A one-off overlap is reported, not blocked (#16): the probe
-        // names the venue clash and the creation still goes through.
+        // The probe names the venue clash.
         final report = await client.events.checkConflict(
           type: EventType.oneOff,
           venueId: venue1Id,
@@ -427,16 +432,31 @@ void main() {
         expect(report.hasConflict, isTrue);
         expect(report.venueConflicts, isNotEmpty);
 
-        final second = await client.events.createEvent(
-          title: 'test_Booking 2',
-          description: 'D',
-          type: EventType.oneOff,
-          visibility: Visibility.public,
-          venueId: venue1Id,
-          startTimeUtc: DateTime.utc(2027, 4, 1, 11),
-          endTimeUtc: DateTime.utc(2027, 4, 1, 13),
+        // A one-off overlap is refused with the report (club_server#72,
+        // #56), and written once the organizer accepts it.
+        Future<Event> second({bool accept = false}) =>
+            client.events.createEvent(
+              title: 'test_Booking 2',
+              description: 'D',
+              type: EventType.oneOff,
+              visibility: Visibility.public,
+              venueId: venue1Id,
+              startTimeUtc: DateTime.utc(2027, 4, 1, 11),
+              endTimeUtc: DateTime.utc(2027, 4, 1, 13),
+              acceptConflicts: accept,
+            );
+        await expectLater(
+          second(),
+          throwsA(
+            isA<ScheduleConflictException>().having(
+              (e) => e.report.venueConflicts,
+              'venueConflicts',
+              isNotEmpty,
+            ),
+          ),
         );
-        expect(second.status, EventStatus.active);
+        final accepted = await second(accept: true);
+        expect(accepted.status, EventStatus.active);
       });
     });
 
@@ -511,7 +531,9 @@ void main() {
 
     group('7.16: Update with Effective Date', () {
       test('schedules future changes', () async {
-        final start = now.add(const Duration(days: 100));
+        // An evening slot, clear of the one-offs and camps (club_server#72,
+        // #56).
+        final start = now.add(const Duration(days: 100, hours: 11));
         final event = await client.events.createEvent(
           title: 'test_Effective Date Test',
           description: 'D',
@@ -589,8 +611,10 @@ void main() {
           visibility: Visibility.public,
           venueId: venue1Id,
           organizerName: 'test_coach1_s07',
-          startTimeUtc: DateTime.utc(2027, 5, 2, 10),
-          endTimeUtc: DateTime.utc(2027, 5, 2, 12),
+          // Clear of the venue-conflict camp above, which a clash would
+          // refuse (club_server#72, #56).
+          startTimeUtc: DateTime.utc(2027, 5, 12, 10),
+          endTimeUtc: DateTime.utc(2027, 5, 12, 12),
           rrule: 'FREQ=DAILY;COUNT=2',
         );
 
@@ -598,10 +622,10 @@ void main() {
           type: EventType.camp,
           venueId: venue2Id,
           organizerName: 'test_coach1_s07',
-          startTimeUtc: DateTime.utc(2027, 5, 2, 10),
-          endTimeUtc: DateTime.utc(2027, 5, 2, 12),
+          startTimeUtc: DateTime.utc(2027, 5, 12, 10),
+          endTimeUtc: DateTime.utc(2027, 5, 12, 12),
           rrule: 'FREQ=DAILY;COUNT=2',
-          untilTimeUtc: DateTime.utc(2027, 5, 3, 12),
+          untilTimeUtc: DateTime.utc(2027, 5, 13, 12),
         );
 
         expect(report.hasConflict, isTrue);
@@ -684,8 +708,10 @@ void main() {
           type: EventType.oneOff,
           visibility: Visibility.public,
           venueId: venue1Id,
-          startTimeUtc: now.add(const Duration(days: 114)),
-          endTimeUtc: now.add(const Duration(days: 114, hours: 1)),
+          // After the camp above (days 112–114): a clash is refused
+          // (club_server#72, #56).
+          startTimeUtc: now.add(const Duration(days: 116)),
+          endTimeUtc: now.add(const Duration(days: 116, hours: 1)),
         );
 
         // Venue changes move through /reschedule, not the metadata PATCH (#232).
@@ -792,8 +818,10 @@ void main() {
             type: EventType.oneOff,
             visibility: Visibility.public,
             venueId: venue1Id,
-            startTimeUtc: now.add(const Duration(days: 126)),
-            endTimeUtc: now.add(const Duration(days: 126, hours: 1)),
+            // After the camp above (days 124–126): a clash is refused
+            // (club_server#72, #56).
+            startTimeUtc: now.add(const Duration(days: 127)),
+            endTimeUtc: now.add(const Duration(days: 127, hours: 1)),
           );
 
           expect(

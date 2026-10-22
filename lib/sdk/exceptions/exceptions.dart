@@ -8,6 +8,7 @@
 /// string for display. See `SdkErrorCode` for all known code constants.
 library;
 
+import '../models/conflict_report.dart';
 import 'error_codes.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -111,6 +112,45 @@ class StaleVersionException extends ServerException {
   String toString() =>
       'StaleVersionException(version: $version, updatedBy: $updatedBy): '
       '$message';
+}
+
+/// 409 `SCHEDULE_CONFLICT`: a schedule or staff write clashes with other
+/// events and was sent without `acceptConflicts: true` (club_server#72,
+/// #56). Nothing was written.
+///
+/// Raised by `EventSource.createEvent`, `updateEvent` (an organizer or coach
+/// change), `updateEventForAllFuture`, `rescheduleEvent`, `reinstate` and
+/// `OccurrenceSource.rescheduleOccurrence`. [report] names every clashing
+/// event by gate — venue, organizer and coach — with the overlapping
+/// occurrence pairs, in the shape `EventSource.checkConflict` returns. Show
+/// it to the organizer, and re-send the same call with
+/// `acceptConflicts: true` to save anyway; the server then notifies the
+/// admins.
+class ScheduleConflictException extends ServerException {
+  const ScheduleConflictException({
+    required super.message,
+    required this.report,
+    super.details,
+  }) : super(statusCode: 409, code: SdkErrorCode.scheduleConflict);
+
+  /// Builds from the server's error object (`detail`), whose extra fields
+  /// are `venueConflicts`, `organizerConflicts` and `coachConflicts`.
+  factory ScheduleConflictException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    return ScheduleConflictException(
+      message: message,
+      report: ConflictReport.fromMap(details ?? const {}),
+      details: details,
+    );
+  }
+
+  /// The clashes the server found, by gate.
+  final ConflictReport report;
+
+  @override
+  String toString() => 'ScheduleConflictException($report): $message';
 }
 
 /// 503 from an optional module that is off on this deployment
