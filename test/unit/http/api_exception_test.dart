@@ -148,6 +148,22 @@ void main() {
       },
     );
 
+    test(
+      'club_server#62: an admin acting on their own account maps to '
+      'CANNOT_ACT_ON_SELF',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'CANNOT_ACT_ON_SELF',
+            'message': 'You cannot do this to your own account',
+          },
+        });
+        expect(exc, isA<ServerException>());
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.cannotActOnSelf);
+      },
+    );
+
     test('accepts top-level error wrapper', () {
       final exc = mapHttpError(422, const {
         'error': {
