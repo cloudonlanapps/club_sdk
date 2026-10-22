@@ -235,7 +235,8 @@ abstract final class SdkErrorCode {
   // is not an image, a video or a PDF.
   static const invalidEvidence = 'INVALID_EVIDENCE';
   // A live template already holds the name, compared without regard to
-  // case or surrounding spaces: create, rename and restore.
+  // case or surrounding spaces: create and rename. A restore renames the
+  // template instead (`<name> -- Restored #N`).
   static const templateNameTaken = 'TEMPLATE_NAME_TAKEN';
   // The effective owner already holds a live review of this member and
   // template over the same period (the exact bounds, or none): create, a

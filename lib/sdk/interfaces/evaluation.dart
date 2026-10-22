@@ -35,7 +35,8 @@ import '../models/pagination.dart';
 /// Templates are read and written by any staff member — an admin or a
 /// coach; a member gets 403. Hard-deleting a template stays super-admin
 /// only. A live template's name is unique, compared without regard to
-/// case or surrounding spaces (422 `TEMPLATE_NAME_TAKEN`).
+/// case or surrounding spaces (422 `TEMPLATE_NAME_TAKEN` on create and
+/// rename); a restore onto a taken name renames the restored template.
 abstract interface class EvaluationSource {
   // ══════════════════════════════════════════════════════════════════════════
   // EVALUATIONS
@@ -258,8 +259,13 @@ abstract interface class EvaluationSource {
   /// first; 422 `TEMPLATE_IN_USE` while any evaluation uses it.
   Future<void> hardDeleteTemplate(int id);
 
-  /// Restore a soft-deleted template. Any staff member.
-  /// 422 `NOTHING_TO_RESTORE` if it is not deleted; 422
-  /// `TEMPLATE_NAME_TAKEN` if a live template now holds its name.
+  /// Restore a soft-deleted template and return it, live again. Any staff
+  /// member. 422 `NOTHING_TO_RESTORE` if it is not deleted.
+  ///
+  /// A taken name is not an error: if a live template now holds its name
+  /// (ignoring case and surrounding spaces), the restored template is
+  /// renamed to the first free `<name> -- Restored #N` (N from 1), in use
+  /// or not; the returned template carries the new name. A free name is
+  /// kept.
   Future<EvaluationTemplate> restoreTemplate(int id);
 }
