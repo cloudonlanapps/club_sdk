@@ -46,6 +46,12 @@ abstract interface class OccurrenceSource {
   /// bypasses both. [newVenueId] must reference a live venue (404
   /// `VENUE_NOT_FOUND`), and a cancelled occurrence cannot be rescheduled (422
   /// `CANCELLED_OCCURRENCE`).
+  ///
+  /// The venue, organizer and coach gates run on the moved occurrence
+  /// (club_server#72, #56). A clash throws `ScheduleConflictException`,
+  /// whose `report` names every clashing event, and nothing moves; send the
+  /// same call with [acceptConflicts] `true` to move it anyway (the server
+  /// then notifies the admins).
   Future<void> rescheduleOccurrence(
     int eventId,
     DateTime occurrenceTimeUtc, {
@@ -53,6 +59,7 @@ abstract interface class OccurrenceSource {
     DateTime? newStartTimeUtc,
     int? newDurationMinutes,
     int? newVenueId,
+    bool acceptConflicts,
   });
 
   /// Cancels one occurrence of a **camp** or **programme**

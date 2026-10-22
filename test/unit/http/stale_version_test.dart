@@ -37,22 +37,6 @@ void main() {
       expect(stale.updatedBy, isNull);
     });
 
-    test('Issue 16: a 409 conflict report is typed TIME_CONFLICT', () {
-      final exc = mapHttpError(409, const {
-        'detail': {
-          'hasConflict': true,
-          'venueConflicts': <Object>[],
-          'userConflicts': [
-            {'eventId': 3, 'eventTitle': 't'},
-          ],
-        },
-      });
-      expect(exc.code, SdkErrorCode.timeConflict);
-      expect(exc.details?['hasConflict'], isTrue);
-      expect(exc.details?['userConflicts'], hasLength(1));
-      expect(exc, isNot(isA<StaleVersionException>()));
-    });
-
     test('Issue 25: other 409 codes stay plain ServerException', () {
       final exc = mapHttpError(409, const {
         'detail': {'code': 'TIME_CONFLICT', 'message': 'm'},

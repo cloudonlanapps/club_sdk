@@ -83,6 +83,7 @@ class RemoteEventSource implements EventSource {
     List<String>? highlights,
     List<String>? includes,
     List<EventSession>? sessions,
+    bool acceptConflicts = false,
   }) async {
     final response = await _store.post(
       endpoints.events.list,
@@ -109,6 +110,7 @@ class RemoteEventSource implements EventSource {
         'includes': ?includes,
         if (sessions != null)
           'sessions': sessions.map((s) => s.toMap()).toList(),
+        if (acceptConflicts) 'acceptConflicts': true,
       },
     );
     return Event.fromMap(response);
@@ -168,6 +170,7 @@ class RemoteEventSource implements EventSource {
     List<String>? Function()? highlights,
     List<String>? Function()? includes,
     List<EventSession>? Function()? sessions,
+    bool acceptConflicts = false,
   }) async {
     // The server's EventUpdate is `extra="forbid"` (#232, #248), so schedule
     // and identity fields (startTimeUtc/endTimeUtc/rrule/venueId/type) must
@@ -196,6 +199,7 @@ class RemoteEventSource implements EventSource {
       if (includes != null) 'includes': includes(),
       if (sessions != null)
         'sessions': sessions()?.map((s) => s.toMap()).toList(),
+      if (acceptConflicts) 'acceptConflicts': true,
     };
     final response = await _store.patch(
       endpoints.events.event(eventId),
@@ -214,6 +218,7 @@ class RemoteEventSource implements EventSource {
     int? venueId,
     List<EventSession>? Function()? sessions,
     bool resetOverrides = false,
+    bool acceptConflicts = false,
   }) async {
     // `sessions` is part of the schedule (#248): provide the getter to replace
     // the per-occurrence timetable atomically with the window change — it is
@@ -231,6 +236,7 @@ class RemoteEventSource implements EventSource {
       if (sessions != null)
         'sessions': sessions()?.map((s) => s.toMap()).toList(),
       'resetOverrides': resetOverrides,
+      if (acceptConflicts) 'acceptConflicts': true,
     };
     final response = await _store.post(
       endpoints.events.reschedule(eventId),
@@ -299,6 +305,7 @@ class RemoteEventSource implements EventSource {
     DateTime? endTimeUtc,
     String? rrule,
     List<EventSession>? Function()? sessions,
+    bool acceptConflicts = false,
   }) async {
     final body = <String, dynamic>{
       'version': version,
@@ -313,6 +320,7 @@ class RemoteEventSource implements EventSource {
       'rrule': ?rrule,
       if (sessions != null)
         'sessions': sessions()?.map((s) => s.toMap()).toList(),
+      if (acceptConflicts) 'acceptConflicts': true,
     };
     final response = await _store.patch(
       endpoints.events.future(eventId),
@@ -411,10 +419,17 @@ class RemoteEventSource implements EventSource {
   }
 
   @override
-  Future<Event> reinstate(int eventId, {required int version}) async {
+  Future<Event> reinstate(
+    int eventId, {
+    required int version,
+    bool acceptConflicts = false,
+  }) async {
     final response = await _store.post(
       endpoints.events.reinstate(eventId),
-      body: {'version': version},
+      body: {
+        'version': version,
+        if (acceptConflicts) 'acceptConflicts': true,
+      },
     );
     return Event.fromMap(response);
   }

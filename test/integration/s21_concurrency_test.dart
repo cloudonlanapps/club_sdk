@@ -302,15 +302,9 @@ void main() {
       test(
         '21.08: Enrollment operations work without version',
         () async {
-          final event = await client.events.createEvent(
-            title: 'test_Enrollment Test S21',
-            description: 'D',
-            type: EventType.oneOff,
-            visibility: Visibility.public,
-            venueId: venueId,
-            startTimeUtc: now.add(const Duration(days: 5)),
-            endTimeUtc: now.add(const Duration(days: 5, hours: 1)),
-          );
+          // Its own day slot: 21.01's one-off holds day 5, and a clash at
+          // the venue or organizer is refused (club_server#72, #56).
+          final event = await oneOff('test_Enrollment Test S21');
 
           await client.enrollments.assign(
             event.id,

@@ -56,6 +56,7 @@ class RemoteOccurrenceSource implements OccurrenceSource {
     DateTime? newStartTimeUtc,
     int? newDurationMinutes,
     int? newVenueId,
+    bool acceptConflicts = false,
   }) async {
     final timeStr = occurrenceTimeUtc.millisecondsSinceEpoch.toString();
     await _store.postVoid(
@@ -66,6 +67,7 @@ class RemoteOccurrenceSource implements OccurrenceSource {
           'newStartTimeUtc': newStartTimeUtc.millisecondsSinceEpoch,
         'newDurationMinutes': ?newDurationMinutes,
         'newVenueId': ?newVenueId,
+        if (acceptConflicts) 'acceptConflicts': true,
       },
     );
   }

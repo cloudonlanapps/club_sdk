@@ -61,6 +61,10 @@ void main() {
         organizerName: coachName,
         startTimeUtc: start,
         endTimeUtc: start.add(length),
+        // The two sessions' windows are fixed by the edit window under test
+        // and overlap, with the same coach organizing: accept the clash
+        // (club_server#72, #56).
+        acceptConflicts: true,
       );
       expect(event.organizerName, coachName);
       expect(event.startTimeUtc, start);

@@ -87,7 +87,9 @@ void main() {
       );
       programmeId = programme.id;
 
-      final campStart = dayAt(28);
+      // Day 28 is the programme's weekday: the camp keeps clear of its hour,
+      // since every write refuses a clash (club_server#72, #56).
+      final campStart = dayAt(28, hour: 14);
       final camp = await admin.events.createEvent(
         title: 'test_credit_camp',
         description: 'a camp',

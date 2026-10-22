@@ -110,10 +110,15 @@ abstract final class SdkErrorCode {
   static const roleAlreadyAssigned = 'ROLE_ALREADY_ASSIGNED';
   static const leaveAlreadyDeclared = 'LEAVE_ALREADY_DECLARED';
   static const conflict = 'CONFLICT';
-  // Also inferred for a 409 whose body is a conflict report (`hasConflict`)
-  // with no code: a blocking programme clash (#16). The report is in
-  // `ServerException.details`.
+  // The member gate: enrolling, assigning or approving a member whose own
+  // programme overlaps the event (enrollment R30).
   static const timeConflict = 'TIME_CONFLICT';
+  // A schedule or staff write clashes with another event's venue, organizer
+  // or coach and did not send `acceptConflicts: true` (club_server#72, #56).
+  // Nothing was written. Mapped to `ScheduleConflictException`, which
+  // carries the full `ConflictReport`; re-send with `acceptConflicts: true`
+  // to save anyway.
+  static const scheduleConflict = 'SCHEDULE_CONFLICT';
   // Optimistic locking: the `version` sent is not the current one — of the
   // event for an update, correction, split, reschedule or cutoff verb
   // (cancel, undo-cancel, terminate, extend, extend-indefinitely;

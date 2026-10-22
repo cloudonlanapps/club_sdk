@@ -122,9 +122,10 @@ class EventConflictItem {
 }
 
 /// Conflict-check report returned by `POST /events/check-conflict` for any
-/// event type (renamed from `CampConflictReport`, #16). Only a
-/// programme-against-programme clash blocks creation with 409; everything
-/// else is reported here for the caller to weigh.
+/// event type (renamed from `CampConflictReport`, #16), and carried by
+/// `ScheduleConflictException` when a schedule write is refused with 409
+/// `SCHEDULE_CONFLICT` (club_server#72, #56). A write that clashes is
+/// written only when it is re-sent with `acceptConflicts: true`.
 ///
 /// Each list groups conflicts by the actor whose schedule was probed:
 /// the target venue, the target organizer, and each target coach.

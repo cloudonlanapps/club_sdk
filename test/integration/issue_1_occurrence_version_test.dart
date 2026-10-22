@@ -24,10 +24,14 @@ void main() {
     const memberPassword = 'password123';
     var n = 0;
 
+    // Three days apart, so no event overlaps another: every schedule write
+    // refuses a venue or organizer clash (club_server#72, #56).
+    DateTime nextStart() => dayAt(10 + 3 * n);
+
     /// A camp far enough ahead that no lead-time rule applies.
     Future<Event> camp() async {
       n += 1;
-      final start = dayAt(10 + n);
+      final start = nextStart();
       return admin.events.createEvent(
         title: 'test_I1 camp $n',
         description: '',
@@ -42,7 +46,7 @@ void main() {
 
     Future<Event> oneOff() async {
       n += 1;
-      final start = dayAt(10 + n);
+      final start = nextStart();
       return admin.events.createEvent(
         title: 'test_I1 one-off $n',
         description: '',

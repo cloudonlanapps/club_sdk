@@ -63,7 +63,9 @@ void main() {
       );
       publicEventId = event.id;
 
-      final privateStart = dayAt(16);
+      // Clear of the public camp's days (14–16): every write refuses a
+      // clash (club_server#72, #56).
+      final privateStart = dayAt(18);
       final private = await admin.events.createEvent(
         title: 'test_private_camp',
         description: 'a private camp',

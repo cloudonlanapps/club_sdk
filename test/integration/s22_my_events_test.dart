@@ -363,8 +363,10 @@ void main() {
 
     group('22.09: Accept Invite', () {
       test('member accepts invitation', () async {
-        // Create a separate event to avoid TIME_CONFLICT
-        final start = now.add(const Duration(days: 100));
+        // Create a separate event to avoid TIME_CONFLICT, on a weekday the
+        // weekly programme does not use: a clash at the venue or organizer
+        // is refused (club_server#72, #56).
+        final start = now.add(const Duration(days: 101));
         final event = await adminClient.events.createEvent(
           title: 'test_Accept Invite S22',
           description: 'D',

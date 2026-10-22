@@ -11,6 +11,7 @@ export 'sdk/exceptions/error_codes.dart' show SdkErrorCode;
 export 'sdk/exceptions/exceptions.dart'
     show
         ModuleDisabledException,
+        ScheduleConflictException,
         SdkError,
         SdkException,
         ServerException,

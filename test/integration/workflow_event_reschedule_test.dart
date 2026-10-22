@@ -165,7 +165,9 @@ void main() {
     test(
       'Issue 706: a split that does not sum to the new window is rejected',
       () async {
-        final start = DateTime.utc(2027, 5, 25, 10);
+        // Clear of the other camps' days: every schedule write refuses a
+        // venue or organizer clash (club_server#72, #56).
+        final start = DateTime.utc(2027, 6, 1, 10);
         final camp = await client.events.createEvent(
           title: 'test_Camp 706 bad split',
           description: 'Stale split vs new window',
@@ -254,7 +256,8 @@ void main() {
     test(
       'Issue 601: camp cancel at a real session boundary, then undo-cancel',
       () async {
-        final start = DateTime.utc(2027, 5, 6, 10);
+        // Clear of the other camps' days (club_server#72, #56).
+        final start = DateTime.utc(2027, 6, 20, 10);
         final camp = await createCamp(start: start);
 
         // The first occurrence start is a valid session boundary.

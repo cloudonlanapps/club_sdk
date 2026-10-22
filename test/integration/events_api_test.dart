@@ -239,6 +239,10 @@ void main() {
 
       test('7.14: Create Camp - multi-day event with RRULE', () async {
         final start = nextStart();
+        // The camp runs three days: keep the next two slots free, since a
+        // clash at the venue or organizer is refused (club_server#72, #56).
+        nextStart();
+        nextStart();
         final event = await client.events.createEvent(
           title: 'test_Camp',
           description: 'D',
@@ -812,6 +816,9 @@ void main() {
             rrule: weeklyOn(progStart),
           );
           final campStart = nextStart();
+          // The camp runs two days: keep the next slot free (club_server#72,
+          // #56).
+          nextStart();
           final privateCamp = await client.events.createEvent(
             title: 'test_Private Camp',
             description: 'D',
@@ -1006,31 +1013,7 @@ void main() {
             endTimeUtc: start.add(const Duration(hours: 1)),
           );
 
-          // A one-off overlap is reported, not blocked (#16): the probe
-          // names the venue clash and the creation still goes through.
-          final report = await client.events.checkConflict(
-            type: EventType.oneOff,
-            venueId: v1Id,
-            organizerName: coach2, // Different coach but same venue
-            startTimeUtc: start.add(const Duration(minutes: 30)),
-            endTimeUtc: start.add(const Duration(hours: 2)),
-          );
-          expect(report.hasConflict, isTrue);
-          expect(report.venueConflicts, isNotEmpty);
-          expect(report.organizerConflicts, isEmpty);
-          final overlapping = await client.events.createEvent(
-            title: 'test_Venue Conflict B',
-            description: 'D',
-            type: EventType.oneOff,
-            visibility: Visibility.public,
-            venueId: v1Id,
-            organizerName: coach2, // Different coach but same venue
-            startTimeUtc: start.add(const Duration(minutes: 30)),
-            endTimeUtc: start.add(const Duration(hours: 2)),
-          );
-          expect(overlapping.status, EventStatus.active);
-
-          // Different venue + different coach should succeed
+          // Different venue + different coach does not clash.
           final eventB = await client.events.createEvent(
             title: 'test_Venue Conflict B OK',
             description: 'D',
@@ -1042,6 +1025,44 @@ void main() {
             endTimeUtc: start.add(const Duration(hours: 1)),
           );
           expect(eventB.id, isNotNull);
+
+          // The probe names the venue clash with A.
+          final report = await client.events.checkConflict(
+            type: EventType.oneOff,
+            venueId: v1Id,
+            organizerName: coach2, // Different coach but same venue
+            startTimeUtc: start.add(const Duration(minutes: 30)),
+            endTimeUtc: start.add(const Duration(hours: 2)),
+          );
+          expect(report.hasConflict, isTrue);
+          expect(report.venueConflicts, isNotEmpty);
+
+          // A one-off overlap is refused with the report (club_server#72,
+          // #56), and written once the organizer accepts it.
+          Future<Event> overlapping({bool accept = false}) =>
+              client.events.createEvent(
+                title: 'test_Venue Conflict B',
+                description: 'D',
+                type: EventType.oneOff,
+                visibility: Visibility.public,
+                venueId: v1Id,
+                organizerName: coach2, // Different coach but same venue
+                startTimeUtc: start.add(const Duration(minutes: 30)),
+                endTimeUtc: start.add(const Duration(hours: 2)),
+                acceptConflicts: accept,
+              );
+          await expectLater(
+            overlapping(),
+            throwsA(
+              isA<ScheduleConflictException>().having(
+                (e) => e.report.venueConflicts,
+                'venueConflicts',
+                isNotEmpty,
+              ),
+            ),
+          );
+          final accepted = await overlapping(accept: true);
+          expect(accepted.status, EventStatus.active);
         },
       );
 
@@ -1140,7 +1161,7 @@ void main() {
       test('7.10: Venue Conflict Detection - on event update', () async {
         // Conflict gates run on every mutation path (club_server#288):
         // a programme split that lands on another programme's venue slot
-        // is blocked with 409, and the report names the clash.
+        // is refused with 409 SCHEDULE_CONFLICT (club_server#72, #56).
         final start = nextStart();
         final occupied = await client.events.createEvent(
           title: 'test_Update Conflict Occupied',
@@ -1173,9 +1194,9 @@ void main() {
             venueId: occupied.venueId,
           ),
           throwsA(
-            isA<ServerException>()
+            isA<ScheduleConflictException>()
                 .having((e) => e.statusCode, 'statusCode', 409)
-                .having((e) => e.code, 'code', SdkErrorCode.timeConflict),
+                .having((e) => e.code, 'code', SdkErrorCode.scheduleConflict),
           ),
         );
         final schedules = await client.events.listSchedules(mover.id);
@@ -1223,6 +1244,9 @@ void main() {
             venueId: v1Id,
             startTimeUtc: start,
             endTimeUtc: start.add(const Duration(hours: 1)),
+            // The time is pinned to now, where 10.01's one-off already
+            // sits; accept that clash (club_server#72, #56).
+            acceptConflicts: true,
           );
           await client.enrollments.assign(
             event.id,
