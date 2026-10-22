@@ -298,18 +298,15 @@ void main() {
           'test_i15_unique',
         );
 
-        // A soft-deleted template holds no name, so restoring it after its
-        // name is reused is refused.
+        // A soft-deleted template holds no name, so a live one may take it.
+        // Restoring the deleted one then renames it rather than refusing:
+        // issue_57_restore_renames_test.dart (club_server#71).
         await coach.evaluations.deleteTemplate(other.id);
         final reused = await coach.evaluations.createTemplate(
           name: 'TEST_I15_UNIQUE',
           layout: standardLayout(),
         );
         expect(reused.name, 'TEST_I15_UNIQUE');
-        await expectLater(
-          coach.evaluations.restoreTemplate(other.id),
-          throwsCode(422, SdkErrorCode.templateNameTaken),
-        );
         final deleted = await coach.evaluations.listDeletedTemplates(
           limit: 100,
         );
