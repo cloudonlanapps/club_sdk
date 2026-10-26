@@ -3,6 +3,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/credit_seed.dart';
 import '../utils/event_time.dart';
 import '../utils/occurrence_reminders.dart';
 import '../utils/occurrence_version.dart';
@@ -105,6 +106,9 @@ void main() {
         gender: Gender.male,
         firstName: 'Member',
       );
+      // Where the credit system is on, the server credit-gates assign
+      // (credit R35); a no-op where the module is off (#62).
+      await seedEnrolmentCreditIfGated(admin, [memberName]);
       member = await createRemoteSecureClient(baseUrl: baseUrl);
       opened.add(member);
       await member.auth.login(memberName, password);

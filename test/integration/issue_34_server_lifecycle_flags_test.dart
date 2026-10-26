@@ -3,6 +3,7 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
+import '../utils/credit_seed.dart';
 import '../utils/event_time.dart';
 import '../utils/occurrence_version.dart';
 import '../utils/register_and_approve.dart';
@@ -62,6 +63,11 @@ void main() {
         );
       }
       await sudo.users.assignRole(adminName, 'admin');
+      // Where the credit system is on, the server credit-gates assign and
+      // assign-trial (credit R35), so every member gets general and
+      // trial credit up front; a refused assign is then refused for the
+      // event's state alone. A no-op where the module is off (#62).
+      await seedEnrolmentCreditIfGated(sudo, members);
 
       admin = await createRemoteSecureClient(baseUrl: baseUrl);
       await admin.auth.login(adminName, password);
