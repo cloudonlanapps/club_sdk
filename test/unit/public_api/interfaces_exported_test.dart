@@ -13,6 +13,7 @@ void main() {
   // Names the compiler must resolve through the barrels alone.
   const exported = <Type>[
     AdminSource,
+    ApplicationSource,
     AttendanceSource,
     AuditLogSource,
     AuthSource,

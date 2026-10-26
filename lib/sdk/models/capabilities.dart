@@ -17,6 +17,8 @@ class Capabilities {
     this.evaluations = false,
     this.eventMarketing = false,
     this.identityVerification = true,
+    this.extendedProfile = false,
+    this.applications = false,
     this.defaultCountryCode,
   });
 
@@ -26,6 +28,8 @@ class Capabilities {
       evaluations: (map['evaluations'] as bool?) ?? false,
       eventMarketing: (map['eventMarketing'] as bool?) ?? false,
       identityVerification: (map['identityVerification'] as bool?) ?? true,
+      extendedProfile: (map['extendedProfile'] as bool?) ?? false,
+      applications: (map['applications'] as bool?) ?? false,
       defaultCountryCode: map['defaultCountryCode'] as String?,
     );
   }
@@ -51,6 +55,19 @@ class Capabilities {
   /// the field always required verification.
   final bool identityVerification;
 
+  /// Whether the app shows the extended profile fields and the club's
+  /// profile options (club_server#92, #66). The fields are stored and
+  /// returned either way; while off, writing the profile options answers
+  /// 503 `EXTENDED_PROFILE_DISABLED`. Absent means off.
+  final bool extendedProfile;
+
+  /// Printable application forms (club_server#93, #66). True only where
+  /// the deployment turns applications on **and** requires identity
+  /// verification; otherwise every `ApplicationSource` call throws
+  /// `ModuleDisabledException` (503 `APPLICATIONS_DISABLED`). Absent means
+  /// off.
+  final bool applications;
+
   /// The club's country calling code, one to three digits without `+`
   /// (club_server#15, #6), for completing a phone number typed without one.
   ///
@@ -62,6 +79,8 @@ class Capabilities {
     bool? evaluations,
     bool? eventMarketing,
     bool? identityVerification,
+    bool? extendedProfile,
+    bool? applications,
     String? Function()? defaultCountryCode,
   }) {
     return Capabilities(
@@ -69,6 +88,8 @@ class Capabilities {
       evaluations: evaluations ?? this.evaluations,
       eventMarketing: eventMarketing ?? this.eventMarketing,
       identityVerification: identityVerification ?? this.identityVerification,
+      extendedProfile: extendedProfile ?? this.extendedProfile,
+      applications: applications ?? this.applications,
       defaultCountryCode: defaultCountryCode != null
           ? defaultCountryCode()
           : this.defaultCountryCode,
@@ -81,6 +102,8 @@ class Capabilities {
       'evaluations': evaluations,
       'eventMarketing': eventMarketing,
       'identityVerification': identityVerification,
+      'extendedProfile': extendedProfile,
+      'applications': applications,
       'defaultCountryCode': defaultCountryCode,
     };
   }
@@ -92,6 +115,8 @@ class Capabilities {
       'Capabilities(creditSystem: $creditSystem, evaluations: $evaluations, '
       'eventMarketing: $eventMarketing, '
       'identityVerification: $identityVerification, '
+      'extendedProfile: $extendedProfile, '
+      'applications: $applications, '
       'defaultCountryCode: $defaultCountryCode)';
 
   @override
@@ -102,6 +127,8 @@ class Capabilities {
         other.evaluations == evaluations &&
         other.eventMarketing == eventMarketing &&
         other.identityVerification == identityVerification &&
+        other.extendedProfile == extendedProfile &&
+        other.applications == applications &&
         other.defaultCountryCode == defaultCountryCode;
   }
 
@@ -111,5 +138,7 @@ class Capabilities {
       evaluations.hashCode ^
       eventMarketing.hashCode ^
       identityVerification.hashCode ^
+      extendedProfile.hashCode ^
+      applications.hashCode ^
       defaultCountryCode.hashCode;
 }

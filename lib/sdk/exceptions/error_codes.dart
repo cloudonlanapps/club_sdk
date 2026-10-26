@@ -59,6 +59,13 @@ abstract final class SdkErrorCode {
   // ═══════════════════════════════════════════════════════════════════════════
   static const insufficientPermission = 'INSUFFICIENT_PERMISSION';
   static const superAdminProtection = 'SUPER_ADMIN_PROTECTION';
+  // A profile edit sending a field only an admin may set; `details['fields']`
+  // names them (e.g. `membershipDateUtc`, club_server#92, #66).
+  static const protectedFields = 'PROTECTED_FIELDS';
+  // A user not yet approved calling what only an active user may; on a
+  // profile edit, anything other than their own extended fields
+  // (club_server#92, #66).
+  static const accountNotActive = 'ACCOUNT_NOT_ACTIVE';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 404 Not Found
@@ -95,6 +102,10 @@ abstract final class SdkErrorCode {
   static const itemNotFound = 'ITEM_NOT_FOUND';
   // The event has no extended marketing block (club_server#410, #22).
   static const eventMarketingNotFound = 'EVENT_MARKETING_NOT_FOUND';
+  // An application template that does not exist, is deleted, or is not
+  // offered to the caller: a member sees published templates only
+  // (club_server#93, #66).
+  static const applicationNotFound = 'APPLICATION_NOT_FOUND';
 
   // The batch public marketing read was given more than 50 public ids
   // (club_server#410, #22).
@@ -145,6 +156,10 @@ abstract final class SdkErrorCode {
   // 422 Unprocessable Entity
   // ═══════════════════════════════════════════════════════════════════════════
   static const invalidState = 'INVALID_STATE';
+  // A `preferredPosition` or `preferredLanguage` that is not one of the
+  // club's profile options (club_server#92, #66); mapped to
+  // `InvalidProfileOptionException`.
+  static const invalidProfileOption = 'INVALID_PROFILE_OPTION';
   // Audit-log read with only one of resource_type and resource_id: they
   // come together (#35).
   static const invalidResourceScope = 'INVALID_RESOURCE_SCOPE';
@@ -250,6 +265,26 @@ abstract final class SdkErrorCode {
   // A review period ending after the server's clock: a review looks back.
   static const periodInFuture = 'PERIOD_IN_FUTURE';
 
+  // Applications (club_server#93, #66). Lifecycle misuse is
+  // `INVALID_TRANSITION`, editing or deleting a template in the wrong state
+  // `INVALID_STATE`, and a member's read or form without an identity
+  // document `IDENTITY_DOCUMENT_REQUIRED`.
+  // An admin's download of a member's form from a template not published.
+  static const applicationNotPublished = 'APPLICATION_NOT_PUBLISHED';
+  // No age category of the template matches the member's date of birth and
+  // gender, or the member has no date of birth.
+  static const applicationNotEligible = 'APPLICATION_NOT_ELIGIBLE';
+  // Save refused: a text the form needs is missing, or lacks a print
+  // language; mapped to `ApplicationIncompleteException`.
+  static const applicationIncomplete = 'APPLICATION_INCOMPLETE';
+  // Save refused: a text names a clause the library does not have, a
+  // clause gap without a fact, a fact the template does not have, or a fact
+  // of the wrong type for its gap. The message names it.
+  static const applicationInvalidReference = 'APPLICATION_INVALID_REFERENCE';
+  // Save refused: the member's details alone overflow page 1; mapped to
+  // `ApplicationDoesNotFitException`.
+  static const applicationDoesNotFit = 'APPLICATION_DOES_NOT_FIT';
+
   // Credit system (#14, club_server#294).
   // Opening an account against a camp or one-off: credit is for programmes.
   static const creditNotApplicable = 'CREDIT_NOT_APPLICABLE';
@@ -285,6 +320,13 @@ abstract final class SdkErrorCode {
   static const creditSystemDisabled = 'CREDIT_SYSTEM_DISABLED';
   static const evaluationsDisabled = 'EVALUATIONS_DISABLED';
   static const eventMarketingDisabled = 'EVENT_MARKETING_DISABLED';
+  // Writing the profile options while the extended profile is off
+  // (club_server#92, #66). The profile fields themselves are stored either
+  // way.
+  static const extendedProfileDisabled = 'EXTENDED_PROFILE_DISABLED';
+  // Every `/applications` route while `APPLICATIONS_ENABLED` or
+  // `IDENTITY_VERIFICATION_REQUIRED` is off (club_server#93, #66).
+  static const applicationsDisabled = 'APPLICATIONS_DISABLED';
 
   // Media encryption has no key configured on this deployment.
   static const encryptionNotConfigured = 'ENCRYPTION_NOT_CONFIGURED';
@@ -294,6 +336,8 @@ abstract final class SdkErrorCode {
     creditSystemDisabled,
     evaluationsDisabled,
     eventMarketingDisabled,
+    extendedProfileDisabled,
+    applicationsDisabled,
   };
 
   // ═══════════════════════════════════════════════════════════════════════════

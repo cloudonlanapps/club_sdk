@@ -2,6 +2,7 @@ import '../client.dart';
 import '../sdk/interfaces/public.dart';
 import 'remote_store.dart';
 import 'sources/admin_source.dart';
+import 'sources/application_source.dart';
 import 'sources/attendance_source.dart';
 import 'sources/audit_log_source.dart';
 import 'sources/auth_source.dart';
@@ -88,6 +89,7 @@ Future<SecureClient> createRemoteSecureClient({
     evaluationMedia: RemoteEvaluationMediaSource(effectiveStore),
     inquiries: RemoteInquirySource(effectiveStore),
     public: RemotePublicSource(effectiveStore),
+    applications: RemoteApplicationSource(effectiveStore),
   );
 }
 

@@ -27,7 +27,7 @@ against a fresh server (see `CLAUDE.md`).
 | | # | Module | Interface | Description |
 |---|---|--------|-----------|-------------|
 | [x] | 1 | Authentication | `AuthSource` | Login, register, password reset, bootstrap super admin, token refresh |
-| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles |
+| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles, the extended profile and the club's profile options |
 | [ ] | 4 | Group Management | `GroupSource` | Create, update, delete groups and manage members |
 | [ ] | 5 | Guardian Management | `GuardianSource` | Guardian-dependent relationships, guardian limits |
 | [ ] | 6 | Venue Management | `VenueSource` | CRUD, capacity management, active venue listing |
@@ -39,3 +39,4 @@ against a fresh server (see `CLAUDE.md`).
 | [ ] | 12 | Notification Management | `NotificationSource` | Fetch/manage notifications, mark read, channel preferences (in-app, email, SMS) |
 | [x] | 14 | Public API | `PublicClient` | Unauthenticated read-only access - staff listings, public events, venues, landing/about/contact pages, health check |
 | [x] | 15 | Seeding | `SeedingService` | Bulk test data loading, handles entity dependency ordering, force-clean |
+| [x] | 16 | Applications | `ApplicationSource` | Printable application forms (optional module, needs identity verification): templates an admin writes, saves and publishes, the label catalogue and clause library, and each member's form as a PDF |

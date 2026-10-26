@@ -10,6 +10,9 @@ export 'client.dart' show SecureClient;
 export 'sdk/exceptions/error_codes.dart' show SdkErrorCode;
 export 'sdk/exceptions/exceptions.dart'
     show
+        ApplicationDoesNotFitException,
+        ApplicationIncompleteException,
+        InvalidProfileOptionException,
         ModuleDisabledException,
         ScheduleConflictException,
         SdkError,
@@ -21,6 +24,7 @@ export 'sdk/exceptions/exceptions.dart'
 // ═════════════════════════════════════════════════════════════════════════════
 
 export 'sdk/interfaces/admin.dart' show AdminSource;
+export 'sdk/interfaces/application.dart' show ApplicationSource;
 export 'sdk/interfaces/attendance.dart' show AttendanceSource;
 export 'sdk/interfaces/audit_log.dart' show AuditLogSource;
 export 'sdk/interfaces/auth.dart' show AuthSource;
@@ -58,6 +62,23 @@ export 'sdk/interfaces/venue.dart' show VenueSource;
 // ClubInfo is exported from the_club/club_info.dart below
 export 'sdk/models/address.dart' show Address;
 export 'sdk/models/age.dart' show Age;
+export 'sdk/models/application_age_category.dart' show ApplicationAgeCategory;
+export 'sdk/models/application_clause.dart' show ApplicationClause;
+export 'sdk/models/application_clause_library.dart'
+    show ApplicationClauseLibrary;
+export 'sdk/models/application_content.dart' show ApplicationContent;
+export 'sdk/models/application_fact.dart' show ApplicationFact;
+export 'sdk/models/application_fact_type.dart' show ApplicationFactType;
+export 'sdk/models/application_header_item.dart' show ApplicationHeaderItem;
+export 'sdk/models/application_labels.dart' show ApplicationLabels;
+export 'sdk/models/application_layout.dart' show ApplicationLayout;
+export 'sdk/models/application_patch.dart' show ApplicationPatch;
+export 'sdk/models/application_status.dart' show ApplicationStatus;
+export 'sdk/models/application_template.dart' show ApplicationTemplate;
+export 'sdk/models/application_term.dart' show ApplicationTerm;
+export 'sdk/models/application_terms_note.dart' show ApplicationTermsNote;
+export 'sdk/models/application_text.dart' show ApplicationText;
+export 'sdk/models/application_text_kind.dart' show ApplicationTextKind;
 export 'sdk/models/attendance.dart' show AttendanceRecord, AttendanceStats;
 export 'sdk/models/attendance_mark_record.dart' show AttendanceMarkRecord;
 export 'sdk/models/attendance_mark_report.dart' show AttendanceMarkReport;
@@ -137,6 +158,7 @@ export 'sdk/models/gender.dart' show Gender;
 export 'sdk/models/group.dart' show Group;
 export 'sdk/models/group_kind.dart' show GroupKind;
 export 'sdk/models/group_member.dart' show GroupMember;
+export 'sdk/models/guardian.dart' show Guardian;
 export 'sdk/models/inquiry.dart' show Inquiry;
 export 'sdk/models/inquiry_kind.dart' show InquiryKind;
 export 'sdk/models/join_request.dart' show JoinRequest, JoinRequestStatus;
@@ -167,6 +189,8 @@ export 'sdk/models/occurrence.dart' show Occurrence;
 export 'sdk/models/occurrence_override.dart' show OccurrenceOverride;
 export 'sdk/models/package_offer.dart' show PackageOffer;
 export 'sdk/models/pagination.dart' show PaginatedList;
+export 'sdk/models/profile_options.dart' show ProfileOptions;
+export 'sdk/models/profile_position.dart' show ProfilePosition;
 export 'sdk/models/promotional_offer.dart' show PromotionalOffer;
 export 'sdk/models/public_club_info.dart' show PublicClubInfo;
 export 'sdk/models/public_event.dart' show PublicEvent;

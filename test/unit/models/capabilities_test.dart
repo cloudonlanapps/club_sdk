@@ -109,6 +109,65 @@ void main() {
       );
     });
 
+    test('Issue 66: extendedProfile reads the server value, absent is off', () {
+      expect(
+        Capabilities.fromMap(const {'extendedProfile': true}).extendedProfile,
+        isTrue,
+      );
+      expect(
+        Capabilities.fromMap(const {'extendedProfile': false}).extendedProfile,
+        isFalse,
+      );
+      // A server that predates the field has no extended profile.
+      expect(
+        Capabilities.fromMap(const {'creditSystem': true}).extendedProfile,
+        isFalse,
+      );
+      expect(const Capabilities().extendedProfile, isFalse);
+    });
+
+    test('Issue 66: extendedProfile round-trips, takes part in equality and '
+        'copyWith', () {
+      const on = Capabilities(extendedProfile: true);
+      expect(on.toMap()['extendedProfile'], isTrue);
+      expect(Capabilities.fromMap(on.toMap()), on);
+      expect(Capabilities.fromJson(on.toJson()), on);
+      expect(on, isNot(const Capabilities()));
+      expect(on.hashCode, const Capabilities(extendedProfile: true).hashCode);
+      expect(on.copyWith(extendedProfile: false), const Capabilities());
+      expect(const Capabilities().copyWith(extendedProfile: true), on);
+    });
+
+    test('Issue 66: applications reads the server value, absent is off', () {
+      expect(
+        Capabilities.fromMap(const {'applications': true}).applications,
+        isTrue,
+      );
+      expect(
+        Capabilities.fromMap(const {'applications': false}).applications,
+        isFalse,
+      );
+      // A server that predates the field has no applications.
+      expect(
+        Capabilities.fromMap(const {'creditSystem': true}).applications,
+        isFalse,
+      );
+      expect(const Capabilities().applications, isFalse);
+    });
+
+    test('Issue 66: applications round-trips, takes part in equality and '
+        'copyWith', () {
+      const on = Capabilities(applications: true);
+      expect(on.toMap()['applications'], isTrue);
+      expect(Capabilities.fromMap(on.toMap()), on);
+      expect(Capabilities.fromJson(on.toJson()), on);
+      expect(on, isNot(const Capabilities()));
+      expect(on.hashCode, const Capabilities(applications: true).hashCode);
+      expect(on.copyWith(applications: false), const Capabilities());
+      expect(const Capabilities().copyWith(applications: true), on);
+      expect(on.toString(), contains('applications: true'));
+    });
+
     test('Issue 15: endpoint', () {
       expect(const CapabilitiesEndpoints().capabilities, '/capabilities');
     });
@@ -119,6 +178,8 @@ void main() {
       'CREDIT_SYSTEM_DISABLED',
       'EVALUATIONS_DISABLED',
       'EVENT_MARKETING_DISABLED',
+      'EXTENDED_PROFILE_DISABLED',
+      'APPLICATIONS_DISABLED',
     ]) {
       test('Issue 15: 503 $code maps to ModuleDisabledException', () {
         final exc = mapHttpError(503, {

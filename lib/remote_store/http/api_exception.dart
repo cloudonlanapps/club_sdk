@@ -83,6 +83,15 @@ ServerException mapHttpError(
   if (code == SdkErrorCode.scheduleConflict) {
     return ScheduleConflictException.fromDetails(message, details);
   }
+  if (code == SdkErrorCode.invalidProfileOption) {
+    return InvalidProfileOptionException.fromDetails(message, details);
+  }
+  if (code == SdkErrorCode.applicationIncomplete) {
+    return ApplicationIncompleteException.fromDetails(message, details);
+  }
+  if (code == SdkErrorCode.applicationDoesNotFit) {
+    return ApplicationDoesNotFitException.fromDetails(message, details);
+  }
   if (statusCode == 503 && SdkErrorCode.moduleDisabledCodes.contains(code)) {
     return ModuleDisabledException(
       code: code,

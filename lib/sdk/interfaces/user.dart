@@ -1,6 +1,8 @@
 import '../models/address.dart';
 import '../models/gender.dart';
+import '../models/guardian.dart';
 import '../models/pagination.dart';
+import '../models/profile_options.dart';
 import '../models/user.dart';
 import '../models/user_counts.dart';
 
@@ -74,10 +76,23 @@ abstract interface class UserSource {
     bool isGuest = false,
   });
 
-  /// Update a user's profile. Uses ValueGetter pattern for nullable fields.
+  /// Update a user's profile. Uses ValueGetter pattern for nullable fields:
+  /// a getter that returns `null` clears the field, an omitted one leaves
+  /// it unchanged.
   ///
   /// Staff-listing curation (position, guest, hidden) is not a profile
   /// edit; it lives on `AdminSource` (club_server#332, #26).
+  ///
+  /// The extended profile (club_server#92, #66) — [clubDistrict],
+  /// [preferredPosition], [pastExperience], [nationality],
+  /// [preferredLanguage] and [guardian] — may be set by the user or an
+  /// admin, and by a user not yet approved on their own profile as long as
+  /// nothing else is sent (403 `ACCOUNT_NOT_ACTIVE` otherwise).
+  /// [preferredPosition] and [preferredLanguage] must be one of the club's
+  /// [getProfileOptions] when they change (422 `INVALID_PROFILE_OPTION`,
+  /// `InvalidProfileOptionException`). [membershipDateUtc] is an admin's
+  /// alone (403 `PROTECTED_FIELDS`) and must be a UTC midnight
+  /// (422 `INVALID_DOB_NOT_UTC_MIDNIGHT`).
   Future<UserPrivate> updateUser(
     String username, {
     String? email,
@@ -95,7 +110,30 @@ abstract interface class UserSource {
     Gender? Function()? gender,
     Address? Function()? address,
     bool? isPublicProfile,
+    String? Function()? clubDistrict,
+    String? Function()? preferredPosition,
+    String? Function()? pastExperience,
+    String? Function()? nationality,
+    String? Function()? preferredLanguage,
+    Guardian? Function()? guardian,
+    DateTime? Function()? membershipDateUtc,
   });
+
+  /// The club's profile options (club_server#92, #66): the positions and
+  /// languages a member picks from. Any signed-in user, approved or not;
+  /// empty until an admin writes them.
+  Future<ProfileOptions> getProfileOptions();
+
+  /// Replaces the club's profile options (admin) and returns what the
+  /// server stored. The write is audited.
+  ///
+  /// - 403 for anyone but an admin.
+  /// - 422 `VALIDATION_ERROR` for a document the server cannot use (two
+  ///   positions with one value, a language twice, a position without a
+  ///   label, an empty name).
+  /// - 503 `EXTENDED_PROFILE_DISABLED` (`ModuleDisabledException`) while
+  ///   `Capabilities.extendedProfile` is off.
+  Future<ProfileOptions> setProfileOptions(ProfileOptions options);
 
   /// Soft delete a user and return them as the server now holds them,
   /// with `deletedAtUtc` set (#53).

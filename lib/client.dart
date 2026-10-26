@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import 'sdk/interfaces/admin.dart';
+import 'sdk/interfaces/application.dart';
 import 'sdk/interfaces/attendance.dart';
 import 'sdk/interfaces/audit_log.dart';
 import 'sdk/interfaces/auth.dart';
@@ -81,6 +82,7 @@ class SecureClient {
     required this.evaluationMedia,
     required this.inquiries,
     required this.public,
+    required this.applications,
   });
 
   /// System preferences (super-admin).
@@ -181,4 +183,10 @@ class SecureClient {
   /// event catalogue, public venues, public marketing blocks, the club
   /// info document and the inquiry form.
   final PublicSource public;
+
+  /// Printable application forms (`/v1/applications`): templates an admin
+  /// writes and publishes, and each member's own form as a PDF. Optional
+  /// module: check `capabilities` first; off, every call throws
+  /// `ModuleDisabledException`.
+  final ApplicationSource applications;
 }

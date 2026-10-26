@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 
 import 'address.dart';
 import 'gender.dart';
+import 'guardian.dart';
 import 'public_profile.dart';
 import 'role.dart';
 
@@ -495,6 +496,13 @@ class UserPrivate extends UserInfo {
     this.gender,
     this.address,
     this.adminReviewNote,
+    this.clubDistrict,
+    this.preferredPosition,
+    this.pastExperience,
+    this.nationality,
+    this.preferredLanguage,
+    this.guardian,
+    this.membershipDateUtc,
   });
 
   /// Creates a UserPrivate with automatically computed displayName.
@@ -527,6 +535,13 @@ class UserPrivate extends UserInfo {
     Address? address,
     DateTime? deletedAtUtc,
     String? adminReviewNote,
+    String? clubDistrict,
+    String? preferredPosition,
+    String? pastExperience,
+    String? nationality,
+    String? preferredLanguage,
+    Guardian? guardian,
+    DateTime? membershipDateUtc,
   }) {
     return UserPrivate(
       publicId: publicId,
@@ -563,6 +578,13 @@ class UserPrivate extends UserInfo {
       address: address,
       deletedAtUtc: deletedAtUtc,
       adminReviewNote: adminReviewNote,
+      clubDistrict: clubDistrict,
+      preferredPosition: preferredPosition,
+      pastExperience: pastExperience,
+      nationality: nationality,
+      preferredLanguage: preferredLanguage,
+      guardian: guardian,
+      membershipDateUtc: membershipDateUtc,
     );
   }
 
@@ -614,6 +636,20 @@ class UserPrivate extends UserInfo {
           ? Address.fromMap(map['address'] as Map<String, dynamic>)
           : null,
       adminReviewNote: map['adminReviewNote'] as String?,
+      clubDistrict: map['clubDistrict'] as String?,
+      preferredPosition: map['preferredPosition'] as String?,
+      pastExperience: map['pastExperience'] as String?,
+      nationality: map['nationality'] as String?,
+      preferredLanguage: map['preferredLanguage'] as String?,
+      guardian: map['guardian'] != null
+          ? Guardian.fromMap(map['guardian'] as Map<String, dynamic>)
+          : null,
+      membershipDateUtc: map['membershipDateUtc'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['membershipDateUtc'] as int,
+              isUtc: true,
+            )
+          : null,
     );
   }
 
@@ -636,6 +672,35 @@ class UserPrivate extends UserInfo {
   /// not `registered`, or no active review row). Absent by design from the
   /// public [UserInfo] / list responses.
   final String? adminReviewNote;
+
+  // ── Extended profile (club_server#92, #66) ─────────────────────────────────
+  // Stored and returned whatever `Capabilities.extendedProfile` says; that
+  // flag only tells the app whether to show them. The member and admins
+  // see them; they are not on the public profile.
+
+  /// The member's club or district ("Club / District").
+  final String? clubDistrict;
+
+  /// One of the club's positions (`ProfileOptions.positions`), by value.
+  final String? preferredPosition;
+
+  /// The member's past experience, multi-line text.
+  final String? pastExperience;
+
+  /// The member's nationality.
+  final String? nationality;
+
+  /// One of the club's languages (`ProfileOptions.languages`), by name.
+  final String? preferredLanguage;
+
+  /// The member's parent or guardian, separate from [emergencyContact].
+  final Guardian? guardian;
+
+  /// The day the member joined, at UTC midnight. Written by an admin only
+  /// (403 `PROTECTED_FIELDS` otherwise); the server sets it to the approval
+  /// day when an admin approves a member who has none, and to the creation
+  /// day for an admin-created member. Null for anyone not yet approved.
+  final DateTime? membershipDateUtc;
 
   @override
   UserPrivate copyWith({
@@ -666,6 +731,13 @@ class UserPrivate extends UserInfo {
     Gender? Function()? gender,
     Address? Function()? address,
     String? Function()? adminReviewNote,
+    String? Function()? clubDistrict,
+    String? Function()? preferredPosition,
+    String? Function()? pastExperience,
+    String? Function()? nationality,
+    String? Function()? preferredLanguage,
+    Guardian? Function()? guardian,
+    DateTime? Function()? membershipDateUtc,
   }) {
     return UserPrivate(
       publicId: publicId ?? this.publicId,
@@ -703,6 +775,21 @@ class UserPrivate extends UserInfo {
       adminReviewNote: adminReviewNote != null
           ? adminReviewNote()
           : this.adminReviewNote,
+      clubDistrict: clubDistrict != null ? clubDistrict() : this.clubDistrict,
+      preferredPosition: preferredPosition != null
+          ? preferredPosition()
+          : this.preferredPosition,
+      pastExperience: pastExperience != null
+          ? pastExperience()
+          : this.pastExperience,
+      nationality: nationality != null ? nationality() : this.nationality,
+      preferredLanguage: preferredLanguage != null
+          ? preferredLanguage()
+          : this.preferredLanguage,
+      guardian: guardian != null ? guardian() : this.guardian,
+      membershipDateUtc: membershipDateUtc != null
+          ? membershipDateUtc()
+          : this.membershipDateUtc,
     );
   }
 
@@ -720,6 +807,13 @@ class UserPrivate extends UserInfo {
     map['gender'] = gender?.serverValue;
     map['address'] = address?.toMap();
     map['adminReviewNote'] = adminReviewNote;
+    map['clubDistrict'] = clubDistrict;
+    map['preferredPosition'] = preferredPosition;
+    map['pastExperience'] = pastExperience;
+    map['nationality'] = nationality;
+    map['preferredLanguage'] = preferredLanguage;
+    map['guardian'] = guardian?.toMap();
+    map['membershipDateUtc'] = membershipDateUtc?.millisecondsSinceEpoch;
     return map;
   }
 
@@ -748,7 +842,14 @@ class UserPrivate extends UserInfo {
         other.password == password &&
         other.gender == gender &&
         other.address == address &&
-        other.adminReviewNote == adminReviewNote;
+        other.adminReviewNote == adminReviewNote &&
+        other.clubDistrict == clubDistrict &&
+        other.preferredPosition == preferredPosition &&
+        other.pastExperience == pastExperience &&
+        other.nationality == nationality &&
+        other.preferredLanguage == preferredLanguage &&
+        other.guardian == guardian &&
+        other.membershipDateUtc == membershipDateUtc;
   }
 
   @override
@@ -764,5 +865,12 @@ class UserPrivate extends UserInfo {
       password.hashCode ^
       gender.hashCode ^
       address.hashCode ^
-      adminReviewNote.hashCode;
+      adminReviewNote.hashCode ^
+      clubDistrict.hashCode ^
+      preferredPosition.hashCode ^
+      pastExperience.hashCode ^
+      nationality.hashCode ^
+      preferredLanguage.hashCode ^
+      guardian.hashCode ^
+      membershipDateUtc.hashCode;
 }

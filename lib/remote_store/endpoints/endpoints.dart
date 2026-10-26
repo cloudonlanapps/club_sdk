@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import 'admin.dart';
+import 'application.dart';
 import 'attendance.dart';
 import 'audit_log.dart';
 import 'auth.dart';
@@ -29,6 +30,7 @@ class Endpoints {
   const Endpoints();
 
   AdminEndpoints get admin => const AdminEndpoints();
+  ApplicationEndpoints get applications => const ApplicationEndpoints();
   AuthEndpoints get auth => const AuthEndpoints();
   UserEndpoints get users => const UserEndpoints();
   EventEndpoints get events => const EventEndpoints();
