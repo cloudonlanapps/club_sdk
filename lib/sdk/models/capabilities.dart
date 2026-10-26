@@ -18,6 +18,7 @@ class Capabilities {
     this.eventMarketing = false,
     this.identityVerification = true,
     this.extendedProfile = false,
+    this.applications = false,
     this.defaultCountryCode,
   });
 
@@ -28,6 +29,7 @@ class Capabilities {
       eventMarketing: (map['eventMarketing'] as bool?) ?? false,
       identityVerification: (map['identityVerification'] as bool?) ?? true,
       extendedProfile: (map['extendedProfile'] as bool?) ?? false,
+      applications: (map['applications'] as bool?) ?? false,
       defaultCountryCode: map['defaultCountryCode'] as String?,
     );
   }
@@ -59,6 +61,13 @@ class Capabilities {
   /// 503 `EXTENDED_PROFILE_DISABLED`. Absent means off.
   final bool extendedProfile;
 
+  /// Printable application forms (club_server#93, #66). True only where
+  /// the deployment turns applications on **and** requires identity
+  /// verification; otherwise every `ApplicationSource` call throws
+  /// `ModuleDisabledException` (503 `APPLICATIONS_DISABLED`). Absent means
+  /// off.
+  final bool applications;
+
   /// The club's country calling code, one to three digits without `+`
   /// (club_server#15, #6), for completing a phone number typed without one.
   ///
@@ -71,6 +80,7 @@ class Capabilities {
     bool? eventMarketing,
     bool? identityVerification,
     bool? extendedProfile,
+    bool? applications,
     String? Function()? defaultCountryCode,
   }) {
     return Capabilities(
@@ -79,6 +89,7 @@ class Capabilities {
       eventMarketing: eventMarketing ?? this.eventMarketing,
       identityVerification: identityVerification ?? this.identityVerification,
       extendedProfile: extendedProfile ?? this.extendedProfile,
+      applications: applications ?? this.applications,
       defaultCountryCode: defaultCountryCode != null
           ? defaultCountryCode()
           : this.defaultCountryCode,
@@ -92,6 +103,7 @@ class Capabilities {
       'eventMarketing': eventMarketing,
       'identityVerification': identityVerification,
       'extendedProfile': extendedProfile,
+      'applications': applications,
       'defaultCountryCode': defaultCountryCode,
     };
   }
@@ -104,6 +116,7 @@ class Capabilities {
       'eventMarketing: $eventMarketing, '
       'identityVerification: $identityVerification, '
       'extendedProfile: $extendedProfile, '
+      'applications: $applications, '
       'defaultCountryCode: $defaultCountryCode)';
 
   @override
@@ -115,6 +128,7 @@ class Capabilities {
         other.eventMarketing == eventMarketing &&
         other.identityVerification == identityVerification &&
         other.extendedProfile == extendedProfile &&
+        other.applications == applications &&
         other.defaultCountryCode == defaultCountryCode;
   }
 
@@ -125,5 +139,6 @@ class Capabilities {
       eventMarketing.hashCode ^
       identityVerification.hashCode ^
       extendedProfile.hashCode ^
+      applications.hashCode ^
       defaultCountryCode.hashCode;
 }

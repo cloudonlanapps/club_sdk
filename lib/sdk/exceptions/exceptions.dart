@@ -196,9 +196,94 @@ class InvalidProfileOptionException extends ServerException {
       '$message';
 }
 
+/// The `details` object inside the server's error, where the application
+/// routers put their structured fields (`{"code", "message", "details"}`).
+Map<String, dynamic>? applicationErrorDetails(Map<String, dynamic>? details) {
+  final inner = details?['details'];
+  return inner is Map<String, dynamic> ? inner : null;
+}
+
+/// 422 `APPLICATION_INCOMPLETE`: saving an application template found a
+/// text the form needs missing, or without a print language
+/// (club_server#93, R9). The template stays a draft.
+///
+/// [missing] names each text (`title`, `declaration`, `formFooter`,
+/// `terms[1]`, …) and [language] the print language they lack.
+class ApplicationIncompleteException extends ServerException {
+  const ApplicationIncompleteException({
+    required super.message,
+    this.missing = const [],
+    this.language,
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationIncomplete);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `missing` and `language`.
+  factory ApplicationIncompleteException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    final inner = applicationErrorDetails(details);
+    final missing = inner?['missing'];
+    final language = inner?['language'];
+    return ApplicationIncompleteException(
+      message: message,
+      missing: missing is List
+          ? List<String>.unmodifiable(missing.whereType<String>())
+          : const [],
+      language: language is String ? language : null,
+      details: details,
+    );
+  }
+
+  /// The texts that are missing or lack [language].
+  final List<String> missing;
+
+  /// The print language they lack.
+  final String? language;
+
+  @override
+  String toString() =>
+      'ApplicationIncompleteException(missing: $missing, '
+      'language: $language): $message';
+}
+
+/// 422 `APPLICATION_DOES_NOT_FIT`: the member's details alone do not fit
+/// page 1 of the form, so the template cannot be saved (club_server#93,
+/// R17) — usually too many age categories. It stays a draft.
+class ApplicationDoesNotFitException extends ServerException {
+  const ApplicationDoesNotFitException({
+    required super.message,
+    this.overflowPt,
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationDoesNotFit);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `overflowPt`.
+  factory ApplicationDoesNotFitException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    final overflow = applicationErrorDetails(details)?['overflowPt'];
+    return ApplicationDoesNotFitException(
+      message: message,
+      overflowPt: overflow is num ? overflow.toDouble() : null,
+      details: details,
+    );
+  }
+
+  /// How far page 1 overflows, in points.
+  final double? overflowPt;
+
+  @override
+  String toString() =>
+      'ApplicationDoesNotFitException(overflowPt: $overflowPt): $message';
+}
+
 /// 503 from an optional module that is off on this deployment
 /// (`CREDIT_SYSTEM_DISABLED`, `EVALUATIONS_DISABLED`,
-/// `EVENT_MARKETING_DISABLED`, `EXTENDED_PROFILE_DISABLED`).
+/// `EVENT_MARKETING_DISABLED`, `EXTENDED_PROFILE_DISABLED`,
+/// `APPLICATIONS_DISABLED`).
 ///
 /// Every module route stays registered on every deployment, so this is how
 /// a call into an absent module fails. Apps should not reach it: read
