@@ -59,6 +59,13 @@ abstract final class SdkErrorCode {
   // ═══════════════════════════════════════════════════════════════════════════
   static const insufficientPermission = 'INSUFFICIENT_PERMISSION';
   static const superAdminProtection = 'SUPER_ADMIN_PROTECTION';
+  // A profile edit sending a field only an admin may set; `details['fields']`
+  // names them (e.g. `membershipDateUtc`, club_server#92, #66).
+  static const protectedFields = 'PROTECTED_FIELDS';
+  // A user not yet approved calling what only an active user may; on a
+  // profile edit, anything other than their own extended fields
+  // (club_server#92, #66).
+  static const accountNotActive = 'ACCOUNT_NOT_ACTIVE';
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 404 Not Found
@@ -145,6 +152,10 @@ abstract final class SdkErrorCode {
   // 422 Unprocessable Entity
   // ═══════════════════════════════════════════════════════════════════════════
   static const invalidState = 'INVALID_STATE';
+  // A `preferredPosition` or `preferredLanguage` that is not one of the
+  // club's profile options (club_server#92, #66); mapped to
+  // `InvalidProfileOptionException`.
+  static const invalidProfileOption = 'INVALID_PROFILE_OPTION';
   // Audit-log read with only one of resource_type and resource_id: they
   // come together (#35).
   static const invalidResourceScope = 'INVALID_RESOURCE_SCOPE';
@@ -285,6 +296,10 @@ abstract final class SdkErrorCode {
   static const creditSystemDisabled = 'CREDIT_SYSTEM_DISABLED';
   static const evaluationsDisabled = 'EVALUATIONS_DISABLED';
   static const eventMarketingDisabled = 'EVENT_MARKETING_DISABLED';
+  // Writing the profile options while the extended profile is off
+  // (club_server#92, #66). The profile fields themselves are stored either
+  // way.
+  static const extendedProfileDisabled = 'EXTENDED_PROFILE_DISABLED';
 
   // Media encryption has no key configured on this deployment.
   static const encryptionNotConfigured = 'ENCRYPTION_NOT_CONFIGURED';
@@ -294,6 +309,7 @@ abstract final class SdkErrorCode {
     creditSystemDisabled,
     evaluationsDisabled,
     eventMarketingDisabled,
+    extendedProfileDisabled,
   };
 
   // ═══════════════════════════════════════════════════════════════════════════

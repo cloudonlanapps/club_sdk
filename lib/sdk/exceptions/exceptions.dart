@@ -153,9 +153,52 @@ class ScheduleConflictException extends ServerException {
   String toString() => 'ScheduleConflictException($report): $message';
 }
 
+/// 422 `INVALID_PROFILE_OPTION`: a profile edit set `preferredPosition` or
+/// `preferredLanguage` to a value that is not one of the club's profile
+/// options (club_server#92, #66). Nothing was written.
+///
+/// [field] is the server's name of the refused field and [value] what was
+/// sent. A value already stored is never refused, even when its option has
+/// since been removed.
+class InvalidProfileOptionException extends ServerException {
+  const InvalidProfileOptionException({
+    required super.message,
+    this.field,
+    this.value,
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.invalidProfileOption);
+
+  /// Builds from the server's error object (`detail`), whose extra fields
+  /// are `field` and `value`.
+  factory InvalidProfileOptionException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    final field = details?['field'];
+    final value = details?['value'];
+    return InvalidProfileOptionException(
+      message: message,
+      field: field is String ? field : null,
+      value: value is String ? value : null,
+      details: details,
+    );
+  }
+
+  /// The refused field (`preferredPosition` or `preferredLanguage`).
+  final String? field;
+
+  /// The value that was sent.
+  final String? value;
+
+  @override
+  String toString() =>
+      'InvalidProfileOptionException(field: $field, value: $value): '
+      '$message';
+}
+
 /// 503 from an optional module that is off on this deployment
 /// (`CREDIT_SYSTEM_DISABLED`, `EVALUATIONS_DISABLED`,
-/// `EVENT_MARKETING_DISABLED`).
+/// `EVENT_MARKETING_DISABLED`, `EXTENDED_PROFILE_DISABLED`).
 ///
 /// Every module route stays registered on every deployment, so this is how
 /// a call into an absent module fails. Apps should not reach it: read

@@ -27,7 +27,7 @@ against a fresh server (see `CLAUDE.md`).
 | | # | Module | Interface | Description |
 |---|---|--------|-----------|-------------|
 | [x] | 1 | Authentication | `AuthSource` | Login, register, password reset, bootstrap super admin, token refresh |
-| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles |
+| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles, the extended profile and the club's profile options |
 | [ ] | 4 | Group Management | `GroupSource` | Create, update, delete groups and manage members |
 | [ ] | 5 | Guardian Management | `GuardianSource` | Guardian-dependent relationships, guardian limits |
 | [ ] | 6 | Venue Management | `VenueSource` | CRUD, capacity management, active venue listing |

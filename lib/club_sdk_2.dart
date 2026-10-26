@@ -10,6 +10,7 @@ export 'client.dart' show SecureClient;
 export 'sdk/exceptions/error_codes.dart' show SdkErrorCode;
 export 'sdk/exceptions/exceptions.dart'
     show
+        InvalidProfileOptionException,
         ModuleDisabledException,
         ScheduleConflictException,
         SdkError,
@@ -137,6 +138,7 @@ export 'sdk/models/gender.dart' show Gender;
 export 'sdk/models/group.dart' show Group;
 export 'sdk/models/group_kind.dart' show GroupKind;
 export 'sdk/models/group_member.dart' show GroupMember;
+export 'sdk/models/guardian.dart' show Guardian;
 export 'sdk/models/inquiry.dart' show Inquiry;
 export 'sdk/models/inquiry_kind.dart' show InquiryKind;
 export 'sdk/models/join_request.dart' show JoinRequest, JoinRequestStatus;
@@ -167,6 +169,8 @@ export 'sdk/models/occurrence.dart' show Occurrence;
 export 'sdk/models/occurrence_override.dart' show OccurrenceOverride;
 export 'sdk/models/package_offer.dart' show PackageOffer;
 export 'sdk/models/pagination.dart' show PaginatedList;
+export 'sdk/models/profile_options.dart' show ProfileOptions;
+export 'sdk/models/profile_position.dart' show ProfilePosition;
 export 'sdk/models/promotional_offer.dart' show PromotionalOffer;
 export 'sdk/models/public_club_info.dart' show PublicClubInfo;
 export 'sdk/models/public_event.dart' show PublicEvent;

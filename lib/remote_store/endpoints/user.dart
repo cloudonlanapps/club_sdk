@@ -24,6 +24,10 @@ class UserEndpoints {
   String transferSuperAdmin(String username) =>
       '/users/by_id/$username/transfer-superadmin';
   String hardDelete(String username) => '/users/by_id/$username/hard';
+
+  /// The club's profile options (club_server#92, #66): read by any
+  /// signed-in user, written by an admin.
+  String get profileOptions => '/system/preferences/profile_options';
   String adminResetPassword(String username) =>
       '/admin/reset-password/$username';
 }

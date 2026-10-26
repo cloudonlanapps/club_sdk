@@ -1,7 +1,9 @@
 import '../../sdk/interfaces/user.dart';
 import '../../sdk/models/address.dart';
 import '../../sdk/models/gender.dart';
+import '../../sdk/models/guardian.dart';
 import '../../sdk/models/pagination.dart';
+import '../../sdk/models/profile_options.dart';
 import '../../sdk/models/user.dart';
 import '../../sdk/models/user_counts.dart';
 import '../endpoints/endpoints.dart';
@@ -69,6 +71,21 @@ class RemoteUserSource implements UserSource {
   Future<UserCounts> getUserCounts() async {
     final response = await _store.get(endpoints.users.count);
     return UserCounts.fromMap(response);
+  }
+
+  @override
+  Future<ProfileOptions> getProfileOptions() async {
+    final response = await _store.get(endpoints.users.profileOptions);
+    return ProfileOptions.fromMap(response);
+  }
+
+  @override
+  Future<ProfileOptions> setProfileOptions(ProfileOptions options) async {
+    final response = await _store.put(
+      endpoints.users.profileOptions,
+      body: options.toMap(),
+    );
+    return ProfileOptions.fromMap(response);
   }
 
   @override
@@ -142,6 +159,13 @@ class RemoteUserSource implements UserSource {
     Gender? Function()? gender,
     Address? Function()? address,
     bool? isPublicProfile,
+    String? Function()? clubDistrict,
+    String? Function()? preferredPosition,
+    String? Function()? pastExperience,
+    String? Function()? nationality,
+    String? Function()? preferredLanguage,
+    Guardian? Function()? guardian,
+    DateTime? Function()? membershipDateUtc,
   }) async {
     final body = <String, dynamic>{
       'email': ?email,
@@ -188,6 +212,27 @@ class RemoteUserSource implements UserSource {
     if (address != null) {
       final a = address();
       body['address'] = a?.toMap();
+    }
+    if (clubDistrict != null) {
+      body['clubDistrict'] = clubDistrict();
+    }
+    if (preferredPosition != null) {
+      body['preferredPosition'] = preferredPosition();
+    }
+    if (pastExperience != null) {
+      body['pastExperience'] = pastExperience();
+    }
+    if (nationality != null) {
+      body['nationality'] = nationality();
+    }
+    if (preferredLanguage != null) {
+      body['preferredLanguage'] = preferredLanguage();
+    }
+    if (guardian != null) {
+      body['guardian'] = guardian()?.toMap();
+    }
+    if (membershipDateUtc != null) {
+      body['membershipDateUtc'] = membershipDateUtc()?.millisecondsSinceEpoch;
     }
 
     final response = await _store.patch(
