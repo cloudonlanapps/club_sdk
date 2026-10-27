@@ -13,10 +13,11 @@ import '../utils/test_client.dart';
 /// #93) — the club's profile options on a form, the guardian block and the
 /// layout's `spreadWithGuardian`, and the member's `membershipDateUtc`.
 ///
-/// Applications need identity verification; `sdk_test_server1.conf` turns both on
-/// together with `extended_profile_enabled`, which writing the profile
-/// options needs, and `sdk_test_server2.conf` turns all three off (#86). So
-/// every case runs on `just test` and skips on `just test-server2`.
+/// Applications need identity verification; `sdk_test_server1.conf` turns
+/// both on together with `extended_profile_enabled`, which writing the
+/// profile options needs, and `sdk_test_server2.conf` turns all three off
+/// (#86). So every case runs on `just test` and skips on
+/// `just test-server2`.
 ///
 /// The forms embed their fonts and print glyph ids, so no text can be read
 /// back from the bytes. A form is drawn deterministically, though: two
