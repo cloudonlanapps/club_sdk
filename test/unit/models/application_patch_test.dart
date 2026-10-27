@@ -15,13 +15,13 @@ void main() {
 
     test('Issue 66: sends only the fields given, a null getter as null', () {
       final patch = ApplicationPatch(
-        title: () => const ApplicationText.custom({'en': 'Season 2027'}),
+        title: () => const ApplicationText({'en': 'Season 2027'}),
         subtitle: () => null,
         facts: () => {'fee': const ApplicationFact.amount(500)},
         header: () => const [
           ApplicationHeaderItem.lines([
-            ApplicationText.fact('venue'),
-            ApplicationText.fact('phone'),
+            ApplicationText({'en': 'City Rink'}),
+            ApplicationText({'en': '98765 43210'}),
           ]),
         ],
         ageCategories: () => null,
@@ -38,8 +38,8 @@ void main() {
         },
         'header': [
           [
-            {'fact': 'venue'},
-            {'fact': 'phone'},
+            {'en': 'City Rink'},
+            {'en': '98765 43210'},
           ],
         ],
         'ageCategories': null,

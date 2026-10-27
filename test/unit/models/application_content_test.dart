@@ -21,19 +21,15 @@ void main() {
         'en': 'EXAMPLE CLUB',
         'mr': 'उदाहरण क्लब',
       });
-      expect(c.subtitle?.kind, ApplicationTextKind.fact);
-      expect(c.subtitle?.factName, 'camp');
-      expect(c.declaration?.kind, ApplicationTextKind.clause);
-      expect(c.declaration?.clauseId, 'declaration.trial');
-      expect(c.declaration?.args, isNull);
+      expect(c.subtitle?.texts['en'], '16–17 November 2026');
+      expect(c.declaration?.texts.keys, ['en', 'mr']);
       expect(c.header, hasLength(3));
       expect(c.header[0].isLines, isFalse);
       expect(c.header[1].isLines, isTrue);
-      expect(c.header[1].texts.map((t) => t.clauseId), [
-        'header.training_camp',
-        'header.matches',
+      expect(c.header[1].texts.map((t) => t.texts['en']), [
+        'Training camp: 16–17 November 2026',
+        'Matches: 19–21 November 2026',
       ]);
-      expect(c.header[1].texts.first.args, {'dates': 'camp'});
       expect(c.ageCategories[1].genders, [
         Gender.female,
         Gender.preferNotToSay,
@@ -41,12 +37,11 @@ void main() {
       expect(c.ageCategories[1].bornOnOrBeforeUtc, DateTime.utc(2013, 12, 31));
       expect(c.ageCategories[0].bornOnOrBeforeUtc, isNull);
       expect(c.ageCategories[0].genders, isNull);
-      expect(c.terms[1].clauseId, 'rule.matches');
-      expect(c.terms[2].isClause, isFalse);
-      expect(c.terms[2].heading?.texts?['en'], 'Kit');
-      expect(c.termsNotes[1].text?.clauseId, 'note.keys_to_success');
-      expect(c.termsNotes[1].attribution?.texts, {'en': '— Example Club'});
-      expect(c.termsNotes[2].attribution, isNull);
+      expect(c.terms[1].heading.texts['en'], 'Kit');
+      expect(c.terms[1].body.texts['mr'], 'स्वतःचे हेल्मेट आणा.');
+      expect(c.termsNotes[0].text.texts['en'], 'Follow the rules.');
+      expect(c.termsNotes[0].attribution?.texts, {'en': '— Example Club'});
+      expect(c.termsNotes[1].attribution, isNull);
       expect(c.labelOverrides['field.past_experience']?['mr'], 'पूर्व अनुभव');
     });
 
@@ -73,7 +68,7 @@ void main() {
     test('Issue 66: copyWith replaces one field and clears a text', () {
       final c = ApplicationContent.fromMap(applicationContentJson());
       final changed = c.copyWith(
-        title: () => const ApplicationText.custom({'en': 'Season 2027'}),
+        title: () => const ApplicationText({'en': 'Season 2027'}),
         subtitle: () => null,
       );
       expect(changed.title?.texts, {'en': 'Season 2027'});
@@ -84,57 +79,38 @@ void main() {
   });
 
   group('ApplicationText', () {
-    test('Issue 66: each kind writes its own shape', () {
-      expect(const ApplicationText.custom({'en': 'A', 'mr': 'अ'}).toMap(), {
+    test('Issue 76: a text is a language map and writes it back', () {
+      expect(const ApplicationText({'en': 'A', 'mr': 'अ'}).toMap(), {
         'en': 'A',
         'mr': 'अ',
       });
-      expect(const ApplicationText.clause('rule.fee').toMap(), {
-        'clause': 'rule.fee',
-      });
-      expect(
-        const ApplicationText.clause(
-          'rule.fee',
-          args: {'amount': 'fee'},
-        ).toMap(),
-        {
-          'clause': 'rule.fee',
-          'args': {'amount': 'fee'},
-        },
-      );
-      expect(const ApplicationText.fact('venue').toMap(), {'fact': 'venue'});
+      expect(ApplicationText.fromMap(const {'en': 'x'}).texts, {'en': 'x'});
+      expect(ApplicationText.fromWire(null), isNull);
+      expect(ApplicationText.fromWire('x'), isNull);
     });
 
-    test('Issue 66: fromMap tells the kinds apart', () {
+    test('Issue 76: fromMap keeps only string entries', () {
       expect(
-        ApplicationText.fromMap(const {'en': 'x'}).kind,
-        ApplicationTextKind.custom,
-      );
-      expect(
-        ApplicationText.fromMap(const {'clause': 'c'}).kind,
-        ApplicationTextKind.clause,
-      );
-      expect(
-        ApplicationText.fromMap(const {'fact': 'f'}).kind,
-        ApplicationTextKind.fact,
+        ApplicationText.fromMap(const {
+          'en': 'x',
+          'args': {'a': 'b'},
+        }).texts,
+        {'en': 'x'},
       );
     });
 
     test('Issue 66: equality compares the maps', () {
       expect(
-        const ApplicationText.clause('c', args: {'a': 'b'}),
-        ApplicationText.fromMap(const {
-          'clause': 'c',
-          'args': {'a': 'b'},
-        }),
+        const ApplicationText({'en': 'x'}),
+        ApplicationText.fromMap(const {'en': 'x'}),
       );
       expect(
-        const ApplicationText.custom({'en': 'x'}).hashCode,
+        const ApplicationText({'en': 'x'}).hashCode,
         ApplicationText.fromMap(const {'en': 'x'}).hashCode,
       );
       expect(
-        const ApplicationText.custom({'en': 'x'}),
-        isNot(const ApplicationText.custom({'en': 'y'})),
+        const ApplicationText({'en': 'x'}),
+        isNot(const ApplicationText({'en': 'y'})),
       );
     });
   });
@@ -247,55 +223,58 @@ void main() {
   group('ApplicationHeaderItem, ApplicationTerm, ApplicationTermsNote', () {
     test('Issue 66: a header line of one text stays a list', () {
       final item = ApplicationHeaderItem.fromWire(const [
-        {'fact': 'venue'},
+        {'en': 'City Rink'},
       ]);
       expect(item.isLines, isTrue);
       expect(item.toWire(), [
-        {'fact': 'venue'},
+        {'en': 'City Rink'},
       ]);
       expect(
-        ApplicationHeaderItem.fromWire(const {'fact': 'venue'}).toWire(),
-        {'fact': 'venue'},
+        ApplicationHeaderItem.fromWire(const {'en': 'City Rink'}).toWire(),
+        {'en': 'City Rink'},
       );
       expect(
         item,
         isNot(
-          const ApplicationHeaderItem.single(ApplicationText.fact('venue')),
+          const ApplicationHeaderItem.single(
+            ApplicationText({'en': 'City Rink'}),
+          ),
         ),
       );
     });
 
-    test('Issue 66: a term is a clause or a heading and a body', () {
-      expect(const ApplicationTerm.clause('rule.fee').toMap(), {
-        'clause': 'rule.fee',
+    test('Issue 76: a term is a heading and a body', () {
+      const term = ApplicationTerm(
+        heading: ApplicationText({'en': 'Kit'}),
+        body: ApplicationText({'en': 'Bring a helmet.'}),
+      );
+      expect(term.toMap(), {
+        'heading': {'en': 'Kit'},
+        'body': {'en': 'Bring a helmet.'},
       });
+      expect(ApplicationTerm.fromMap(term.toMap()), term);
       expect(
-        const ApplicationTerm.custom(
-          heading: ApplicationText.custom({'en': 'Kit'}),
-          body: ApplicationText.clause('rule.fee', args: {'amount': 'fee'}),
-        ).toMap(),
-        {
-          'heading': {'en': 'Kit'},
-          'body': {
-            'clause': 'rule.fee',
-            'args': {'amount': 'fee'},
-          },
-        },
+        ApplicationTerm.fromMap(term.toMap()).hashCode,
+        term.hashCode,
       );
     });
 
-    test('Issue 66: a note is a clause or a text with an attribution', () {
-      expect(const ApplicationTermsNote.clause('note.follow_rules').toMap(), {
-        'clause': 'note.follow_rules',
-      });
+    test('Issue 76: a note is a text with an optional attribution', () {
+      const note = ApplicationTermsNote(
+        text: ApplicationText({'en': 'Go'}),
+        attribution: ApplicationText({'en': '— Coach'}),
+      );
       expect(
-        const ApplicationTermsNote.custom(
-          text: ApplicationText.custom({'en': 'Go'}),
-        ).toMap(),
+        const ApplicationTermsNote(text: ApplicationText({'en': 'Go'})).toMap(),
         {
           'text': {'en': 'Go'},
         },
       );
+      expect(note.toMap(), {
+        'text': {'en': 'Go'},
+        'attribution': {'en': '— Coach'},
+      });
+      expect(ApplicationTermsNote.fromMap(note.toMap()), note);
     });
 
     test('Issue 66: an age category leaves out what it does not set', () {

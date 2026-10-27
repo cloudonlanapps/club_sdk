@@ -2,10 +2,10 @@
 ///
 /// [applicationContentJson] is the content an admin sends, in the shape of
 /// club_server's own `tests/application_helpers.py::template_body`: English
-/// and Marathi, every kind of fact, custom texts, clause references with
-/// and without arguments, fact references, a header line of two clauses, a
-/// custom term and a note with an attribution. It is fictional and
-/// club-neutral.
+/// and Marathi, every kind of fact (kept for the editor, never printed),
+/// printed texts as `{language: text}` only (club_server#107), a header
+/// line of two texts, terms with a heading and a body, and a note with an
+/// attribution. It is fictional and club-neutral.
 library;
 
 /// A calendar date as the API sends it: UTC midnight, in ms.
@@ -43,20 +43,20 @@ Map<String, dynamic> applicationContentJson() => <String, dynamic>{
     'en': 'Selection Trial — Registration Form',
     'mr': 'निवड चाचणी — नोंदणी अर्ज',
   },
-  'subtitle': {'fact': 'camp'},
+  'subtitle': {'en': '16–17 November 2026', 'mr': '16–17 नोव्हेंबर 2026'},
   'header': [
-    {'fact': 'venue'},
+    {'en': 'City Rink', 'mr': 'सिटी रिंक'},
     [
       {
-        'clause': 'header.training_camp',
-        'args': {'dates': 'camp'},
+        'en': 'Training camp: 16–17 November 2026',
+        'mr': 'प्रशिक्षण शिबिर: 16–17 नोव्हेंबर 2026',
       },
       {
-        'clause': 'header.matches',
-        'args': {'dates': 'matches'},
+        'en': 'Matches: 19–21 November 2026',
+        'mr': 'सामने: 19–21 नोव्हेंबर 2026',
       },
     ],
-    {'fact': 'phone'},
+    {'en': '98765 43210'},
   ],
   'ageCategories': [
     {
@@ -72,17 +72,22 @@ Map<String, dynamic> applicationContentJson() => <String, dynamic>{
   ],
   'selections': [
     {
-      'clause': 'selection.attend_training_camp',
-      'args': {'dates': 'camp'},
+      'en': 'I will attend the training camp on 16–17 November 2026.',
+      'mr': 'मी 16–17 नोव्हेंबर 2026 रोजीच्या प्रशिक्षण शिबिरास उपस्थित राहीन.',
     },
   ],
-  'declaration': {'clause': 'declaration.trial'},
+  'declaration': {
+    'en': 'I agree to abide by the rules of the trial.',
+    'mr': 'मी चाचणीचे नियम पाळण्यास सहमत आहे.',
+  },
   'formFooter': {'en': 'Play fair, play hard.', 'mr': 'खिलाडूवृत्तीने खेळा.'},
   'terms': [
-    {'clause': 'rule.identity_proof'},
     {
-      'clause': 'rule.matches',
-      'args': {'dates': 'matches', 'venue': 'venue'},
+      'heading': {'en': 'Identity proof', 'mr': 'ओळखपत्र'},
+      'body': {
+        'en': 'Bring a proof of identity.',
+        'mr': 'ओळखपत्र सोबत आणा.',
+      },
     },
     {
       'heading': {'en': 'Kit', 'mr': 'साहित्य'},
@@ -90,9 +95,8 @@ Map<String, dynamic> applicationContentJson() => <String, dynamic>{
     },
   ],
   'termsNotes': [
-    {'clause': 'note.follow_rules'},
     {
-      'text': {'clause': 'note.keys_to_success'},
+      'text': {'en': 'Follow the rules.', 'mr': 'नियम पाळा.'},
       'attribution': {'en': '— Example Club'},
     },
     {
@@ -119,6 +123,8 @@ Map<String, dynamic> applicationResponseJson({
     'name': 'one page',
     'spread': {'withGuardian': 3.25, 'withoutGuardian': 6.5},
   },
+  'fittingCategories': null,
+  'publishId': null,
   'createdBy': 'test_admin',
   'createdAtUtc': 1767225600000,
   'updatedAtUtc': 1767229200000,
@@ -142,6 +148,8 @@ Map<String, dynamic> emptyDraftResponseJson({int id = 8}) => <String, dynamic>{
   'id': id,
   'status': 'draft',
   'layout': null,
+  'fittingCategories': null,
+  'publishId': null,
   'createdBy': 'test_admin',
   'createdAtUtc': 1767225600000,
   'updatedAtUtc': 1767225600000,

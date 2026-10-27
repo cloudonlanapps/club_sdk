@@ -68,9 +68,10 @@ void main() {
     );
 
     // An English + Marathi selection trial, as an admin would build it:
-    // custom texts, clauses with every fact type, a fact on its own, a
-    // header line of two clauses, a custom rule and an attributed note.
-    // The footer line has no Marathi, so the first save is refused.
+    // every fact type (kept for the editor, never printed), printed texts
+    // as `{language: text}` (club_server#107), a header line of two
+    // texts, rules and an attributed note. The footer line has no Marathi,
+    // so the first save is refused.
     final content = ApplicationContent(
       languages: const ['en', 'mr'],
       facts: {
@@ -93,23 +94,31 @@ void main() {
         'fee': const ApplicationFact.amount(150000),
         'kinds': const ApplicationFact.choices(['on_ice', 'inline']),
       },
-      organisation: const ApplicationText.custom({
+      organisation: const ApplicationText({
         'en': 'EXAMPLE CLUB',
         'mr': 'उदाहरण क्लब',
       }),
-      title: const ApplicationText.custom({
+      title: const ApplicationText({
         'en': 'Selection Trial — Registration Form',
         'mr': 'निवड चाचणी — नोंदणी अर्ज',
       }),
-      subtitle: const ApplicationText.fact('camp'),
+      subtitle: const ApplicationText({
+        'en': '16–17 November 2026',
+        'mr': '16–17 नोव्हेंबर 2026',
+      }),
       header: const [
-        ApplicationHeaderItem.single(ApplicationText.fact('venue')),
+        ApplicationHeaderItem.single(
+          ApplicationText({'en': 'City Rink', 'mr': 'सिटी रिंक'}),
+        ),
         ApplicationHeaderItem.lines([
-          ApplicationText.clause(
-            'header.training_camp',
-            args: {'dates': 'camp'},
-          ),
-          ApplicationText.clause('header.matches', args: {'dates': 'matches'}),
+          ApplicationText({
+            'en': 'Training camp: 16–17 November 2026',
+            'mr': 'प्रशिक्षण शिबिर: 16–17 नोव्हेंबर 2026',
+          }),
+          ApplicationText({
+            'en': 'Matches: 19–21 November 2026',
+            'mr': 'सामने: 19–21 नोव्हेंबर 2026',
+          }),
         ]),
       ],
       ageCategories: [
@@ -124,38 +133,52 @@ void main() {
         ),
       ],
       selections: const [
-        ApplicationText.clause(
-          'selection.attend_practice',
-          args: {'dates': 'camp', 'kinds': 'kinds'},
-        ),
+        ApplicationText({
+          'en': 'I will attend the on-ice and inline practice.',
+          'mr': 'मी बर्फावरील आणि इनलाइन सरावास उपस्थित राहीन.',
+        }),
       ],
-      declaration: const ApplicationText.clause('declaration.trial'),
-      formFooter: const ApplicationText.custom({'en': 'Play fair.'}),
+      declaration: const ApplicationText({
+        'en': 'I agree to abide by the rules of the trial.',
+        'mr': 'मी चाचणीचे नियम पाळण्यास सहमत आहे.',
+      }),
+      formFooter: const ApplicationText({'en': 'Play fair.'}),
       terms: const [
-        ApplicationTerm.clause('rule.identity_proof'),
-        ApplicationTerm.clause('rule.fee', args: {'amount': 'fee'}),
-        ApplicationTerm.clause(
-          'rule.timely_arrival',
-          args: {
-            'city': 'city',
-            'arrive': 'arrive',
-            'report': 'report',
-            'report_time': 'reportTime',
-          },
+        ApplicationTerm(
+          heading: ApplicationText({'en': 'Identity proof', 'mr': 'ओळखपत्र'}),
+          body: ApplicationText({
+            'en': 'Bring a proof of identity.',
+            'mr': 'ओळखपत्र सोबत आणा.',
+          }),
         ),
-        ApplicationTerm.custom(
-          heading: ApplicationText.custom({'en': 'Kit', 'mr': 'साहित्य'}),
-          body: ApplicationText.custom({
+        ApplicationTerm(
+          heading: ApplicationText({'en': 'Fee', 'mr': 'शुल्क'}),
+          body: ApplicationText({
+            'en': 'A registration fee of ₹1,50,000 is payable.',
+            'mr': '₹1,50,000 नोंदणी शुल्क भरावे लागेल.',
+          }),
+        ),
+        ApplicationTerm(
+          heading: ApplicationText({'en': 'Kit', 'mr': 'साहित्य'}),
+          body: ApplicationText({
             'en': 'Bring your own helmet.',
             'mr': 'स्वतःचे हेल्मेट आणा.',
           }),
         ),
       ],
       termsNotes: const [
-        ApplicationTermsNote.clause('note.follow_rules'),
-        ApplicationTermsNote.custom(
-          text: ApplicationText.clause('note.keys_to_success'),
-          attribution: ApplicationText.custom({'en': '— Example Club'}),
+        ApplicationTermsNote(
+          text: ApplicationText({
+            'en': 'Follow the rules.',
+            'mr': 'नियम पाळा.',
+          }),
+        ),
+        ApplicationTermsNote(
+          text: ApplicationText({
+            'en': 'Discipline is the key to success.',
+            'mr': 'शिस्त हीच यशाची गुरुकिल्ली.',
+          }),
+          attribution: ApplicationText({'en': '— Example Club'}),
         ),
       ],
       labelOverrides: const {
@@ -166,7 +189,7 @@ void main() {
       },
     );
 
-    const footer = ApplicationText.custom({
+    const footer = ApplicationText({
       'en': 'Play fair.',
       'mr': 'खिलाडूवृत्तीने खेळा.',
     });
@@ -325,9 +348,16 @@ void main() {
       await expectLater(
         admin.applications.saveApplication(appId),
         throwsA(
-          isA<ApplicationIncompleteException>()
-              .having((e) => e.missing, 'missing', contains('formFooter'))
-              .having((e) => e.language, 'language', 'mr'),
+          isA<ApplicationIncompleteException>().having(
+            (e) => e.missing,
+            'missing',
+            contains(
+              const ApplicationMissingText(
+                field: 'formFooter',
+                languages: ['mr'],
+              ),
+            ),
+          ),
         ),
       );
       final read = await admin.applications.getApplication(appId);
@@ -373,26 +403,6 @@ void main() {
         ),
         refused(422, SdkErrorCode.invalidState),
       );
-    });
-
-    test('Issue 66: save refuses a reference to a fact the template does '
-        'not have', () async {
-      if (skipUnless(enabled: on, module: 'applications')) return;
-      final broken = await admin.applications.createApplication(
-        content.copyWith(
-          formFooter: () => footer,
-          subtitle: () => const ApplicationText.fact('nowhere'),
-        ),
-      );
-      await expectLater(
-        admin.applications.saveApplication(broken.id),
-        refused(422, SdkErrorCode.applicationInvalidReference),
-      );
-      expect(
-        (await admin.applications.getApplication(broken.id)).status,
-        ApplicationStatus.draft,
-      );
-      await admin.applications.deleteApplication(broken.id);
     });
 
     test('Issue 66: save refuses a form whose details overflow page 1, '
@@ -482,7 +492,12 @@ void main() {
       await attachIdentityDocument(newcomer, newcomerName);
       final offered = await newcomer.applications.listApplications();
       expect(offered.items.map((t) => t.id), contains(appId));
-      expect(await newcomer.applications.downloadOwnForm(appId), isPdf());
+      // Born 2016, female: she fits both categories, so she names one
+      // (club_server#108).
+      expect(
+        await newcomer.applications.downloadOwnForm(appId, category: 1),
+        isPdf(),
+      );
     });
 
     test("Issue 66: an admin downloads any member's form", () async {

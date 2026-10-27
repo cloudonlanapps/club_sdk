@@ -10,6 +10,8 @@ export 'client.dart' show SecureClient;
 export 'sdk/exceptions/error_codes.dart' show SdkErrorCode;
 export 'sdk/exceptions/exceptions.dart'
     show
+        ApplicationCategoryNotFittingException,
+        ApplicationCategoryRequiredException,
         ApplicationDoesNotFitException,
         ApplicationIncompleteException,
         InvalidProfileOptionException,
@@ -69,16 +71,17 @@ export 'sdk/models/application_clause_library.dart'
 export 'sdk/models/application_content.dart' show ApplicationContent;
 export 'sdk/models/application_fact.dart' show ApplicationFact;
 export 'sdk/models/application_fact_type.dart' show ApplicationFactType;
+export 'sdk/models/application_filled_clause.dart' show ApplicationFilledClause;
 export 'sdk/models/application_header_item.dart' show ApplicationHeaderItem;
 export 'sdk/models/application_labels.dart' show ApplicationLabels;
 export 'sdk/models/application_layout.dart' show ApplicationLayout;
+export 'sdk/models/application_missing_text.dart' show ApplicationMissingText;
 export 'sdk/models/application_patch.dart' show ApplicationPatch;
 export 'sdk/models/application_status.dart' show ApplicationStatus;
 export 'sdk/models/application_template.dart' show ApplicationTemplate;
 export 'sdk/models/application_term.dart' show ApplicationTerm;
 export 'sdk/models/application_terms_note.dart' show ApplicationTermsNote;
 export 'sdk/models/application_text.dart' show ApplicationText;
-export 'sdk/models/application_text_kind.dart' show ApplicationTextKind;
 export 'sdk/models/attendance.dart' show AttendanceRecord, AttendanceStats;
 export 'sdk/models/attendance_mark_record.dart' show AttendanceMarkRecord;
 export 'sdk/models/attendance_mark_report.dart' show AttendanceMarkReport;

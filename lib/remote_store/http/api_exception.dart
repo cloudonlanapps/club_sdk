@@ -89,6 +89,15 @@ ServerException mapHttpError(
   if (code == SdkErrorCode.applicationIncomplete) {
     return ApplicationIncompleteException.fromDetails(message, details);
   }
+  if (code == SdkErrorCode.applicationCategoryRequired) {
+    return ApplicationCategoryRequiredException.fromDetails(message, details);
+  }
+  if (code == SdkErrorCode.applicationCategoryNotFitting) {
+    return ApplicationCategoryNotFittingException.fromDetails(
+      message,
+      details,
+    );
+  }
   if (code == SdkErrorCode.applicationDoesNotFit) {
     return ApplicationDoesNotFitException.fromDetails(message, details);
   }

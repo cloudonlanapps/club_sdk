@@ -1,53 +1,22 @@
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import 'application_text_kind.dart';
-
-/// One printed text of an application template (club_server#93, R6): a
-/// custom text per language, a library clause whose gaps name the
-/// template's facts, or a fact on its own ([kind]).
+/// One printed text of an application template: the text in each language,
+/// `{"en": "…", "mr": "…"}` (club_server#93, R6; #107).
 ///
-/// [toMap] writes the shape `fromMap` read, so a text reads back as it was
-/// sent: `{"en": "…", "mr": "…"}`, `{"clause": "rule.matches", "args":
-/// {"dates": "matches"}}` (no `args` when there are none) or
-/// `{"fact": "venue"}`.
+/// A template's printed texts are custom text only: the server refuses a
+/// `{"clause": …}` or `{"fact": …}` reference with 422. To print a library
+/// clause, fill it with `ApplicationSource.fillClause` and insert the
+/// result's [ApplicationText].
 @immutable
 class ApplicationText {
-  /// A text written for this template, keyed by language code.
-  const ApplicationText.custom(Map<String, String> this.texts)
-    : kind = ApplicationTextKind.custom,
-      clauseId = null,
-      args = null,
-      factName = null;
+  /// The text keyed by language code.
+  const ApplicationText(this.texts);
 
-  /// The library clause [clauseId]; [args] names a fact for each gap.
-  const ApplicationText.clause(String this.clauseId, {this.args})
-    : kind = ApplicationTextKind.clause,
-      texts = null,
-      factName = null;
-
-  /// The fact [factName], printed on its own.
-  const ApplicationText.fact(String this.factName)
-    : kind = ApplicationTextKind.fact,
-      texts = null,
-      clauseId = null,
-      args = null;
-
-  /// Reads any of the three shapes: a `clause` key makes a clause, a
-  /// `fact` key a fact, anything else a custom text.
-  factory ApplicationText.fromMap(Map<String, dynamic> map) {
-    final clause = map['clause'];
-    if (clause is String) {
-      final args = map['args'];
-      return ApplicationText.clause(
-        clause,
-        args: args is Map ? stringMap(args) : null,
-      );
-    }
-    final fact = map['fact'];
-    if (fact is String) return ApplicationText.fact(fact);
-    return ApplicationText.custom(stringMap(map));
-  }
+  /// Reads `{language: text}`; an entry whose value is not a string is
+  /// skipped.
+  factory ApplicationText.fromMap(Map<String, dynamic> map) =>
+      ApplicationText(stringMap(map));
 
   /// Reads a text, or returns null for a null or non-map value.
   static ApplicationText? fromWire(Object? value) => value is Map
@@ -61,39 +30,20 @@ class ApplicationText {
         e.key as String: e.value as String,
   };
 
-  /// Which shape this text is.
-  final ApplicationTextKind kind;
+  /// Language code → text.
+  final Map<String, String> texts;
 
-  /// A custom text's language → text.
-  final Map<String, String>? texts;
-
-  /// A clause's id in the library (`rule.matches`).
-  final String? clauseId;
-
-  /// A clause's gap → fact name; null when it was sent without `args`.
-  final Map<String, String>? args;
-
-  /// A fact reference's fact name.
-  final String? factName;
-
-  Map<String, dynamic> toMap() => switch (kind) {
-    ApplicationTextKind.custom => {...?texts},
-    ApplicationTextKind.clause => {
-      'clause': clauseId,
-      if (args != null) 'args': {...?args},
-    },
-    ApplicationTextKind.fact => {'fact': factName},
-  };
+  Map<String, dynamic> toMap() => {...texts};
 
   @override
-  String toString() => 'ApplicationText(${toMap()})';
+  String toString() => 'ApplicationText($texts)';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ApplicationText &&
-          const DeepCollectionEquality().equals(other.toMap(), toMap());
+          const MapEquality<String, String>().equals(other.texts, texts);
 
   @override
-  int get hashCode => const DeepCollectionEquality().hash(toMap());
+  int get hashCode => const MapEquality<String, String>().hash(texts);
 }

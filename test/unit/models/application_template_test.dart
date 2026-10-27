@@ -21,6 +21,52 @@ void main() {
       expect(t.updatedAtUtc, DateTime.utc(2026, 1, 1, 1));
     });
 
+    test("Issue 77: a member's read carries the categories they fit", () {
+      final t = ApplicationTemplate.fromMap({
+        ...applicationResponseJson(status: 'published'),
+        'fittingCategories': const [0, 1],
+      });
+      expect(t.fittingCategories, [0, 1]);
+      expect(t.toMap()['fittingCategories'], [0, 1]);
+      expect(
+        ApplicationTemplate.fromMap(
+          applicationResponseJson(),
+        ).fittingCategories,
+        isNull,
+      );
+      expect(t, isNot(ApplicationTemplate.fromMap(applicationResponseJson())));
+      expect(
+        t.copyWith(fittingCategories: () => null).fittingCategories,
+        isNull,
+      );
+      expect(t.toString(), contains('fittingCategories: [0, 1]'));
+    });
+
+    test('Issue 81: a published template carries its publishId', () {
+      const id = '3f2b9c1e-8a4d-4f6b-9e2a-1c5d7e9f0a1b';
+      final json = {
+        ...applicationResponseJson(status: 'published'),
+        'publishId': id,
+      };
+      final t = ApplicationTemplate.fromMap(json);
+      expect(t.publishId, id);
+      expect(t.toMap(), json);
+      expect(t.toString(), contains(id));
+      expect(t, isNot(t.copyWith(publishId: () => 'another')));
+      expect(t.copyWith(publishId: () => null).publishId, isNull);
+      expect(t.copyWith(), t);
+    });
+
+    test('Issue 81: a draft or saved template has no publishId', () {
+      expect(
+        ApplicationTemplate.fromMap(emptyDraftResponseJson()).publishId,
+        isNull,
+      );
+      final saved = ApplicationTemplate.fromMap(applicationResponseJson());
+      expect(saved.publishId, isNull);
+      expect(saved.toMap()['publishId'], isNull);
+    });
+
     test('Issue 66: toMap gives back exactly the JSON it was read from', () {
       final json = applicationResponseJson();
       expect(ApplicationTemplate.fromMap(json).toMap(), json);

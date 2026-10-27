@@ -5,8 +5,8 @@ import 'application_fact_type.dart';
 import 'application_labels.dart';
 
 /// One clause of the application clause library (club_server#93, R7): a
-/// sentence in every catalogue language with `{gap}`s a template fills
-/// with its facts.
+/// sentence in every catalogue language with `{gap}`s that
+/// `ApplicationSource.fillClause` fills with facts (#107).
 @immutable
 class ApplicationClause {
   const ApplicationClause({

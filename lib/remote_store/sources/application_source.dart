@@ -1,6 +1,8 @@
 import '../../sdk/interfaces/application.dart';
 import '../../sdk/models/application_clause_library.dart';
 import '../../sdk/models/application_content.dart';
+import '../../sdk/models/application_fact.dart';
+import '../../sdk/models/application_filled_clause.dart';
 import '../../sdk/models/application_labels.dart';
 import '../../sdk/models/application_patch.dart';
 import '../../sdk/models/application_status.dart';
@@ -90,13 +92,27 @@ class RemoteApplicationSource implements ApplicationSource {
   Future<List<int>> downloadPreview(int id) =>
       _store.downloadBytes(endpoints.applications.preview(id));
 
-  @override
-  Future<List<int>> downloadOwnForm(int id) =>
-      _store.downloadBytes(endpoints.applications.ownForm(id));
+  /// The `?category=` of a form download, when one is chosen.
+  static Map<String, String> categoryQuery(int? category) => {
+    'category': ?category?.toString(),
+  };
 
   @override
-  Future<List<int>> downloadMemberForm(int id, String username) =>
-      _store.downloadBytes(endpoints.applications.memberForm(id, username));
+  Future<List<int>> downloadOwnForm(int id, {int? category}) =>
+      _store.downloadBytes(
+        endpoints.applications.ownForm(id),
+        queryParams: categoryQuery(category),
+      );
+
+  @override
+  Future<List<int>> downloadMemberForm(
+    int id,
+    String username, {
+    int? category,
+  }) => _store.downloadBytes(
+    endpoints.applications.memberForm(id, username),
+    queryParams: categoryQuery(category),
+  );
 
   @override
   Future<ApplicationLabels> getLabels() async => ApplicationLabels.fromMap(
@@ -108,4 +124,18 @@ class RemoteApplicationSource implements ApplicationSource {
       ApplicationClauseLibrary.fromMap(
         await _store.get(endpoints.applications.clauses),
       );
+
+  @override
+  Future<ApplicationFilledClause> fillClause(
+    String clause, {
+    Map<String, ApplicationFact> facts = const {},
+  }) async => ApplicationFilledClause.fromMap(
+    await _store.post(
+      endpoints.applications.fillClause,
+      body: {
+        'clause': clause,
+        'facts': {for (final e in facts.entries) e.key: e.value.toMap()},
+      },
+    ),
+  );
 }

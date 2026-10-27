@@ -8,6 +8,7 @@
 /// string for display. See `SdkErrorCode` for all known code constants.
 library;
 
+import '../models/application_missing_text.dart';
 import '../models/conflict_report.dart';
 import 'error_codes.dart';
 
@@ -205,49 +206,122 @@ Map<String, dynamic>? applicationErrorDetails(Map<String, dynamic>? details) {
   return inner is Map<String, dynamic> ? inner : null;
 }
 
-/// 422 `APPLICATION_INCOMPLETE`: saving an application template found a
-/// text the form needs missing, or without a print language
-/// (club_server#93, R9). The template stays a draft.
+/// 422 `APPLICATION_INCOMPLETE`: saving an application template found
+/// texts the form needs missing, or without a print language
+/// (club_server#93, R9; #101). The template stays a draft.
 ///
-/// [missing] names each text (`title`, `declaration`, `formFooter`,
-/// `terms[1]`, …) and [language] the print language they lack.
+/// [missing] names each text by its API path (`title`, `formFooter`,
+/// `terms[1].heading`, …) with the print languages it lacks.
 class ApplicationIncompleteException extends ServerException {
   const ApplicationIncompleteException({
     required super.message,
     this.missing = const [],
-    this.language,
     super.details,
   }) : super(statusCode: 422, code: SdkErrorCode.applicationIncomplete);
 
   /// Builds from the server's error object, whose `details` carry
-  /// `missing` and `language`.
+  /// `missing: [{field, languages}]`. An entry of another shape is skipped.
   factory ApplicationIncompleteException.fromDetails(
     String message,
     Map<String, dynamic>? details,
   ) {
-    final inner = applicationErrorDetails(details);
-    final missing = inner?['missing'];
-    final language = inner?['language'];
+    final missing = applicationErrorDetails(details)?['missing'];
     return ApplicationIncompleteException(
       message: message,
       missing: missing is List
-          ? List<String>.unmodifiable(missing.whereType<String>())
+          ? List<ApplicationMissingText>.unmodifiable([
+              for (final m in missing)
+                if (m is Map<String, dynamic> && m['field'] is String)
+                  ApplicationMissingText.fromMap(m),
+            ])
           : const [],
-      language: language is String ? language : null,
       details: details,
     );
   }
 
-  /// The texts that are missing or lack [language].
-  final List<String> missing;
+  /// Each text missing print languages, with the languages it lacks.
+  final List<ApplicationMissingText> missing;
 
-  /// The print language they lack.
-  final String? language;
+  /// The API paths of the [missing] texts.
+  List<String> get fields => [for (final m in missing) m.field];
 
   @override
   String toString() =>
-      'ApplicationIncompleteException(missing: $missing, '
-      'language: $language): $message';
+      'ApplicationIncompleteException(missing: $missing): $message';
+}
+
+/// The `categories` of an application error's `details`: the indexes of
+/// the age categories the member fits (club_server#108). Empty when the
+/// server sent none.
+List<int> applicationErrorCategories(Map<String, dynamic>? details) {
+  final categories = applicationErrorDetails(details)?['categories'];
+  return categories is List
+      ? List<int>.unmodifiable(categories.whereType<int>())
+      : const [];
+}
+
+/// 422 `APPLICATION_CATEGORY_REQUIRED`: the member fits several age
+/// categories of the template and the download named none
+/// (club_server#108). Download again with one of [categories] as
+/// `category`.
+class ApplicationCategoryRequiredException extends ServerException {
+  const ApplicationCategoryRequiredException({
+    required super.message,
+    this.categories = const [],
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationCategoryRequired);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `categories`.
+  factory ApplicationCategoryRequiredException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) => ApplicationCategoryRequiredException(
+    message: message,
+    categories: applicationErrorCategories(details),
+    details: details,
+  );
+
+  /// The indexes of the age categories the member fits.
+  final List<int> categories;
+
+  @override
+  String toString() =>
+      'ApplicationCategoryRequiredException(categories: $categories): '
+      '$message';
+}
+
+/// 422 `APPLICATION_CATEGORY_NOT_FITTING`: the download named an age
+/// category the member does not fit (club_server#108). [categories] are
+/// the ones they do fit.
+class ApplicationCategoryNotFittingException extends ServerException {
+  const ApplicationCategoryNotFittingException({
+    required super.message,
+    this.categories = const [],
+    super.details,
+  }) : super(
+         statusCode: 422,
+         code: SdkErrorCode.applicationCategoryNotFitting,
+       );
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `categories`.
+  factory ApplicationCategoryNotFittingException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) => ApplicationCategoryNotFittingException(
+    message: message,
+    categories: applicationErrorCategories(details),
+    details: details,
+  );
+
+  /// The indexes of the age categories the member fits.
+  final List<int> categories;
+
+  @override
+  String toString() =>
+      'ApplicationCategoryNotFittingException(categories: $categories): '
+      '$message';
 }
 
 /// 422 `APPLICATION_DOES_NOT_FIT`: the member's details alone do not fit
