@@ -8,9 +8,8 @@ import '../utils/module_gate.dart';
 import '../utils/test_client.dart';
 
 /// Workflow 11: how every kind of account comes into being, on a stack with
-/// identity verification on (`just test` and `just test-modules`, #72) and
-/// one with it off (a conf with `identity_verification_required = false`,
-/// through `SDK_CONF`).
+/// identity verification on (`just test`, `sdk_test.conf`) and one with it
+/// off (`just test-modules`, `sdk_test_modules.conf`, #86).
 ///
 /// Accounts an admin creates never touch identity verification: they are
 /// `active` at once, on either stack, and ask no admin for approval

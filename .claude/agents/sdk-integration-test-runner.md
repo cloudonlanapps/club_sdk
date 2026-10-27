@@ -17,9 +17,10 @@ do not manage ports, stacks or cleanup.
 
 An optional integration-test file basename, e.g.
 `s01_authentication_test.dart`, and optionally "modules" for the stack with
-credits, evaluations, event marketing, the extended profile and applications
-on (`sdk_test_modules.conf`; `sdk_test.conf` has only applications on). No dart-test flags: the recipe
-fixes them (`-j 1 --timeout=600s`).
+credits, evaluations and event marketing on and identity verification, the
+extended profile and applications off (`sdk_test_modules.conf`);
+`sdk_test.conf` is the reverse. No dart-test flags: the recipe fixes them
+(`-j 1 --timeout=600s`).
 
 ## Protocol
 

@@ -13,10 +13,10 @@ import '../utils/test_client.dart';
 /// #93) — the club's profile options on a form, the guardian block and the
 /// layout's `spreadWithGuardian`, and the member's `membershipDateUtc`.
 ///
-/// Applications need identity verification, which both test confs turn on;
-/// writing the profile options needs `extended_profile_enabled`, on only in
-/// `sdk_test_modules.conf`. So the guardian and membership-date cases run on
-/// both stacks and the profile-options cases on the modules stack.
+/// Applications need identity verification; `sdk_test.conf` turns both on
+/// together with `extended_profile_enabled`, which writing the profile
+/// options needs, and `sdk_test_modules.conf` turns all three off (#86). So
+/// every case runs on `just test` and skips on `just test-modules`.
 ///
 /// The forms embed their fonts and print glyph ids, so no text can be read
 /// back from the bytes. A form is drawn deterministically, though: two
@@ -138,11 +138,14 @@ void main() {
       }
     });
 
-    test('Issue 72: applications are available on this stack', () async {
-      // Both confs turn applications on with identity verification, so
-      // neither stack may silently skip the cases below.
-      expect(capabilities.identityVerification, isTrue);
-      expect(capabilities.applications, isTrue);
+    test('Issue 72: applications and the extended profile are on or off '
+        'together on this stack', () async {
+      // Each conf turns them on or off together (#86), so no stack runs
+      // only half of the cases below.
+      expect(capabilities.extendedProfile, capabilities.applications);
+      if (capabilities.applications) {
+        expect(capabilities.identityVerification, isTrue);
+      }
     });
 
     test('Issue 72: the saved layout leaves less spread with the guardian '
