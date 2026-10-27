@@ -16,7 +16,7 @@ import '../utils/test_client.dart';
 /// Applications need identity verification, which both test confs turn on;
 /// writing the profile options needs `extended_profile_enabled`, on only in
 /// `sdk_test_modules.conf`. So the guardian and membership-date cases run on
-/// both stacks and the profile-options case on the modules stack.
+/// both stacks and the profile-options cases on the modules stack.
 ///
 /// The forms embed their fonts and print glyph ids, so no text can be read
 /// back from the bytes. A form is drawn deterministically, though: two
@@ -45,9 +45,9 @@ void main() {
     // save (a declaration and a footer line), so the form's page 1 is
     // mostly the member's details.
     const content = ApplicationContent(
-      title: ApplicationText.custom({'en': 'Issue 72 — Registration Form'}),
-      declaration: ApplicationText.custom({'en': 'I agree to the rules.'}),
-      formFooter: ApplicationText.custom({'en': 'Play fair.'}),
+      title: ApplicationText({'en': 'Issue 72 — Registration Form'}),
+      declaration: ApplicationText({'en': 'I agree to the rules.'}),
+      formFooter: ApplicationText({'en': 'Play fair.'}),
     );
 
     late SecureClient sudo;
@@ -56,8 +56,10 @@ void main() {
     late Capabilities capabilities;
     late ProfileOptions originalOptions;
 
-    // A published template saved while the club had no positions.
+    // A published template saved while the club had no positions, and one
+    // saved after the club's positions were written.
     late ApplicationTemplate published;
+    ApplicationTemplate? withPositions;
 
     Future<void> register(String username, DateTime born) => registerAndApprove(
       client: sudo,
@@ -79,8 +81,9 @@ void main() {
       return client;
     }
 
+    // Only the super admin writes the club's profile options.
     Future<void> writeOptions(ProfileOptions value) =>
-        sudo.admin.setPreference('profile_options', value.toMap());
+        sudo.users.setProfileOptions(value);
 
     // The form without the two entries that record when it was drawn.
     final drawnAt = RegExp(r'/CreationDate \([^)]*\)|/ID \[[^\]]*\]');
@@ -91,8 +94,10 @@ void main() {
       expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     }
 
-    Future<List<int>> ownForm() async {
-      final pdf = await member.applications.downloadOwnForm(published.id);
+    Future<List<int>> ownForm([ApplicationTemplate? of]) async {
+      final pdf = await member.applications.downloadOwnForm(
+        (of ?? published).id,
+      );
       expectPdf(pdf);
       return pdf;
     }
@@ -255,7 +260,39 @@ void main() {
 
       // The template published before the positions keeps its frozen copy.
       expect(drawing(await ownForm()) == drawing(formBefore), isTrue);
-      await admin.applications.deleteApplication(draft.id);
+      withPositions = await admin.applications.publishApplication(draft.id);
     });
+
+    test(
+      "Issue 72: a member's preferred position is ticked on their form",
+      () async {
+        if (skipUnless(
+              enabled: capabilities.applications,
+              module: 'applications',
+            ) ||
+            skipUnless(
+              enabled: capabilities.extendedProfile,
+              module: 'extended profile',
+            )) {
+          return;
+        }
+        final template = withPositions;
+        expect(template, isNotNull, reason: 'published by the case above');
+        final before = await ownForm(template);
+
+        final picked = await member.users.updateUser(
+          memberName,
+          preferredPositions: const ['Forward'],
+        );
+        expect(picked.preferredPositions, ['Forward']);
+        final ticked = await ownForm(template);
+        expect(drawing(ticked), isNot(drawing(before)));
+        // The template without positions has no row to tick.
+        final plain = await ownForm();
+        await member.users.updateUser(memberName, preferredPositions: const []);
+        expect(drawing(await ownForm()) == drawing(plain), isTrue);
+        expect(drawing(await ownForm(template)) == drawing(before), isTrue);
+      },
+    );
   });
 }
