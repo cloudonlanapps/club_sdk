@@ -22,12 +22,12 @@ import '../models/pagination.dart';
 /// Who may call what: writing, the moves, [duplicateApplication],
 /// [downloadPreview], [downloadBlankForm], [downloadMemberForm],
 /// [getLabels], [getClauses] and the club library ([listLibraryTexts] …
-/// [deleteLibraryText]) are an admin's (403 otherwise; 401 signed out). [listApplications],
-/// [getApplication] and [downloadOwnForm] are any signed-in user's —
-/// `registered`, `pending` or approved. A member sees the published
-/// templates only, and only once they have uploaded an identity document:
-/// before that the list is empty, and a read or a form is 422
-/// `IDENTITY_DOCUMENT_REQUIRED`.
+/// [deleteLibraryText]) are an admin's (403 otherwise; 401 signed out).
+/// [listApplications], [getApplication] and [downloadOwnForm] are any
+/// signed-in user's — `registered`, `pending` or approved. A member sees
+/// the published templates only, and only once they have uploaded an
+/// identity document: before that the list is empty, and a read or a form
+/// is 422 `IDENTITY_DOCUMENT_REQUIRED`.
 /// A template a member may not see is 404 `APPLICATION_NOT_FOUND`.
 ///
 /// A PDF is the form's bytes (`application/pdf`); the server names it
@@ -99,7 +99,7 @@ abstract interface class ApplicationSource {
   /// Saved or published template [id]'s form with no member in it and no
   /// watermark: every label, box and tick box, for filling in by hand
   /// (club_server#129). A published template's is the drawing stored when
-  /// it was published, with its side mark "Form <publishId>"; a saved
+  /// it was published, with its side mark `Form <publishId>`; a saved
   /// one's is drawn on request, with no publish mark. The server names it
   /// `application-<id>-blank.pdf`.
   ///
