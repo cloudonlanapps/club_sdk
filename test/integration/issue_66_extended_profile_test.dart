@@ -217,19 +217,52 @@ void main() {
     );
 
     test(
-      'Issue 66: a user not yet approved may not send anything else',
+      'Issue 88: a user not yet approved saves their own bio and phone',
       () async {
+        final updated = await newcomer.users.updateUser(
+          newcomerName,
+          bio: () => 'Hello',
+          phone: () => '0000000068',
+        );
+        expect(updated.status, isNot(UserStatus.active));
+        expect(updated.bio, 'Hello');
+        expect(updated.phone, '0000000068');
+        final me = await newcomer.auth.getCurrentUser();
+        expect(me.bio, 'Hello');
+        expect(me.phone, '0000000068');
+      },
+    );
+
+    test(
+      'Issue 88: a user not yet approved may not send their gender or date '
+      'of birth',
+      () async {
+        await expectLater(
+          newcomer.users.updateUser(newcomerName, gender: () => Gender.male),
+          refused(403, SdkErrorCode.protectedFields),
+        );
         await expectLater(
           newcomer.users.updateUser(
             newcomerName,
-            nationality: () => 'Indian',
-            bio: () => 'Hello',
+            dateOfBirthUtc: () => DateTime.utc(2012),
           ),
-          refused(403, SdkErrorCode.accountNotActive),
+          refused(403, SdkErrorCode.protectedFields),
         );
         final me = await newcomer.auth.getCurrentUser();
-        expect(me.nationality, isNull);
-        expect(me.bio, isNull);
+        expect(me.gender, Gender.female);
+        expect(me.dateOfBirthUtc, DateTime.utc(2011, 2, 3));
+      },
+    );
+
+    test(
+      "Issue 88: a user not yet approved may not edit another user's profile",
+      () async {
+        await expectLater(
+          newcomer.users.updateUser(otherName, bio: () => 'Hello'),
+          refused(403, SdkErrorCode.accountNotActive),
+        );
+        final other = await admin.users.getUserPrivate(otherName);
+        expect(other.bio, isNull);
       },
     );
 

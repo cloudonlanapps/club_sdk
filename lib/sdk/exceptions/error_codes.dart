@@ -63,8 +63,7 @@ abstract final class SdkErrorCode {
   // names them (e.g. `membershipDateUtc`, club_server#92, #66).
   static const protectedFields = 'PROTECTED_FIELDS';
   // A user not yet approved calling what only an active user may; on a
-  // profile edit, anything other than their own extended fields
-  // (club_server#92, #66).
+  // profile edit, another user's profile (club_server#123, #88).
   static const accountNotActive = 'ACCOUNT_NOT_ACTIVE';
 
   // ═══════════════════════════════════════════════════════════════════════════

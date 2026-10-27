@@ -86,8 +86,12 @@ abstract interface class UserSource {
   /// The extended profile (club_server#92, #66) — [clubDistrict],
   /// [preferredPositions], [pastExperience], [nationality],
   /// [preferredLanguages] and [guardian] — may be set by the user or an
-  /// admin, and by a user not yet approved on their own profile as long as
-  /// nothing else is sent (403 `ACCOUNT_NOT_ACTIVE` otherwise).
+  /// admin.
+  ///
+  /// A user not yet approved (`registered` or `pending`) may edit every
+  /// field of their own profile except [gender] and [dateOfBirthUtc], which
+  /// only an admin sets (403 `PROTECTED_FIELDS`); another user's profile is
+  /// 403 `ACCOUNT_NOT_ACTIVE` (club_server#123, #88).
   /// [preferredPositions] and [preferredLanguages] replace the member's
   /// whole list when sent; an empty list clears it, an omitted one leaves
   /// it unchanged (club_server#106, #75). A value listed twice is 422
