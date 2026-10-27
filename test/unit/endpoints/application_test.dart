@@ -26,6 +26,10 @@ void main() {
       expect(ep.memberForm(7, 'test_m1'), '/applications/7/form/test_m1');
     });
 
+    test('Issue 94: the blank form', () {
+      expect(ep.blankForm(7), '/applications/7/blank-form');
+    });
+
     test('Issue 66: the catalogues', () {
       expect(ep.labels, '/applications/labels');
       expect(ep.clauses, '/applications/clauses');

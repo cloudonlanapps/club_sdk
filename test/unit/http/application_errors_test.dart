@@ -203,6 +203,7 @@ void main() {
     for (final (status, code) in const [
       (404, 'APPLICATION_NOT_FOUND'),
       (422, 'APPLICATION_NOT_PUBLISHED'),
+      (422, 'APPLICATION_NOT_SAVED'),
       (422, 'APPLICATION_NOT_ELIGIBLE'),
       (422, 'APPLICATION_INVALID_REFERENCE'),
       (422, 'INVALID_TRANSITION'),
@@ -317,6 +318,10 @@ void main() {
       expect(exc.runtimeType, ServerException);
       expect(exc.statusCode, 404);
       expect(exc.code, SdkErrorCode.applicationLibraryTextNotFound);
+    });
+
+    test('Issue 94: APPLICATION_NOT_SAVED has its server spelling', () {
+      expect(SdkErrorCode.applicationNotSaved, 'APPLICATION_NOT_SAVED');
     });
 
     test('Issue 92: the codes have their server spelling', () {
