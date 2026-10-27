@@ -84,15 +84,19 @@ abstract interface class UserSource {
   /// edit; it lives on `AdminSource` (club_server#332, #26).
   ///
   /// The extended profile (club_server#92, #66) — [clubDistrict],
-  /// [preferredPosition], [pastExperience], [nationality],
-  /// [preferredLanguage] and [guardian] — may be set by the user or an
+  /// [preferredPositions], [pastExperience], [nationality],
+  /// [preferredLanguages] and [guardian] — may be set by the user or an
   /// admin, and by a user not yet approved on their own profile as long as
   /// nothing else is sent (403 `ACCOUNT_NOT_ACTIVE` otherwise).
-  /// [preferredPosition] and [preferredLanguage] must be one of the club's
-  /// [getProfileOptions] when they change (422 `INVALID_PROFILE_OPTION`,
-  /// `InvalidProfileOptionException`). [membershipDateUtc] is an admin's
-  /// alone (403 `PROTECTED_FIELDS`) and must be a UTC midnight
-  /// (422 `INVALID_DOB_NOT_UTC_MIDNIGHT`).
+  /// [preferredPositions] and [preferredLanguages] replace the member's
+  /// whole list when sent; an empty list clears it, an omitted one leaves
+  /// it unchanged (club_server#106, #75). A value listed twice is 422
+  /// `VALIDATION_ERROR`; each value the member does not already hold must
+  /// be one of the club's [getProfileOptions] (422
+  /// `INVALID_PROFILE_OPTION`, `InvalidProfileOptionException` naming
+  /// `preferredPositions` or `preferredLanguages` and the refused value).
+  /// [membershipDateUtc] is an admin's alone (403 `PROTECTED_FIELDS`) and
+  /// must be a UTC midnight (422 `INVALID_DOB_NOT_UTC_MIDNIGHT`).
   Future<UserPrivate> updateUser(
     String username, {
     String? email,
@@ -111,10 +115,10 @@ abstract interface class UserSource {
     Address? Function()? address,
     bool? isPublicProfile,
     String? Function()? clubDistrict,
-    String? Function()? preferredPosition,
+    List<String>? preferredPositions,
     String? Function()? pastExperience,
     String? Function()? nationality,
-    String? Function()? preferredLanguage,
+    List<String>? preferredLanguages,
     Guardian? Function()? guardian,
     DateTime? Function()? membershipDateUtc,
   });

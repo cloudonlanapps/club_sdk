@@ -160,10 +160,10 @@ class RemoteUserSource implements UserSource {
     Address? Function()? address,
     bool? isPublicProfile,
     String? Function()? clubDistrict,
-    String? Function()? preferredPosition,
+    List<String>? preferredPositions,
     String? Function()? pastExperience,
     String? Function()? nationality,
-    String? Function()? preferredLanguage,
+    List<String>? preferredLanguages,
     Guardian? Function()? guardian,
     DateTime? Function()? membershipDateUtc,
   }) async {
@@ -171,6 +171,8 @@ class RemoteUserSource implements UserSource {
       'email': ?email,
       'useNamePublicly': ?useNamePublicly,
       'isPublicProfile': ?isPublicProfile,
+      'preferredPositions': ?preferredPositions,
+      'preferredLanguages': ?preferredLanguages,
     };
 
     // Handle ValueGetter pattern for nullable fields
@@ -216,17 +218,11 @@ class RemoteUserSource implements UserSource {
     if (clubDistrict != null) {
       body['clubDistrict'] = clubDistrict();
     }
-    if (preferredPosition != null) {
-      body['preferredPosition'] = preferredPosition();
-    }
     if (pastExperience != null) {
       body['pastExperience'] = pastExperience();
     }
     if (nationality != null) {
       body['nationality'] = nationality();
-    }
-    if (preferredLanguage != null) {
-      body['preferredLanguage'] = preferredLanguage();
     }
     if (guardian != null) {
       body['guardian'] = guardian()?.toMap();

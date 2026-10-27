@@ -497,10 +497,10 @@ class UserPrivate extends UserInfo {
     this.address,
     this.adminReviewNote,
     this.clubDistrict,
-    this.preferredPosition,
+    this.preferredPositions = const [],
     this.pastExperience,
     this.nationality,
-    this.preferredLanguage,
+    this.preferredLanguages = const [],
     this.guardian,
     this.membershipDateUtc,
   });
@@ -536,10 +536,10 @@ class UserPrivate extends UserInfo {
     DateTime? deletedAtUtc,
     String? adminReviewNote,
     String? clubDistrict,
-    String? preferredPosition,
+    List<String> preferredPositions = const [],
     String? pastExperience,
     String? nationality,
-    String? preferredLanguage,
+    List<String> preferredLanguages = const [],
     Guardian? guardian,
     DateTime? membershipDateUtc,
   }) {
@@ -579,10 +579,10 @@ class UserPrivate extends UserInfo {
       deletedAtUtc: deletedAtUtc,
       adminReviewNote: adminReviewNote,
       clubDistrict: clubDistrict,
-      preferredPosition: preferredPosition,
+      preferredPositions: preferredPositions,
       pastExperience: pastExperience,
       nationality: nationality,
-      preferredLanguage: preferredLanguage,
+      preferredLanguages: preferredLanguages,
       guardian: guardian,
       membershipDateUtc: membershipDateUtc,
     );
@@ -637,10 +637,14 @@ class UserPrivate extends UserInfo {
           : null,
       adminReviewNote: map['adminReviewNote'] as String?,
       clubDistrict: map['clubDistrict'] as String?,
-      preferredPosition: map['preferredPosition'] as String?,
+      preferredPositions: List<String>.from(
+        map['preferredPositions'] as List? ?? const <String>[],
+      ),
       pastExperience: map['pastExperience'] as String?,
       nationality: map['nationality'] as String?,
-      preferredLanguage: map['preferredLanguage'] as String?,
+      preferredLanguages: List<String>.from(
+        map['preferredLanguages'] as List? ?? const <String>[],
+      ),
       guardian: map['guardian'] != null
           ? Guardian.fromMap(map['guardian'] as Map<String, dynamic>)
           : null,
@@ -681,8 +685,10 @@ class UserPrivate extends UserInfo {
   /// The member's club or district ("Club / District").
   final String? clubDistrict;
 
-  /// One of the club's positions (`ProfileOptions.positions`), by value.
-  final String? preferredPosition;
+  /// The member's positions, each one of the club's
+  /// (`ProfileOptions.positions`) by value, distinct; empty for none
+  /// (club_server#106, #75).
+  final List<String> preferredPositions;
 
   /// The member's past experience, multi-line text.
   final String? pastExperience;
@@ -690,8 +696,10 @@ class UserPrivate extends UserInfo {
   /// The member's nationality.
   final String? nationality;
 
-  /// One of the club's languages (`ProfileOptions.languages`), by name.
-  final String? preferredLanguage;
+  /// The member's languages, each one of the club's
+  /// (`ProfileOptions.languages`) by name, distinct; empty for none
+  /// (club_server#106, #75).
+  final List<String> preferredLanguages;
 
   /// The member's parent or guardian, separate from [emergencyContact].
   final Guardian? guardian;
@@ -732,10 +740,10 @@ class UserPrivate extends UserInfo {
     Address? Function()? address,
     String? Function()? adminReviewNote,
     String? Function()? clubDistrict,
-    String? Function()? preferredPosition,
+    List<String>? preferredPositions,
     String? Function()? pastExperience,
     String? Function()? nationality,
-    String? Function()? preferredLanguage,
+    List<String>? preferredLanguages,
     Guardian? Function()? guardian,
     DateTime? Function()? membershipDateUtc,
   }) {
@@ -776,16 +784,12 @@ class UserPrivate extends UserInfo {
           ? adminReviewNote()
           : this.adminReviewNote,
       clubDistrict: clubDistrict != null ? clubDistrict() : this.clubDistrict,
-      preferredPosition: preferredPosition != null
-          ? preferredPosition()
-          : this.preferredPosition,
+      preferredPositions: preferredPositions ?? this.preferredPositions,
       pastExperience: pastExperience != null
           ? pastExperience()
           : this.pastExperience,
       nationality: nationality != null ? nationality() : this.nationality,
-      preferredLanguage: preferredLanguage != null
-          ? preferredLanguage()
-          : this.preferredLanguage,
+      preferredLanguages: preferredLanguages ?? this.preferredLanguages,
       guardian: guardian != null ? guardian() : this.guardian,
       membershipDateUtc: membershipDateUtc != null
           ? membershipDateUtc()
@@ -808,10 +812,10 @@ class UserPrivate extends UserInfo {
     map['address'] = address?.toMap();
     map['adminReviewNote'] = adminReviewNote;
     map['clubDistrict'] = clubDistrict;
-    map['preferredPosition'] = preferredPosition;
+    map['preferredPositions'] = preferredPositions;
     map['pastExperience'] = pastExperience;
     map['nationality'] = nationality;
-    map['preferredLanguage'] = preferredLanguage;
+    map['preferredLanguages'] = preferredLanguages;
     map['guardian'] = guardian?.toMap();
     map['membershipDateUtc'] = membershipDateUtc?.millisecondsSinceEpoch;
     return map;
@@ -844,10 +848,16 @@ class UserPrivate extends UserInfo {
         other.address == address &&
         other.adminReviewNote == adminReviewNote &&
         other.clubDistrict == clubDistrict &&
-        other.preferredPosition == preferredPosition &&
+        const ListEquality<String>().equals(
+          other.preferredPositions,
+          preferredPositions,
+        ) &&
         other.pastExperience == pastExperience &&
         other.nationality == nationality &&
-        other.preferredLanguage == preferredLanguage &&
+        const ListEquality<String>().equals(
+          other.preferredLanguages,
+          preferredLanguages,
+        ) &&
         other.guardian == guardian &&
         other.membershipDateUtc == membershipDateUtc;
   }
@@ -867,10 +877,10 @@ class UserPrivate extends UserInfo {
       address.hashCode ^
       adminReviewNote.hashCode ^
       clubDistrict.hashCode ^
-      preferredPosition.hashCode ^
+      const ListEquality<String>().hash(preferredPositions) ^
       pastExperience.hashCode ^
       nationality.hashCode ^
-      preferredLanguage.hashCode ^
+      const ListEquality<String>().hash(preferredLanguages) ^
       guardian.hashCode ^
       membershipDateUtc.hashCode;
 }

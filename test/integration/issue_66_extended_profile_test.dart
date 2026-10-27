@@ -377,8 +377,8 @@ void main() {
       },
     );
 
-    test("Issue 66: a member picks a position and language from the club's "
-        'options', () async {
+    test('Issue 75: a member picks two positions and two languages from the '
+        'club options and reads them back as lists', () async {
       if (skipUnless(
         enabled: capabilities.extendedProfile,
         module: 'extended profile',
@@ -388,34 +388,89 @@ void main() {
       await sudo.users.setProfileOptions(options);
       final updated = await member.users.updateUser(
         memberName,
-        preferredPosition: () => 'Goalie',
-        preferredLanguage: () => 'Marathi',
+        preferredPositions: const ['Goalie', 'Forward'],
+        preferredLanguages: const ['Marathi', 'English'],
       );
-      expect(updated.preferredPosition, 'Goalie');
-      expect(updated.preferredLanguage, 'Marathi');
+      expect(updated.preferredPositions, ['Goalie', 'Forward']);
+      expect(updated.preferredLanguages, ['Marathi', 'English']);
       final me = await member.auth.getCurrentUser();
-      expect(me.preferredPosition, 'Goalie');
-      expect(me.preferredLanguage, 'Marathi');
+      expect(me.preferredPositions, ['Goalie', 'Forward']);
+      expect(me.preferredLanguages, ['Marathi', 'English']);
+      final seen = await admin.users.getUserPrivate(memberName);
+      expect(seen.preferredPositions, ['Goalie', 'Forward']);
+      expect(seen.preferredLanguages, ['Marathi', 'English']);
     });
 
-    test("Issue 66: a position that is not one of the club's options is "
-        'refused, naming the field', () async {
+    test('Issue 75: an empty list clears the preferred positions and '
+        'languages', () async {
+      if (skipUnless(
+        enabled: capabilities.extendedProfile,
+        module: 'extended profile',
+      )) {
+        return;
+      }
+      await sudo.users.setProfileOptions(options);
+      await member.users.updateUser(
+        memberName,
+        preferredPositions: const ['Goalie'],
+        preferredLanguages: const ['English'],
+      );
+      final cleared = await member.users.updateUser(
+        memberName,
+        preferredPositions: const [],
+        preferredLanguages: const [],
+      );
+      expect(cleared.preferredPositions, isEmpty);
+      expect(cleared.preferredLanguages, isEmpty);
+      final me = await member.auth.getCurrentUser();
+      expect(me.preferredPositions, isEmpty);
+      expect(me.preferredLanguages, isEmpty);
+    });
+
+    test('Issue 75: a value listed twice is refused', () async {
       await expectLater(
         member.users.updateUser(
           memberName,
-          preferredPosition: () => 'Striker',
+          preferredLanguages: const ['English', 'English'],
         ),
-        throwsA(
-          isA<InvalidProfileOptionException>()
-              .having((e) => e.statusCode, 'status', 422)
-              .having((e) => e.field, 'field', 'preferredPosition')
-              .having((e) => e.value, 'value', 'Striker'),
+        refused(422, SdkErrorCode.validationError),
+      );
+    });
+
+    test('Issue 75: a position or language that is not one of the club '
+        'options is refused, naming the field and the value', () async {
+      final before = await member.auth.getCurrentUser();
+      for (final (field, value, update) in [
+        (
+          'preferredPositions',
+          'Striker',
+          () => member.users.updateUser(
+            memberName,
+            preferredPositions: const ['Striker'],
+          ),
         ),
-      );
-      expect(
-        (await member.auth.getCurrentUser()).preferredPosition,
-        isNot('Striker'),
-      );
+        (
+          'preferredLanguages',
+          'Klingon',
+          () => member.users.updateUser(
+            memberName,
+            preferredLanguages: const ['Klingon'],
+          ),
+        ),
+      ]) {
+        await expectLater(
+          update(),
+          throwsA(
+            isA<InvalidProfileOptionException>()
+                .having((e) => e.statusCode, 'status', 422)
+                .having((e) => e.field, 'field', field)
+                .having((e) => e.value, 'value', value),
+          ),
+        );
+      }
+      final me = await member.auth.getCurrentUser();
+      expect(me.preferredPositions, before.preferredPositions);
+      expect(me.preferredLanguages, before.preferredLanguages);
     });
   });
 }

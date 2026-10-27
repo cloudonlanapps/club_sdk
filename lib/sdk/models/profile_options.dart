@@ -10,8 +10,8 @@ const _languagesEquality = ListEquality<String>();
 
 /// The club's profile options, the `profile_options` system preference
 /// (`/system/preferences/profile_options`, club_server#92, #66): the
-/// positions and languages a member chooses from for `preferredPosition`
-/// and `preferredLanguage`.
+/// positions and languages a member chooses from for `preferredPositions`
+/// and `preferredLanguages`.
 ///
 /// Any signed-in user may read it; both lists are empty until the super
 /// admin writes it (`PATCH /admin/preferences/profile_options`,

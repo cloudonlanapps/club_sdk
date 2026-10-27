@@ -153,9 +153,10 @@ class ScheduleConflictException extends ServerException {
   String toString() => 'ScheduleConflictException($report): $message';
 }
 
-/// 422 `INVALID_PROFILE_OPTION`: a profile edit set `preferredPosition` or
-/// `preferredLanguage` to a value that is not one of the club's profile
-/// options (club_server#92, #66). Nothing was written.
+/// 422 `INVALID_PROFILE_OPTION`: a profile edit put a value in
+/// `preferredPositions` or `preferredLanguages` that is not one of the
+/// club's profile options (club_server#92, #106, #66, #75). Nothing was
+/// written.
 ///
 /// [field] is the server's name of the refused field and [value] what was
 /// sent. A value already stored is never refused, even when its option has
@@ -184,10 +185,11 @@ class InvalidProfileOptionException extends ServerException {
     );
   }
 
-  /// The refused field (`preferredPosition` or `preferredLanguage`).
+  /// The refused field (`preferredPositions` or `preferredLanguages`).
   final String? field;
 
-  /// The value that was sent.
+  /// The refused value: the first entry of the list that is not one of the
+  /// club's options.
   final String? value;
 
   @override

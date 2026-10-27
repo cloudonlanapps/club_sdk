@@ -5,24 +5,29 @@ import 'package:test/test.dart';
 /// Issue 66: the error codes of the extended profile (club_server#92).
 void main() {
   group('Extended profile errors', () {
-    test('Issue 66: 422 INVALID_PROFILE_OPTION maps to '
-        'InvalidProfileOptionException naming the field and value', () {
-      final exc = mapHttpError(422, const {
-        'detail': {
-          'code': 'INVALID_PROFILE_OPTION',
-          'message': "'Striker' is not one of the club's options",
-          'field': 'preferredPosition',
-          'value': 'Striker',
-        },
+    for (final (field, value) in const [
+      ('preferredPositions', 'Striker'),
+      ('preferredLanguages', 'Klingon'),
+    ]) {
+      test('Issue 75: 422 INVALID_PROFILE_OPTION maps to '
+          'InvalidProfileOptionException naming $field and the value', () {
+        final exc = mapHttpError(422, {
+          'detail': {
+            'code': 'INVALID_PROFILE_OPTION',
+            'message': "'$value' is not one of the club's options",
+            'field': field,
+            'value': value,
+          },
+        });
+        expect(exc, isA<InvalidProfileOptionException>());
+        exc as InvalidProfileOptionException;
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.invalidProfileOption);
+        expect(exc.field, field);
+        expect(exc.value, value);
+        expect(exc.details, {'field': field, 'value': value});
       });
-      expect(exc, isA<InvalidProfileOptionException>());
-      exc as InvalidProfileOptionException;
-      expect(exc.statusCode, 422);
-      expect(exc.code, SdkErrorCode.invalidProfileOption);
-      expect(exc.field, 'preferredPosition');
-      expect(exc.value, 'Striker');
-      expect(exc.details, {'field': 'preferredPosition', 'value': 'Striker'});
-    });
+    }
 
     test('Issue 66: INVALID_PROFILE_OPTION without field or value still '
         'maps, with both null', () {

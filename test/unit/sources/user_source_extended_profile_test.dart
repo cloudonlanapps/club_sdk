@@ -60,10 +60,10 @@ void main() {
       await h.source.updateUser(
         'u1',
         clubDistrict: () => 'Pune District',
-        preferredPosition: () => 'Forward',
+        preferredPositions: const ['Forward', 'Goalie'],
         pastExperience: () => 'Two seasons.',
         nationality: () => 'Indian',
-        preferredLanguage: () => 'Marathi',
+        preferredLanguages: const ['Marathi', 'English'],
         guardian: () => const Guardian(name: 'Asha', relation: 'Mother'),
         membershipDateUtc: () => DateTime.utc(2024, 4),
       );
@@ -72,10 +72,10 @@ void main() {
       expect(request.url.path, '/v1/users/by_id/u1');
       expect(bodyOf(request), {
         'clubDistrict': 'Pune District',
-        'preferredPosition': 'Forward',
+        'preferredPositions': ['Forward', 'Goalie'],
         'pastExperience': 'Two seasons.',
         'nationality': 'Indian',
-        'preferredLanguage': 'Marathi',
+        'preferredLanguages': ['Marathi', 'English'],
         'guardian': {'name': 'Asha', 'relation': 'Mother', 'phone': null},
         'membershipDateUtc': DateTime.utc(2024, 4).millisecondsSinceEpoch,
       });
@@ -99,6 +99,20 @@ void main() {
       },
     );
 
+    test('Issue 75: an empty list clears the preferred positions and '
+        'languages', () async {
+      final h = harness();
+      await h.source.updateUser(
+        'u1',
+        preferredPositions: const [],
+        preferredLanguages: const [],
+      );
+      expect(bodyOf(h.requests.single), {
+        'preferredPositions': <String>[],
+        'preferredLanguages': <String>[],
+      });
+    });
+
     test('Issue 66: an omitted extended field is not sent', () async {
       final h = harness();
       await h.source.updateUser('u1', nationality: () => 'Indian');
@@ -109,16 +123,17 @@ void main() {
       final h = harness(
         body: {
           ...userResponse,
-          'preferredLanguage': 'Marathi',
+          'preferredLanguages': ['Marathi', 'English'],
           'guardian': {'name': 'Asha'},
           'membershipDateUtc': DateTime.utc(2024, 4).millisecondsSinceEpoch,
         },
       );
       final user = await h.source.updateUser(
         'u1',
-        preferredLanguage: () => 'Marathi',
+        preferredLanguages: const ['Marathi', 'English'],
       );
-      expect(user.preferredLanguage, 'Marathi');
+      expect(user.preferredLanguages, ['Marathi', 'English']);
+      expect(user.preferredPositions, isEmpty);
       expect(user.guardian, const Guardian(name: 'Asha'));
       expect(user.membershipDateUtc, DateTime.utc(2024, 4));
     });
