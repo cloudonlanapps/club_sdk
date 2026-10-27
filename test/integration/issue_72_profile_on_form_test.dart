@@ -40,7 +40,7 @@ void main() {
         ProfilePosition(value: 'Forward', label: {'en': 'Forward'}),
         ProfilePosition(value: 'Goalie', label: {'en': 'Goalie'}),
       ],
-      languages: ['English'],
+      languages: [ProfileLanguage(code: 'en', name: 'English')],
     );
     // Plain custom texts in English only: the least a template needs to
     // save (a declaration and a footer line), so the form's page 1 is

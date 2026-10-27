@@ -42,7 +42,10 @@ void main() {
         ),
         ProfilePosition(value: 'Goalie', label: {'en': 'Goalie'}),
       ],
-      languages: ['English', 'Marathi'],
+      languages: [
+        ProfileLanguage(code: 'en', name: 'English'),
+        ProfileLanguage(code: 'mr', name: 'Marathi'),
+      ],
     );
 
     Future<void> register(String username) => registerAndApprove(
@@ -404,7 +407,12 @@ void main() {
         }
         await expectLater(
           sudo.users.setProfileOptions(
-            const ProfileOptions(languages: ['English', 'English']),
+            const ProfileOptions(
+              languages: [
+                ProfileLanguage(code: 'en', name: 'English'),
+                ProfileLanguage(code: 'en', name: 'English'),
+              ],
+            ),
           ),
           refused(422, SdkErrorCode.invalidPreferenceValue),
         );

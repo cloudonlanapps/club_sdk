@@ -262,7 +262,8 @@ void main() {
     test('Issue 66: an admin reads the label catalogue', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final labels = await admin.applications.getLabels();
-      expect(labels.languages, containsAll(['en', 'mr', 'hi']));
+      // The club's languages (club_server#133): English is always one.
+      expect(labels.languages, contains('en'));
       expect(labels.labels, contains('field.past_experience'));
       for (final texts in labels.labels.values) {
         expect(texts.keys, containsAll(labels.languages));
@@ -272,14 +273,14 @@ void main() {
     test('Issue 66: an admin reads the clause library', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final library = await admin.applications.getClauses();
-      expect(library.languages, containsAll(['en', 'mr', 'hi']));
+      expect(library.languages, contains('en'));
       expect(library.choices.keys, containsAll(['on_ice', 'inline']));
-      final matches = library.builtinClause('rule.matches')!;
-      expect(matches.kind, ApplicationClauseKind.rule);
-      expect(matches.gaps, {
-        'dates': ApplicationFactType.dateRange,
-        'venue': ApplicationFactType.name,
-      });
+      // The built-in clauses are seeded into the club library
+      // (club_server#133), each keeping its key.
+      final matches = library.clauseWithKey('rule.matches');
+      expect(matches, isNotNull);
+      expect(matches!.kind, ApplicationClauseKind.rule);
+      expect(matches.text.texts['en'], contains('{venue}'));
       expect(matches.heading?.texts.keys, containsAll(library.languages));
       expect(
         library
