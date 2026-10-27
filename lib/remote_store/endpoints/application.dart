@@ -18,6 +18,7 @@ class ApplicationEndpoints {
   String revert(int id) => '/applications/$id/revert';
   String duplicate(int id) => '/applications/$id/duplicate';
   String preview(int id) => '/applications/$id/preview';
+  String blankForm(int id) => '/applications/$id/blank-form';
   String ownForm(int id) => '/applications/$id/form';
   String memberForm(int id, String username) =>
       '/applications/$id/form/$username';

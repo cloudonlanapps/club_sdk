@@ -20,9 +20,9 @@ import '../models/pagination.dart';
 /// `ModuleDisabledException` (503 `APPLICATIONS_DISABLED`).
 ///
 /// Who may call what: writing, the moves, [duplicateApplication],
-/// [downloadPreview], [downloadMemberForm], [getLabels], [getClauses] and
-/// the club library ([listLibraryTexts] … [deleteLibraryText]) are an
-/// admin's (403 otherwise; 401 signed out). [listApplications],
+/// [downloadPreview], [downloadBlankForm], [downloadMemberForm],
+/// [getLabels], [getClauses] and the club library ([listLibraryTexts] …
+/// [deleteLibraryText]) are an admin's (403 otherwise; 401 signed out). [listApplications],
 /// [getApplication] and [downloadOwnForm] are any signed-in user's —
 /// `registered`, `pending` or approved. A member sees the published
 /// templates only, and only once they have uploaded an identity document:
@@ -95,6 +95,17 @@ abstract interface class ApplicationSource {
   /// Template [id], in any state, drawn for the server's fictional demo
   /// member and watermarked "PREVIEW".
   Future<List<int>> downloadPreview(int id);
+
+  /// Saved or published template [id]'s form with no member in it and no
+  /// watermark: every label, box and tick box, for filling in by hand
+  /// (club_server#129). A published template's is the drawing stored when
+  /// it was published, with its side mark "Form <publishId>"; a saved
+  /// one's is drawn on request, with no publish mark. The server names it
+  /// `application-<id>-blank.pdf`.
+  ///
+  /// A draft is 422 `APPLICATION_NOT_SAVED`; an unknown template 404
+  /// `APPLICATION_NOT_FOUND`.
+  Future<List<int>> downloadBlankForm(int id);
 
   /// The caller's own form of published template [id]. A member no age
   /// category matches, or with no date of birth, is 422

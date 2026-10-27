@@ -91,6 +91,10 @@ class RemoteApplicationSource implements ApplicationSource {
   Future<List<int>> downloadPreview(int id) =>
       _store.downloadBytes(endpoints.applications.preview(id));
 
+  @override
+  Future<List<int>> downloadBlankForm(int id) =>
+      _store.downloadBytes(endpoints.applications.blankForm(id));
+
   /// The `?category=` of a form download, when one is chosen.
   static Map<String, String> categoryQuery(int? category) => {
     'category': ?category?.toString(),

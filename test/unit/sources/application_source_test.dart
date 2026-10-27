@@ -181,6 +181,14 @@ void main() {
       expect(h.requests.single.url.path, '/v1/applications/7/form/test_m1');
     });
 
+    test('Issue 94: downloadBlankForm GETs the blank form', () async {
+      final h = harness(bytes: pdf);
+      expect(await h.source.downloadBlankForm(7), pdf);
+      expect(h.requests.single.method, 'GET');
+      expect(h.requests.single.url.path, '/v1/applications/7/blank-form');
+      expect(h.requests.single.url.query, isEmpty);
+    });
+
     test('Issue 77: the form downloads send the chosen category', () async {
       final h = harness(bytes: pdf);
       expect(await h.source.downloadOwnForm(7, category: 1), pdf);

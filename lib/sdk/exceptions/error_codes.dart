@@ -278,6 +278,9 @@ abstract final class SdkErrorCode {
   // document `IDENTITY_DOCUMENT_REQUIRED`.
   // An admin's download of a member's form from a template not published.
   static const applicationNotPublished = 'APPLICATION_NOT_PUBLISHED';
+  // An admin's blank form of a draft: only a saved or published template
+  // has a layout to draw (club_server#129, #94).
+  static const applicationNotSaved = 'APPLICATION_NOT_SAVED';
   // No age category of the template matches the member's date of birth and
   // gender, or the member has no date of birth.
   static const applicationNotEligible = 'APPLICATION_NOT_ELIGIBLE';
