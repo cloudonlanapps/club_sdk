@@ -74,5 +74,9 @@ void main() {
       expect(SdkErrorCode.protectedFields, 'PROTECTED_FIELDS');
       expect(SdkErrorCode.accountNotActive, 'ACCOUNT_NOT_ACTIVE');
     });
+
+    test('Issue 74: INVALID_PREFERENCE_VALUE has its server spelling', () {
+      expect(SdkErrorCode.invalidPreferenceValue, 'INVALID_PREFERENCE_VALUE');
+    });
   });
 }

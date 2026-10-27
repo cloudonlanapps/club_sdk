@@ -121,16 +121,19 @@ abstract interface class UserSource {
 
   /// The club's profile options (club_server#92, #66): the positions and
   /// languages a member picks from. Any signed-in user, approved or not;
-  /// empty until an admin writes them.
+  /// empty until the super admin writes them.
   Future<ProfileOptions> getProfileOptions();
 
-  /// Replaces the club's profile options (admin) and returns what the
-  /// server stored. The write is audited.
+  /// Replaces the club's profile options and returns what the server
+  /// stored. Only the super admin writes them, as the `profile_options`
+  /// system preference (`PATCH /admin/preferences/profile_options`,
+  /// club_server#98, #74); the write is audited.
   ///
-  /// - 403 for anyone but an admin.
-  /// - 422 `VALIDATION_ERROR` for a document the server cannot use (two
-  ///   positions with one value, a language twice, a position without a
-  ///   label, an empty name).
+  /// - 403 for anyone but the super admin, whether the module is on or off.
+  /// - 422 `INVALID_PREFERENCE_VALUE` for a document the server cannot use
+  ///   (two positions with one value, a language twice, a position without
+  ///   an English label or with a label in a language outside the
+  ///   catalogue, an empty name).
   /// - 503 `EXTENDED_PROFILE_DISABLED` (`ModuleDisabledException`) while
   ///   `Capabilities.extendedProfile` is off.
   Future<ProfileOptions> setProfileOptions(ProfileOptions options);

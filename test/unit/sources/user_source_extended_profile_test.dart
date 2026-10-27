@@ -8,8 +8,9 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 /// Issue 66: the extended profile fields on `updateUser`, and the club's
-/// profile options at `/system/preferences/profile_options`
-/// (club_server#92).
+/// profile options, read at `/system/preferences/profile_options`
+/// (club_server#92) and written at `/admin/preferences/profile_options`
+/// (club_server#98, #74).
 const Map<String, Object> userResponse = {
   'username': 'u1',
   'publicId': 'p1',
@@ -133,16 +134,51 @@ void main() {
       expect(options, ProfileOptions.fromMap(optionsResponse));
     });
 
-    test('Issue 66: setProfileOptions puts the whole document and reads the '
-        'stored one back', () async {
-      final h = harness(body: optionsResponse);
+    test("Issue 74: setProfileOptions patches the super admin's preference "
+        'with the whole document as its value and reads the stored one '
+        'back', () async {
+      final h = harness(
+        body: {
+          'key': 'profile_options',
+          'value': optionsResponse,
+          'updatedAtUtc': 1767225600000,
+          'updatedBy': 'sudo',
+        },
+      );
       final options = ProfileOptions.fromMap(optionsResponse);
       final written = await h.source.setProfileOptions(options);
       final request = h.requests.single;
-      expect(request.method, 'PUT');
-      expect(request.url.path, '/v1/system/preferences/profile_options');
-      expect(bodyOf(request), optionsResponse);
+      expect(request.method, 'PATCH');
+      expect(request.url.path, '/v1/admin/preferences/profile_options');
+      expect(bodyOf(request), {'value': optionsResponse});
       expect(written, options);
+    });
+
+    test('Issue 74: setProfileOptions surfaces an invalid document as '
+        'INVALID_PREFERENCE_VALUE', () async {
+      final h = harness(
+        status: 422,
+        body: {
+          'detail': {
+            'code': 'INVALID_PREFERENCE_VALUE',
+            'message': 'profile_options: a language is listed twice',
+          },
+        },
+      );
+      await expectLater(
+        h.source.setProfileOptions(
+          const ProfileOptions(languages: ['English', 'English']),
+        ),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'status', 422)
+              .having(
+                (e) => e.code,
+                'code',
+                SdkErrorCode.invalidPreferenceValue,
+              ),
+        ),
+      );
     });
 
     test('Issue 66: setProfileOptions surfaces a disabled extended profile '

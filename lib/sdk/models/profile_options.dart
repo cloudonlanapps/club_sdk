@@ -13,10 +13,11 @@ const _languagesEquality = ListEquality<String>();
 /// positions and languages a member chooses from for `preferredPosition`
 /// and `preferredLanguage`.
 ///
-/// Any signed-in user may read it; both lists are empty until an admin
-/// writes it. The server checks a chosen value against these lists when it
-/// is written (422 `INVALID_PROFILE_OPTION`); a stored value whose option
-/// is removed later stays as it is.
+/// Any signed-in user may read it; both lists are empty until the super
+/// admin writes it (`PATCH /admin/preferences/profile_options`,
+/// club_server#98, #74). The server checks a chosen value against these
+/// lists when it is written (422 `INVALID_PROFILE_OPTION`); a stored value
+/// whose option is removed later stays as it is.
 @immutable
 class ProfileOptions {
   const ProfileOptions({

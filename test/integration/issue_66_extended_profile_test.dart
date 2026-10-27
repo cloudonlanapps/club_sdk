@@ -17,6 +17,7 @@ import '../utils/test_client.dart';
 /// options write needs `extended_profile_enabled` (on in
 /// `sdk_test_modules.conf`, off in `sdk_test.conf`), so the cases that
 /// write options run on the modules stack and the 503 on the plain one.
+/// Only the super admin writes them (club_server#98, #74).
 void main() {
   group('Issue 66: extended profile', () {
     const password = 'password123';
@@ -314,7 +315,7 @@ void main() {
       );
     });
 
-    test('Issue 66: writing the profile options answers 503 while the '
+    test('Issue 74: writing the profile options answers 503 while the '
         'extended profile is off', () async {
       if (skipIf(
         enabled: capabilities.extendedProfile,
@@ -323,44 +324,43 @@ void main() {
         return;
       }
       await expectLater(
-        admin.users.setProfileOptions(options),
+        sudo.users.setProfileOptions(options),
         throwsModuleDisabled(SdkErrorCode.extendedProfileDisabled),
       );
-      expect(await admin.users.getProfileOptions(), originalOptions);
+      expect(await sudo.users.getProfileOptions(), originalOptions);
     });
 
-    test('Issue 66: an admin writes the profile options and a member reads '
-        'them', () async {
+    test('Issue 74: the super admin writes the profile options and a member '
+        'reads them', () async {
       if (skipUnless(
         enabled: capabilities.extendedProfile,
         module: 'extended profile',
       )) {
         return;
       }
-      final written = await admin.users.setProfileOptions(options);
+      final written = await sudo.users.setProfileOptions(options);
       expect(written, options);
       final read = await member.users.getProfileOptions();
       expect(read, options);
       expect(read.position('Forward')?.labelFor('mr'), 'फॉरवर्ड');
     });
 
-    test('Issue 66: a member may not write the profile options', () async {
-      if (skipUnless(
-        enabled: capabilities.extendedProfile,
-        module: 'extended profile',
-      )) {
-        return;
+    test('Issue 74: an admin or a member may not write the profile options, '
+        'whether the extended profile is on or off', () async {
+      final before = await sudo.users.getProfileOptions();
+      for (final client in [admin, member]) {
+        await expectLater(
+          client.users.setProfileOptions(options),
+          throwsA(
+            isA<ServerException>().having((e) => e.statusCode, 'status', 403),
+          ),
+        );
       }
-      await expectLater(
-        member.users.setProfileOptions(const ProfileOptions()),
-        throwsA(
-          isA<ServerException>().having((e) => e.statusCode, 'status', 403),
-        ),
-      );
+      expect(await sudo.users.getProfileOptions(), before);
     });
 
     test(
-      'Issue 66: a profile options document with a duplicate is refused',
+      'Issue 74: a profile options document with a duplicate is refused',
       () async {
         if (skipUnless(
           enabled: capabilities.extendedProfile,
@@ -369,10 +369,10 @@ void main() {
           return;
         }
         await expectLater(
-          admin.users.setProfileOptions(
+          sudo.users.setProfileOptions(
             const ProfileOptions(languages: ['English', 'English']),
           ),
-          refused(422, SdkErrorCode.validationError),
+          refused(422, SdkErrorCode.invalidPreferenceValue),
         );
       },
     );
@@ -385,7 +385,7 @@ void main() {
       )) {
         return;
       }
-      await admin.users.setProfileOptions(options);
+      await sudo.users.setProfileOptions(options);
       final updated = await member.users.updateUser(
         memberName,
         preferredPosition: () => 'Goalie',

@@ -81,11 +81,11 @@ class RemoteUserSource implements UserSource {
 
   @override
   Future<ProfileOptions> setProfileOptions(ProfileOptions options) async {
-    final response = await _store.put(
-      endpoints.users.profileOptions,
-      body: options.toMap(),
+    final response = await _store.patch(
+      endpoints.users.profileOptionsWrite,
+      body: {'value': options.toMap()},
     );
-    return ProfileOptions.fromMap(response);
+    return ProfileOptions.fromMap(response['value'] as Map<String, dynamic>);
   }
 
   @override
