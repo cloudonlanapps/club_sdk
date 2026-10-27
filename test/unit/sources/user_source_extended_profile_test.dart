@@ -8,8 +8,9 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 /// Issue 66: the extended profile fields on `updateUser`, and the club's
-/// profile options at `/system/preferences/profile_options`
-/// (club_server#92).
+/// profile options, read at `/system/preferences/profile_options`
+/// (club_server#92) and written at `/admin/preferences/profile_options`
+/// (club_server#98, #74).
 const Map<String, Object> userResponse = {
   'username': 'u1',
   'publicId': 'p1',
@@ -59,10 +60,10 @@ void main() {
       await h.source.updateUser(
         'u1',
         clubDistrict: () => 'Pune District',
-        preferredPosition: () => 'Forward',
+        preferredPositions: const ['Forward', 'Goalie'],
         pastExperience: () => 'Two seasons.',
         nationality: () => 'Indian',
-        preferredLanguage: () => 'Marathi',
+        preferredLanguages: const ['Marathi', 'English'],
         guardian: () => const Guardian(name: 'Asha', relation: 'Mother'),
         membershipDateUtc: () => DateTime.utc(2024, 4),
       );
@@ -71,10 +72,10 @@ void main() {
       expect(request.url.path, '/v1/users/by_id/u1');
       expect(bodyOf(request), {
         'clubDistrict': 'Pune District',
-        'preferredPosition': 'Forward',
+        'preferredPositions': ['Forward', 'Goalie'],
         'pastExperience': 'Two seasons.',
         'nationality': 'Indian',
-        'preferredLanguage': 'Marathi',
+        'preferredLanguages': ['Marathi', 'English'],
         'guardian': {'name': 'Asha', 'relation': 'Mother', 'phone': null},
         'membershipDateUtc': DateTime.utc(2024, 4).millisecondsSinceEpoch,
       });
@@ -98,6 +99,20 @@ void main() {
       },
     );
 
+    test('Issue 75: an empty list clears the preferred positions and '
+        'languages', () async {
+      final h = harness();
+      await h.source.updateUser(
+        'u1',
+        preferredPositions: const [],
+        preferredLanguages: const [],
+      );
+      expect(bodyOf(h.requests.single), {
+        'preferredPositions': <String>[],
+        'preferredLanguages': <String>[],
+      });
+    });
+
     test('Issue 66: an omitted extended field is not sent', () async {
       final h = harness();
       await h.source.updateUser('u1', nationality: () => 'Indian');
@@ -108,16 +123,17 @@ void main() {
       final h = harness(
         body: {
           ...userResponse,
-          'preferredLanguage': 'Marathi',
+          'preferredLanguages': ['Marathi', 'English'],
           'guardian': {'name': 'Asha'},
           'membershipDateUtc': DateTime.utc(2024, 4).millisecondsSinceEpoch,
         },
       );
       final user = await h.source.updateUser(
         'u1',
-        preferredLanguage: () => 'Marathi',
+        preferredLanguages: const ['Marathi', 'English'],
       );
-      expect(user.preferredLanguage, 'Marathi');
+      expect(user.preferredLanguages, ['Marathi', 'English']);
+      expect(user.preferredPositions, isEmpty);
       expect(user.guardian, const Guardian(name: 'Asha'));
       expect(user.membershipDateUtc, DateTime.utc(2024, 4));
     });
@@ -133,16 +149,51 @@ void main() {
       expect(options, ProfileOptions.fromMap(optionsResponse));
     });
 
-    test('Issue 66: setProfileOptions puts the whole document and reads the '
-        'stored one back', () async {
-      final h = harness(body: optionsResponse);
+    test("Issue 74: setProfileOptions patches the super admin's preference "
+        'with the whole document as its value and reads the stored one '
+        'back', () async {
+      final h = harness(
+        body: {
+          'key': 'profile_options',
+          'value': optionsResponse,
+          'updatedAtUtc': 1767225600000,
+          'updatedBy': 'sudo',
+        },
+      );
       final options = ProfileOptions.fromMap(optionsResponse);
       final written = await h.source.setProfileOptions(options);
       final request = h.requests.single;
-      expect(request.method, 'PUT');
-      expect(request.url.path, '/v1/system/preferences/profile_options');
-      expect(bodyOf(request), optionsResponse);
+      expect(request.method, 'PATCH');
+      expect(request.url.path, '/v1/admin/preferences/profile_options');
+      expect(bodyOf(request), {'value': optionsResponse});
       expect(written, options);
+    });
+
+    test('Issue 74: setProfileOptions surfaces an invalid document as '
+        'INVALID_PREFERENCE_VALUE', () async {
+      final h = harness(
+        status: 422,
+        body: {
+          'detail': {
+            'code': 'INVALID_PREFERENCE_VALUE',
+            'message': 'profile_options: a language is listed twice',
+          },
+        },
+      );
+      await expectLater(
+        h.source.setProfileOptions(
+          const ProfileOptions(languages: ['English', 'English']),
+        ),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'status', 422)
+              .having(
+                (e) => e.code,
+                'code',
+                SdkErrorCode.invalidPreferenceValue,
+              ),
+        ),
+      );
     });
 
     test('Issue 66: setProfileOptions surfaces a disabled extended profile '

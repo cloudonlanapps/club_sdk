@@ -156,10 +156,14 @@ abstract final class SdkErrorCode {
   // 422 Unprocessable Entity
   // ═══════════════════════════════════════════════════════════════════════════
   static const invalidState = 'INVALID_STATE';
-  // A `preferredPosition` or `preferredLanguage` that is not one of the
-  // club's profile options (club_server#92, #66); mapped to
-  // `InvalidProfileOptionException`.
+  // A value in `preferredPositions` or `preferredLanguages` that is not one
+  // of the club's profile options (club_server#92, #106, #66, #75); mapped
+  // to `InvalidProfileOptionException`.
   static const invalidProfileOption = 'INVALID_PROFILE_OPTION';
+  // A system preference value the server cannot use, such as a profile
+  // options document with a duplicate or a position without an English
+  // label (club_server#98, #74).
+  static const invalidPreferenceValue = 'INVALID_PREFERENCE_VALUE';
   // Audit-log read with only one of resource_type and resource_id: they
   // come together (#35).
   static const invalidResourceScope = 'INVALID_RESOURCE_SCOPE';

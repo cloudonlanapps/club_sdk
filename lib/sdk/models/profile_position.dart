@@ -6,7 +6,7 @@ import 'package:meta/meta.dart';
 const _labelEquality = MapEquality<String, String>();
 
 /// One of the club's positions in its `ProfileOptions` (club_server#92,
-/// #66): the [value] stored as a member's `preferredPosition`, and its name
+/// #66): the [value] stored in a member's `preferredPositions`, and its name
 /// in each language a form may print it in.
 @immutable
 class ProfilePosition {
@@ -31,7 +31,7 @@ class ProfilePosition {
   factory ProfilePosition.fromJson(String source) =>
       ProfilePosition.fromMap(json.decode(source) as Map<String, dynamic>);
 
-  /// The stored value, sent as `preferredPosition`.
+  /// The stored value, sent in `preferredPositions`.
   final String value;
 
   /// The position's name keyed by language (`en`, `mr`, …). The server

@@ -54,6 +54,17 @@ void main() {
       () => expect(ep.hardDelete('alice'), '/users/by_id/alice/hard'),
     );
     test(
+      'Issue 66: profileOptions',
+      () => expect(ep.profileOptions, '/system/preferences/profile_options'),
+    );
+    test(
+      'Issue 74: profileOptionsWrite',
+      () => expect(
+        ep.profileOptionsWrite,
+        '/admin/preferences/profile_options',
+      ),
+    );
+    test(
       'adminResetPassword',
       () =>
           expect(ep.adminResetPassword('alice'), '/admin/reset-password/alice'),

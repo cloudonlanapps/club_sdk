@@ -2,7 +2,8 @@ import 'package:club_sdk_2/club_sdk_2.dart';
 import 'package:test/test.dart';
 
 /// Issue 66: the extended profile fields of the private profile
-/// (club_server#92). Not on the public [UserInfo].
+/// (club_server#92). Not on the public [UserInfo]. Issue 75: the preferred
+/// positions and languages are lists (club_server#106).
 void main() {
   final membership = DateTime.utc(2024, 4);
   final base = {
@@ -16,10 +17,10 @@ void main() {
   final extended = {
     ...base,
     'clubDistrict': 'Pune District',
-    'preferredPosition': 'Forward',
+    'preferredPositions': ['Forward', 'Goalie'],
     'pastExperience': 'Two seasons of roller hockey.',
     'nationality': 'Indian',
-    'preferredLanguage': 'Marathi',
+    'preferredLanguages': ['Marathi', 'English'],
     'guardian': {'name': 'Asha Rao', 'relation': 'Mother', 'phone': '1'},
     'membershipDateUtc': membership.millisecondsSinceEpoch,
   };
@@ -28,10 +29,10 @@ void main() {
     test('Issue 66: fromMap reads every extended field', () {
       final u = UserPrivate.fromMap(extended);
       expect(u.clubDistrict, 'Pune District');
-      expect(u.preferredPosition, 'Forward');
+      expect(u.preferredPositions, ['Forward', 'Goalie']);
       expect(u.pastExperience, 'Two seasons of roller hockey.');
       expect(u.nationality, 'Indian');
-      expect(u.preferredLanguage, 'Marathi');
+      expect(u.preferredLanguages, ['Marathi', 'English']);
       expect(
         u.guardian,
         const Guardian(name: 'Asha Rao', relation: 'Mother', phone: '1'),
@@ -40,20 +41,28 @@ void main() {
       expect(u.membershipDateUtc!.isUtc, isTrue);
     });
 
-    test('Issue 66: fromMap reads absent and null extended fields as null', () {
+    test('Issue 66: fromMap reads absent and null extended fields as null, '
+        'and the preferred lists as empty (Issue 75)', () {
       final absent = UserPrivate.fromMap(base);
       final nulls = UserPrivate.fromMap({
         ...base,
         'clubDistrict': null,
+        'preferredPositions': null,
+        'preferredLanguages': null,
         'guardian': null,
         'membershipDateUtc': null,
       });
-      for (final u in [absent, nulls]) {
+      final empty = UserPrivate.fromMap({
+        ...base,
+        'preferredPositions': const <String>[],
+        'preferredLanguages': const <String>[],
+      });
+      for (final u in [absent, nulls, empty]) {
         expect(u.clubDistrict, isNull);
-        expect(u.preferredPosition, isNull);
+        expect(u.preferredPositions, isEmpty);
         expect(u.pastExperience, isNull);
         expect(u.nationality, isNull);
-        expect(u.preferredLanguage, isNull);
+        expect(u.preferredLanguages, isEmpty);
         expect(u.guardian, isNull);
         expect(u.membershipDateUtc, isNull);
       }
@@ -63,10 +72,10 @@ void main() {
       final u = UserPrivate.fromMap(extended);
       final map = u.toMap();
       expect(map['clubDistrict'], 'Pune District');
-      expect(map['preferredPosition'], 'Forward');
+      expect(map['preferredPositions'], ['Forward', 'Goalie']);
       expect(map['pastExperience'], 'Two seasons of roller hockey.');
       expect(map['nationality'], 'Indian');
-      expect(map['preferredLanguage'], 'Marathi');
+      expect(map['preferredLanguages'], ['Marathi', 'English']);
       expect(map['guardian'], {
         'name': 'Asha Rao',
         'relation': 'Mother',
@@ -81,19 +90,23 @@ void main() {
       final u = UserPrivate.fromMap(extended);
       final cleared = u.copyWith(
         clubDistrict: () => null,
-        preferredPosition: () => null,
+        preferredPositions: const [],
         pastExperience: () => null,
         nationality: () => null,
-        preferredLanguage: () => null,
+        preferredLanguages: const [],
         guardian: () => null,
         membershipDateUtc: () => null,
       );
       expect(cleared, UserPrivate.fromMap(base));
       final changed = u.copyWith(
+        preferredPositions: const ['Defence'],
+        preferredLanguages: const ['Hindi', 'Marathi'],
         nationality: () => 'Nepali',
         guardian: () => const Guardian(name: 'B'),
         membershipDateUtc: () => DateTime.utc(2025),
       );
+      expect(changed.preferredPositions, ['Defence']);
+      expect(changed.preferredLanguages, ['Hindi', 'Marathi']);
       expect(changed.nationality, 'Nepali');
       expect(changed.guardian, const Guardian(name: 'B'));
       expect(changed.membershipDateUtc, DateTime.utc(2025));
@@ -105,10 +118,20 @@ void main() {
       final u = UserPrivate.fromMap(extended);
       expect(u.hashCode, UserPrivate.fromMap(extended).hashCode);
       expect(u.copyWith(clubDistrict: () => 'x'), isNot(u));
-      expect(u.copyWith(preferredPosition: () => 'x'), isNot(u));
+      expect(u.copyWith(preferredPositions: const ['x']), isNot(u));
+      expect(
+        u.copyWith(preferredPositions: const ['Goalie', 'Forward']),
+        isNot(u),
+      );
       expect(u.copyWith(pastExperience: () => 'x'), isNot(u));
       expect(u.copyWith(nationality: () => 'x'), isNot(u));
-      expect(u.copyWith(preferredLanguage: () => 'x'), isNot(u));
+      expect(u.copyWith(preferredLanguages: const ['x']), isNot(u));
+      final same = u.copyWith(
+        preferredPositions: ['Forward', 'Goalie'],
+        preferredLanguages: ['Marathi', 'English'],
+      );
+      expect(same, u);
+      expect(same.hashCode, u.hashCode);
       expect(u.copyWith(guardian: () => const Guardian()), isNot(u));
       expect(
         u.copyWith(membershipDateUtc: () => DateTime.utc(2020)),
@@ -125,10 +148,10 @@ void main() {
         roles: const UserRoles(),
         createdAtUtc: DateTime.utc(2026),
         clubDistrict: 'Pune District',
-        preferredPosition: 'Forward',
+        preferredPositions: const ['Forward', 'Goalie'],
         pastExperience: 'Two seasons of roller hockey.',
         nationality: 'Indian',
-        preferredLanguage: 'Marathi',
+        preferredLanguages: const ['Marathi', 'English'],
         guardian: const Guardian(
           name: 'Asha Rao',
           relation: 'Mother',
@@ -144,10 +167,10 @@ void main() {
       final keys = info.toMap().keys;
       for (final key in const [
         'clubDistrict',
-        'preferredPosition',
+        'preferredPositions',
         'pastExperience',
         'nationality',
-        'preferredLanguage',
+        'preferredLanguages',
         'guardian',
         'membershipDateUtc',
       ]) {
