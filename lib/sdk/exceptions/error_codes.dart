@@ -278,9 +278,9 @@ abstract final class SdkErrorCode {
   // languages; `details.missing` is `[{field, languages}]` (#101). Mapped
   // to `ApplicationIncompleteException`.
   static const applicationIncomplete = 'APPLICATION_INCOMPLETE';
-  // Save refused: a text names a clause the library does not have, a
-  // clause gap without a fact, a fact the template does not have, or a fact
-  // of the wrong type for its gap. The message names it.
+  // A clause fill refused (#107): an unknown clause, a gap without a fact,
+  // a fact for no gap, a fact of the wrong type or an unknown choice. The
+  // message names it.
   static const applicationInvalidReference = 'APPLICATION_INVALID_REFERENCE';
   // Save refused: the member's details alone overflow page 1; mapped to
   // `ApplicationDoesNotFitException`.

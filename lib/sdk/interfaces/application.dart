@@ -1,5 +1,7 @@
 import '../models/application_clause_library.dart';
 import '../models/application_content.dart';
+import '../models/application_fact.dart';
+import '../models/application_filled_clause.dart';
 import '../models/application_labels.dart';
 import '../models/application_patch.dart';
 import '../models/application_status.dart';
@@ -19,12 +21,13 @@ import '../models/pagination.dart';
 /// `ModuleDisabledException` (503 `APPLICATIONS_DISABLED`).
 ///
 /// Who may call what: writing, the moves, [duplicateApplication],
-/// [downloadPreview], [downloadMemberForm], [getLabels] and [getClauses]
-/// are an admin's (403 otherwise). [listApplications], [getApplication]
-/// and [downloadOwnForm] are any signed-in user's — `registered`,
-/// `pending` or approved. A member sees the published templates only, and
-/// only once they have uploaded an identity document: before that the
-/// list is empty, and a read or a form is 422 `IDENTITY_DOCUMENT_REQUIRED`.
+/// [downloadPreview], [downloadMemberForm], [getLabels], [getClauses] and
+/// [fillClause] are an admin's (403 otherwise). [listApplications],
+/// [getApplication] and [downloadOwnForm] are any signed-in user's —
+/// `registered`, `pending` or approved. A member sees the published
+/// templates only, and only once they have uploaded an identity document:
+/// before that the list is empty, and a read or a form is 422
+/// `IDENTITY_DOCUMENT_REQUIRED`.
 /// A template a member may not see is 404 `APPLICATION_NOT_FOUND`.
 ///
 /// A PDF is the form's bytes (`application/pdf`); the server names it
@@ -32,7 +35,9 @@ import '../models/pagination.dart';
 abstract interface class ApplicationSource {
   /// Create a draft from [content] (201). Every field may be left for
   /// later; nothing is checked for completeness until [saveApplication].
-  /// A shape the server cannot store is 422 `VALIDATION_ERROR`.
+  /// A shape the server cannot store — among them a text that is not
+  /// `{language: text}`, such as a `{"clause": …}` or `{"fact": …}`
+  /// reference — is 422 `VALIDATION_ERROR`.
   Future<ApplicationTemplate> createApplication(ApplicationContent content);
 
   /// List the templates the caller may see, newest first: an admin every
@@ -61,10 +66,9 @@ abstract interface class ApplicationSource {
 
   /// Draft → saved. Refused, staying a draft, when a text the form needs
   /// is missing or lacks a print language (`ApplicationIncompleteException`),
-  /// a text names an unknown clause, a missing fact or a fact of the wrong
-  /// type (422 `APPLICATION_INVALID_REFERENCE`), or the details alone
-  /// overflow page 1 (`ApplicationDoesNotFitException`). Otherwise the
-  /// layout is decided and stored on the template.
+  /// or the details alone overflow page 1
+  /// (`ApplicationDoesNotFitException`). Otherwise the layout is decided and
+  /// stored on the template.
   Future<ApplicationTemplate> saveApplication(int id);
 
   /// Saved → published: members see it.
@@ -101,4 +105,14 @@ abstract interface class ApplicationSource {
 
   /// The clause library, for the editor's pickers.
   Future<ApplicationClauseLibrary> getClauses();
+
+  /// Library clause [clause] with each gap filled from [facts] (gap →
+  /// fact), in every library language, for the editor to insert as custom
+  /// text (club_server#107). No template is read or changed. An unknown
+  /// clause, a gap without a fact, a fact for no gap, a fact of the wrong
+  /// type or an unknown choice is 422 `APPLICATION_INVALID_REFERENCE`.
+  Future<ApplicationFilledClause> fillClause(
+    String clause, {
+    Map<String, ApplicationFact> facts = const {},
+  });
 }

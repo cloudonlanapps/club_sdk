@@ -19,9 +19,9 @@ void main() {
     // English + Marathi, every required text in English only.
     const content = ApplicationContent(
       languages: ['en', 'mr'],
-      title: ApplicationText.custom({'en': 'Issue 69 — Registration Form'}),
-      declaration: ApplicationText.custom({'en': 'I agree to the rules.'}),
-      formFooter: ApplicationText.custom({'en': 'Play fair.'}),
+      title: ApplicationText({'en': 'Issue 69 — Registration Form'}),
+      declaration: ApplicationText({'en': 'I agree to the rules.'}),
+      formFooter: ApplicationText({'en': 'Play fair.'}),
     );
 
     setUpAll(() async {

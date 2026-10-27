@@ -6,8 +6,8 @@ import 'application_labels.dart';
 
 /// The application clause library (club_server#93, R7): every clause by
 /// id, and the choices a `choices` fact may name, in every catalogue
-/// language. A template refers to a clause as
-/// `ApplicationText.clause(id, args: {gap: factName})`.
+/// language. A template does not refer to a clause: the editor fills one
+/// with `ApplicationSource.fillClause` and inserts the text (#107).
 @immutable
 class ApplicationClauseLibrary {
   const ApplicationClauseLibrary({

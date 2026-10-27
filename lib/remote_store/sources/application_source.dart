@@ -1,6 +1,8 @@
 import '../../sdk/interfaces/application.dart';
 import '../../sdk/models/application_clause_library.dart';
 import '../../sdk/models/application_content.dart';
+import '../../sdk/models/application_fact.dart';
+import '../../sdk/models/application_filled_clause.dart';
 import '../../sdk/models/application_labels.dart';
 import '../../sdk/models/application_patch.dart';
 import '../../sdk/models/application_status.dart';
@@ -108,4 +110,18 @@ class RemoteApplicationSource implements ApplicationSource {
       ApplicationClauseLibrary.fromMap(
         await _store.get(endpoints.applications.clauses),
       );
+
+  @override
+  Future<ApplicationFilledClause> fillClause(
+    String clause, {
+    Map<String, ApplicationFact> facts = const {},
+  }) async => ApplicationFilledClause.fromMap(
+    await _store.post(
+      endpoints.applications.fillClause,
+      body: {
+        'clause': clause,
+        'facts': {for (final e in facts.entries) e.key: e.value.toMap()},
+      },
+    ),
+  );
 }

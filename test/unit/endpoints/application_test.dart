@@ -31,6 +31,10 @@ void main() {
       expect(ep.clauses, '/applications/clauses');
     });
 
+    test('Issue 76: fill one clause', () {
+      expect(ep.fillClause, '/applications/clauses/fill');
+    });
+
     test('Issue 66: reachable from endpoints', () {
       expect(endpoints.applications.list, '/applications');
     });

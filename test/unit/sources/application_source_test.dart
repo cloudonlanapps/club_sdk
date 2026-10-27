@@ -113,7 +113,7 @@ void main() {
         ApplicationPatch(
           formFooter: () => null,
           selections: () => const [
-            ApplicationText.custom({'en': 'Yes'}),
+            ApplicationText({'en': 'Yes'}),
           ],
         ),
       );
@@ -240,6 +240,83 @@ void main() {
       expect(h.requests.single.url.path, '/v1/applications/clauses');
       expect(library.clauses.keys, ['note.follow_rules']);
     });
+
+    test('Issue 76: fillClause POSTs the clause and a fact per gap and '
+        'reads the filled texts', () async {
+      final h = harness(
+        body: {
+          'clause': 'rule.fee',
+          'heading': {'en': 'Fee', 'mr': 'शुल्क', 'hi': 'शुल्क'},
+          'text': {
+            'en': 'A registration fee of ₹1,50,000 is payable.',
+            'mr': '₹1,50,000 नोंदणी शुल्क.',
+            'hi': '₹1,50,000 पंजीकरण शुल्क.',
+          },
+        },
+      );
+      final filled = await h.source.fillClause(
+        'rule.fee',
+        facts: {'amount': const ApplicationFact.amount(150000)},
+      );
+      final r = h.requests.single;
+      expect(r.method, 'POST');
+      expect(r.url.path, '/v1/applications/clauses/fill');
+      expect(bodyOf(r), {
+        'clause': 'rule.fee',
+        'facts': {
+          'amount': {'type': 'amount', 'value': 150000},
+        },
+      });
+      expect(filled.clause, 'rule.fee');
+      expect(filled.heading?.texts['mr'], 'शुल्क');
+      expect(filled.text.texts.keys, ['en', 'mr', 'hi']);
+      expect(filled.text.texts['en'], contains('1,50,000'));
+    });
+
+    test('Issue 76: fillClause of a clause without gaps sends no facts and '
+        'reads a null heading', () async {
+      final h = harness(
+        body: {
+          'clause': 'declaration.trial',
+          'heading': null,
+          'text': {'en': 'I agree.'},
+        },
+      );
+      final filled = await h.source.fillClause('declaration.trial');
+      expect(bodyOf(h.requests.single), {
+        'clause': 'declaration.trial',
+        'facts': <String, dynamic>{},
+      });
+      expect(filled.heading, isNull);
+      expect(filled.text, const ApplicationText({'en': 'I agree.'}));
+    });
+
+    test(
+      'Issue 76: a fill refused is 422 APPLICATION_INVALID_REFERENCE',
+      () async {
+        final h = harness(
+          status: 422,
+          body: {
+            'detail': {
+              'code': 'APPLICATION_INVALID_REFERENCE',
+              'message': "clause 'rule.fee' needs facts for amount",
+            },
+          },
+        );
+        await expectLater(
+          h.source.fillClause('rule.fee'),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statusCode', 422)
+                .having(
+                  (e) => e.code,
+                  'code',
+                  SdkErrorCode.applicationInvalidReference,
+                ),
+          ),
+        );
+      },
+    );
 
     test('Issue 66: the module off is ModuleDisabledException', () async {
       final h = harness(
