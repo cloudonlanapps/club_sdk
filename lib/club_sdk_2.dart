@@ -72,6 +72,7 @@ export 'sdk/models/application_fact_type.dart' show ApplicationFactType;
 export 'sdk/models/application_header_item.dart' show ApplicationHeaderItem;
 export 'sdk/models/application_labels.dart' show ApplicationLabels;
 export 'sdk/models/application_layout.dart' show ApplicationLayout;
+export 'sdk/models/application_missing_text.dart' show ApplicationMissingText;
 export 'sdk/models/application_patch.dart' show ApplicationPatch;
 export 'sdk/models/application_status.dart' show ApplicationStatus;
 export 'sdk/models/application_template.dart' show ApplicationTemplate;

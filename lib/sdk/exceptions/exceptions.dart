@@ -8,6 +8,7 @@
 /// string for display. See `SdkErrorCode` for all known code constants.
 library;
 
+import '../models/application_missing_text.dart';
 import '../models/conflict_report.dart';
 import 'error_codes.dart';
 
@@ -203,49 +204,48 @@ Map<String, dynamic>? applicationErrorDetails(Map<String, dynamic>? details) {
   return inner is Map<String, dynamic> ? inner : null;
 }
 
-/// 422 `APPLICATION_INCOMPLETE`: saving an application template found a
-/// text the form needs missing, or without a print language
-/// (club_server#93, R9). The template stays a draft.
+/// 422 `APPLICATION_INCOMPLETE`: saving an application template found
+/// texts the form needs missing, or without a print language
+/// (club_server#93, R9; #101). The template stays a draft.
 ///
-/// [missing] names each text (`title`, `declaration`, `formFooter`,
-/// `terms[1]`, …) and [language] the print language they lack.
+/// [missing] names each text by its API path (`title`, `formFooter`,
+/// `terms[1].heading`, …) with the print languages it lacks.
 class ApplicationIncompleteException extends ServerException {
   const ApplicationIncompleteException({
     required super.message,
     this.missing = const [],
-    this.language,
     super.details,
   }) : super(statusCode: 422, code: SdkErrorCode.applicationIncomplete);
 
   /// Builds from the server's error object, whose `details` carry
-  /// `missing` and `language`.
+  /// `missing: [{field, languages}]`. An entry of another shape is skipped.
   factory ApplicationIncompleteException.fromDetails(
     String message,
     Map<String, dynamic>? details,
   ) {
-    final inner = applicationErrorDetails(details);
-    final missing = inner?['missing'];
-    final language = inner?['language'];
+    final missing = applicationErrorDetails(details)?['missing'];
     return ApplicationIncompleteException(
       message: message,
       missing: missing is List
-          ? List<String>.unmodifiable(missing.whereType<String>())
+          ? List<ApplicationMissingText>.unmodifiable([
+              for (final m in missing)
+                if (m is Map<String, dynamic> && m['field'] is String)
+                  ApplicationMissingText.fromMap(m),
+            ])
           : const [],
-      language: language is String ? language : null,
       details: details,
     );
   }
 
-  /// The texts that are missing or lack [language].
-  final List<String> missing;
+  /// Each text missing print languages, with the languages it lacks.
+  final List<ApplicationMissingText> missing;
 
-  /// The print language they lack.
-  final String? language;
+  /// The API paths of the [missing] texts.
+  List<String> get fields => [for (final m in missing) m.field];
 
   @override
   String toString() =>
-      'ApplicationIncompleteException(missing: $missing, '
-      'language: $language): $message';
+      'ApplicationIncompleteException(missing: $missing): $message';
 }
 
 /// 422 `APPLICATION_DOES_NOT_FIT`: the member's details alone do not fit

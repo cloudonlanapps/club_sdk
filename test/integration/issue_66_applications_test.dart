@@ -325,9 +325,16 @@ void main() {
       await expectLater(
         admin.applications.saveApplication(appId),
         throwsA(
-          isA<ApplicationIncompleteException>()
-              .having((e) => e.missing, 'missing', contains('formFooter'))
-              .having((e) => e.language, 'language', 'mr'),
+          isA<ApplicationIncompleteException>().having(
+            (e) => e.missing,
+            'missing',
+            contains(
+              const ApplicationMissingText(
+                field: 'formFooter',
+                languages: ['mr'],
+              ),
+            ),
+          ),
         ),
       );
       final read = await admin.applications.getApplication(appId);

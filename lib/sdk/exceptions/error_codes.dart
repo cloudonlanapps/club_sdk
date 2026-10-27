@@ -274,8 +274,9 @@ abstract final class SdkErrorCode {
   // No age category of the template matches the member's date of birth and
   // gender, or the member has no date of birth.
   static const applicationNotEligible = 'APPLICATION_NOT_ELIGIBLE';
-  // Save refused: a text the form needs is missing, or lacks a print
-  // language; mapped to `ApplicationIncompleteException`.
+  // Save refused: texts the form needs are missing, or lack print
+  // languages; `details.missing` is `[{field, languages}]` (#101). Mapped
+  // to `ApplicationIncompleteException`.
   static const applicationIncomplete = 'APPLICATION_INCOMPLETE';
   // Save refused: a text names a clause the library does not have, a
   // clause gap without a fact, a fact the template does not have, or a fact
