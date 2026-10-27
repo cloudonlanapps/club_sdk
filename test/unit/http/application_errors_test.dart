@@ -122,6 +122,71 @@ void main() {
       expect(exc.overflowPt, 140.0);
     });
 
+    test(
+      'Issue 77: 422 APPLICATION_CATEGORY_REQUIRED maps to '
+      'ApplicationCategoryRequiredException with the categories that fit',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'APPLICATION_CATEGORY_REQUIRED',
+            'message':
+                'choose an age category: the member fits categories 0, 2',
+            'details': {
+              'categories': [0, 2],
+            },
+          },
+        });
+        expect(exc, isA<ApplicationCategoryRequiredException>());
+        exc as ApplicationCategoryRequiredException;
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.applicationCategoryRequired);
+        expect(exc.categories, [0, 2]);
+        expect(exc.toString(), contains('[0, 2]'));
+      },
+    );
+
+    test(
+      'Issue 77: 422 APPLICATION_CATEGORY_NOT_FITTING maps to '
+      'ApplicationCategoryNotFittingException with the categories that fit',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'APPLICATION_CATEGORY_NOT_FITTING',
+            'message': 'the member does not fit age category 1',
+            'details': {
+              'categories': [0],
+            },
+          },
+        });
+        expect(exc, isA<ApplicationCategoryNotFittingException>());
+        exc as ApplicationCategoryNotFittingException;
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.applicationCategoryNotFitting);
+        expect(exc.categories, [0]);
+      },
+    );
+
+    test('Issue 77: the category errors without details still map', () {
+      for (final code in const [
+        'APPLICATION_CATEGORY_REQUIRED',
+        'APPLICATION_CATEGORY_NOT_FITTING',
+      ]) {
+        final exc = mapHttpError(422, {
+          'detail': {'code': code, 'message': 'm'},
+        });
+        expect(
+          exc,
+          isA<ServerException>().having((e) => e.code, 'code', code),
+        );
+        expect(
+          exc is ApplicationCategoryRequiredException
+              ? exc.categories
+              : (exc as ApplicationCategoryNotFittingException).categories,
+          isEmpty,
+        );
+      }
+    });
+
     test('Issue 66: 503 APPLICATIONS_DISABLED maps to '
         'ModuleDisabledException', () {
       final exc = mapHttpError(503, const {
@@ -165,6 +230,14 @@ void main() {
       );
       expect(SdkErrorCode.applicationDoesNotFit, 'APPLICATION_DOES_NOT_FIT');
       expect(SdkErrorCode.applicationsDisabled, 'APPLICATIONS_DISABLED');
+      expect(
+        SdkErrorCode.applicationCategoryRequired,
+        'APPLICATION_CATEGORY_REQUIRED',
+      );
+      expect(
+        SdkErrorCode.applicationCategoryNotFitting,
+        'APPLICATION_CATEGORY_NOT_FITTING',
+      );
     });
   });
 }

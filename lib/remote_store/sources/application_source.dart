@@ -92,13 +92,27 @@ class RemoteApplicationSource implements ApplicationSource {
   Future<List<int>> downloadPreview(int id) =>
       _store.downloadBytes(endpoints.applications.preview(id));
 
-  @override
-  Future<List<int>> downloadOwnForm(int id) =>
-      _store.downloadBytes(endpoints.applications.ownForm(id));
+  /// The `?category=` of a form download, when one is chosen.
+  static Map<String, String> categoryQuery(int? category) => {
+    'category': ?category?.toString(),
+  };
 
   @override
-  Future<List<int>> downloadMemberForm(int id, String username) =>
-      _store.downloadBytes(endpoints.applications.memberForm(id, username));
+  Future<List<int>> downloadOwnForm(int id, {int? category}) =>
+      _store.downloadBytes(
+        endpoints.applications.ownForm(id),
+        queryParams: categoryQuery(category),
+      );
+
+  @override
+  Future<List<int>> downloadMemberForm(
+    int id,
+    String username, {
+    int? category,
+  }) => _store.downloadBytes(
+    endpoints.applications.memberForm(id, username),
+    queryParams: categoryQuery(category),
+  );
 
   @override
   Future<ApplicationLabels> getLabels() async => ApplicationLabels.fromMap(

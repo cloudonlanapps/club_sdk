@@ -274,6 +274,15 @@ abstract final class SdkErrorCode {
   // No age category of the template matches the member's date of birth and
   // gender, or the member has no date of birth.
   static const applicationNotEligible = 'APPLICATION_NOT_ELIGIBLE';
+  // A form download from a member who fits several age categories and
+  // named none (#108); `details.categories` lists those they fit. Mapped to
+  // `ApplicationCategoryRequiredException`.
+  static const applicationCategoryRequired = 'APPLICATION_CATEGORY_REQUIRED';
+  // A form download naming an age category the member does not fit
+  // (#108); `details.categories` lists those they fit. Mapped to
+  // `ApplicationCategoryNotFittingException`.
+  static const applicationCategoryNotFitting =
+      'APPLICATION_CATEGORY_NOT_FITTING';
   // Save refused: texts the form needs are missing, or lack print
   // languages; `details.missing` is `[{field, languages}]` (#101). Mapped
   // to `ApplicationIncompleteException`.

@@ -10,6 +10,8 @@ export 'client.dart' show SecureClient;
 export 'sdk/exceptions/error_codes.dart' show SdkErrorCode;
 export 'sdk/exceptions/exceptions.dart'
     show
+        ApplicationCategoryNotFittingException,
+        ApplicationCategoryRequiredException,
         ApplicationDoesNotFitException,
         ApplicationIncompleteException,
         InvalidProfileOptionException,

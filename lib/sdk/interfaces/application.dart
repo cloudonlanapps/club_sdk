@@ -93,12 +93,24 @@ abstract interface class ApplicationSource {
   /// The caller's own form of published template [id]. A member no age
   /// category matches, or with no date of birth, is 422
   /// `APPLICATION_NOT_ELIGIBLE`.
-  Future<List<int>> downloadOwnForm(int id);
+  ///
+  /// [category] is the index of the age category to tick
+  /// (club_server#108): needed when the member fits several
+  /// (`ApplicationCategoryRequiredException` otherwise), and it must be one
+  /// they fit (`ApplicationCategoryNotFittingException` otherwise). A
+  /// member's [getApplication] lists the ones they fit
+  /// (`ApplicationTemplate.fittingCategories`).
+  Future<List<int>> downloadOwnForm(int id, {int? category});
 
   /// [username]'s form of published template [id], for an admin. A
   /// template not published is 422 `APPLICATION_NOT_PUBLISHED`; an unknown
-  /// user 404 `USER_NOT_FOUND`.
-  Future<List<int>> downloadMemberForm(int id, String username);
+  /// user 404 `USER_NOT_FOUND`. [category] is chosen as for
+  /// [downloadOwnForm], for that member.
+  Future<List<int>> downloadMemberForm(
+    int id,
+    String username, {
+    int? category,
+  });
 
   /// The label catalogue, to pre-fill the editor.
   Future<ApplicationLabels> getLabels();

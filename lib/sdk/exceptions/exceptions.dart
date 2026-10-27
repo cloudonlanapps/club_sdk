@@ -248,6 +248,80 @@ class ApplicationIncompleteException extends ServerException {
       'ApplicationIncompleteException(missing: $missing): $message';
 }
 
+/// The `categories` of an application error's `details`: the indexes of
+/// the age categories the member fits (club_server#108). Empty when the
+/// server sent none.
+List<int> applicationErrorCategories(Map<String, dynamic>? details) {
+  final categories = applicationErrorDetails(details)?['categories'];
+  return categories is List
+      ? List<int>.unmodifiable(categories.whereType<int>())
+      : const [];
+}
+
+/// 422 `APPLICATION_CATEGORY_REQUIRED`: the member fits several age
+/// categories of the template and the download named none
+/// (club_server#108). Download again with one of [categories] as
+/// `category`.
+class ApplicationCategoryRequiredException extends ServerException {
+  const ApplicationCategoryRequiredException({
+    required super.message,
+    this.categories = const [],
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationCategoryRequired);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `categories`.
+  factory ApplicationCategoryRequiredException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) => ApplicationCategoryRequiredException(
+    message: message,
+    categories: applicationErrorCategories(details),
+    details: details,
+  );
+
+  /// The indexes of the age categories the member fits.
+  final List<int> categories;
+
+  @override
+  String toString() =>
+      'ApplicationCategoryRequiredException(categories: $categories): '
+      '$message';
+}
+
+/// 422 `APPLICATION_CATEGORY_NOT_FITTING`: the download named an age
+/// category the member does not fit (club_server#108). [categories] are
+/// the ones they do fit.
+class ApplicationCategoryNotFittingException extends ServerException {
+  const ApplicationCategoryNotFittingException({
+    required super.message,
+    this.categories = const [],
+    super.details,
+  }) : super(
+         statusCode: 422,
+         code: SdkErrorCode.applicationCategoryNotFitting,
+       );
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `categories`.
+  factory ApplicationCategoryNotFittingException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) => ApplicationCategoryNotFittingException(
+    message: message,
+    categories: applicationErrorCategories(details),
+    details: details,
+  );
+
+  /// The indexes of the age categories the member fits.
+  final List<int> categories;
+
+  @override
+  String toString() =>
+      'ApplicationCategoryNotFittingException(categories: $categories): '
+      '$message';
+}
+
 /// 422 `APPLICATION_DOES_NOT_FIT`: the member's details alone do not fit
 /// page 1 of the form, so the template cannot be saved (club_server#93,
 /// R17) — usually too many age categories. It stays a draft.

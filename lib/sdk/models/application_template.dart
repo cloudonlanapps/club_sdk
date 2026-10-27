@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import 'application_content.dart';
@@ -11,8 +12,8 @@ import 'application_status.dart';
 /// how its form is fitted ([layout]).
 ///
 /// [toMap] gives back the server's JSON: the content keys at the top
-/// level beside `id`, `status`, `layout`, `createdBy`, `createdAtUtc` and
-/// `updatedAtUtc`.
+/// level beside `id`, `status`, `layout`, `fittingCategories`,
+/// `createdBy`, `createdAtUtc` and `updatedAtUtc`.
 @immutable
 class ApplicationTemplate {
   const ApplicationTemplate({
@@ -22,17 +23,22 @@ class ApplicationTemplate {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     this.layout,
+    this.fittingCategories,
     this.createdBy,
   });
 
   factory ApplicationTemplate.fromMap(Map<String, dynamic> map) {
     final layout = map['layout'];
+    final fitting = map['fittingCategories'];
     return ApplicationTemplate(
       id: map['id'] as int,
       status: ApplicationStatus.fromWire(map['status'] as String),
       content: ApplicationContent.fromMap(map),
       layout: layout is Map<String, dynamic>
           ? ApplicationLayout.fromMap(layout)
+          : null,
+      fittingCategories: fitting is List
+          ? List<int>.unmodifiable(fitting.whereType<int>())
           : null,
       createdBy: map['createdBy'] as String?,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
@@ -60,6 +66,11 @@ class ApplicationTemplate {
   /// Set on save, dropped on revert: null for a draft.
   final ApplicationLayout? layout;
 
+  /// A member's read: the indexes of the age categories they fit, one of
+  /// which a form download names as `category` when there are several
+  /// (club_server#108). Null on an admin's read.
+  final List<int>? fittingCategories;
+
   /// Username of the admin who created it.
   final String? createdBy;
 
@@ -71,6 +82,7 @@ class ApplicationTemplate {
     ApplicationStatus? status,
     ApplicationContent? content,
     ApplicationLayout? Function()? layout,
+    List<int>? Function()? fittingCategories,
     String? Function()? createdBy,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
@@ -80,6 +92,9 @@ class ApplicationTemplate {
       status: status ?? this.status,
       content: content ?? this.content,
       layout: layout != null ? layout() : this.layout,
+      fittingCategories: fittingCategories != null
+          ? fittingCategories()
+          : this.fittingCategories,
       createdBy: createdBy != null ? createdBy() : this.createdBy,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
@@ -91,6 +106,9 @@ class ApplicationTemplate {
     'id': id,
     'status': status.wireName,
     'layout': layout?.toMap(),
+    'fittingCategories': fittingCategories == null
+        ? null
+        : [...fittingCategories!],
     'createdBy': createdBy,
     'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
     'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
@@ -101,7 +119,7 @@ class ApplicationTemplate {
   @override
   String toString() =>
       'ApplicationTemplate(id: $id, status: ${status.wireName}, '
-      'layout: $layout)';
+      'layout: $layout, fittingCategories: $fittingCategories)';
 
   @override
   bool operator ==(Object other) =>
@@ -111,6 +129,10 @@ class ApplicationTemplate {
           other.status == status &&
           other.content == content &&
           other.layout == layout &&
+          const ListEquality<int>().equals(
+            other.fittingCategories,
+            fittingCategories,
+          ) &&
           other.createdBy == createdBy &&
           other.createdAtUtc == createdAtUtc &&
           other.updatedAtUtc == updatedAtUtc;
@@ -121,6 +143,7 @@ class ApplicationTemplate {
     status,
     content,
     layout,
+    const ListEquality<int>().hash(fittingCategories),
     createdBy,
     createdAtUtc,
     updatedAtUtc,

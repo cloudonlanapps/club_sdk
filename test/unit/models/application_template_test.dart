@@ -21,6 +21,27 @@ void main() {
       expect(t.updatedAtUtc, DateTime.utc(2026, 1, 1, 1));
     });
 
+    test("Issue 77: a member's read carries the categories they fit", () {
+      final t = ApplicationTemplate.fromMap({
+        ...applicationResponseJson(status: 'published'),
+        'fittingCategories': const [0, 1],
+      });
+      expect(t.fittingCategories, [0, 1]);
+      expect(t.toMap()['fittingCategories'], [0, 1]);
+      expect(
+        ApplicationTemplate.fromMap(
+          applicationResponseJson(),
+        ).fittingCategories,
+        isNull,
+      );
+      expect(t, isNot(ApplicationTemplate.fromMap(applicationResponseJson())));
+      expect(
+        t.copyWith(fittingCategories: () => null).fittingCategories,
+        isNull,
+      );
+      expect(t.toString(), contains('fittingCategories: [0, 1]'));
+    });
+
     test('Issue 66: toMap gives back exactly the JSON it was read from', () {
       final json = applicationResponseJson();
       expect(ApplicationTemplate.fromMap(json).toMap(), json);

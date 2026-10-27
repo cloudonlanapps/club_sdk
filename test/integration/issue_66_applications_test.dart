@@ -492,7 +492,12 @@ void main() {
       await attachIdentityDocument(newcomer, newcomerName);
       final offered = await newcomer.applications.listApplications();
       expect(offered.items.map((t) => t.id), contains(appId));
-      expect(await newcomer.applications.downloadOwnForm(appId), isPdf());
+      // Born 2016, female: she fits both categories, so she names one
+      // (club_server#108).
+      expect(
+        await newcomer.applications.downloadOwnForm(appId, category: 1),
+        isPdf(),
+      );
     });
 
     test("Issue 66: an admin downloads any member's form", () async {

@@ -181,6 +181,23 @@ void main() {
       expect(h.requests.single.url.path, '/v1/applications/7/form/test_m1');
     });
 
+    test('Issue 77: the form downloads send the chosen category', () async {
+      final h = harness(bytes: pdf);
+      expect(await h.source.downloadOwnForm(7, category: 1), pdf);
+      expect(await h.source.downloadMemberForm(7, 'test_m1', category: 0), pdf);
+      expect(h.requests[0].url.path, '/v1/applications/7/form');
+      expect(h.requests[0].url.queryParameters, {'category': '1'});
+      expect(h.requests[1].url.path, '/v1/applications/7/form/test_m1');
+      expect(h.requests[1].url.queryParameters, {'category': '0'});
+    });
+
+    test('Issue 77: no category sends no query', () async {
+      final h = harness(bytes: pdf);
+      await h.source.downloadOwnForm(7);
+      await h.source.downloadMemberForm(7, 'test_m1');
+      expect(h.requests.map((r) => r.url.query), ['', '']);
+    });
+
     test('Issue 66: a refused download throws the mapped error', () async {
       final h = harness(
         status: 422,
