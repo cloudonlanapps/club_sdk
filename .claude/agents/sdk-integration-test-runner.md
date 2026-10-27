@@ -17,7 +17,8 @@ do not manage ports, stacks or cleanup.
 
 An optional integration-test file basename, e.g.
 `s01_authentication_test.dart`, and optionally "modules" for the stack with
-credits, evaluations and event marketing on. No dart-test flags: the recipe
+credits, evaluations, event marketing, the extended profile and applications
+on (`sdk_test_modules.conf`; `sdk_test.conf` has only applications on). No dart-test flags: the recipe
 fixes them (`-j 1 --timeout=600s`).
 
 ## Protocol
@@ -25,9 +26,9 @@ fixes them (`-j 1 --timeout=600s`).
 Run exactly one, in a single `Bash` call:
 
 ```bash
-just test-one <FILE_BASENAME>        # one file, modules off
-just test                            # whole suite, modules off
-just test-modules [<FILE_BASENAME>]  # modules on
+just test-one <FILE_BASENAME>        # one file, sdk_test.conf
+just test                            # whole suite, sdk_test.conf
+just test-modules [<FILE_BASENAME>]  # sdk_test_modules.conf
 ```
 
 The full suite takes several minutes: run it with `run_in_background: true`

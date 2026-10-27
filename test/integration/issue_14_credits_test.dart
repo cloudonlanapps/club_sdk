@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
 import '../utils/event_time.dart';
+import '../utils/identity_document.dart';
 import '../utils/module_gate.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -771,7 +772,19 @@ void main() {
           firstName: 'Test',
           lastName: name,
         );
-        expect(registered.status, UserStatus.pending);
+        // Submitted for review where identity verification is on, so the
+        // user is pending on either stack.
+        await submitForReviewIfRequired(
+          client: admin,
+          registered: registered,
+          password: 'password123',
+          adminUsername: sudoUsername,
+          adminPassword: sudoPassword,
+        );
+        expect(
+          (await admin.users.getUserInfo(name)).status,
+          UserStatus.pending,
+        );
 
         final account = await openFor(name);
 
