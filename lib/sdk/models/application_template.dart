@@ -13,7 +13,7 @@ import 'application_status.dart';
 ///
 /// [toMap] gives back the server's JSON: the content keys at the top
 /// level beside `id`, `status`, `layout`, `fittingCategories`,
-/// `createdBy`, `createdAtUtc` and `updatedAtUtc`.
+/// `publishId`, `createdBy`, `createdAtUtc` and `updatedAtUtc`.
 @immutable
 class ApplicationTemplate {
   const ApplicationTemplate({
@@ -24,6 +24,7 @@ class ApplicationTemplate {
     required this.updatedAtUtc,
     this.layout,
     this.fittingCategories,
+    this.publishId,
     this.createdBy,
   });
 
@@ -40,6 +41,7 @@ class ApplicationTemplate {
       fittingCategories: fitting is List
           ? List<int>.unmodifiable(fitting.whereType<int>())
           : null,
+      publishId: map['publishId'] as String?,
       createdBy: map['createdBy'] as String?,
       createdAtUtc: DateTime.fromMillisecondsSinceEpoch(
         map['createdAtUtc'] as int,
@@ -71,6 +73,12 @@ class ApplicationTemplate {
   /// (club_server#108). Null on an admin's read.
   final List<int>? fittingCategories;
 
+  /// A UUID, new on each publish and null unless published
+  /// (club_server#97). Each page of a member's form prints
+  /// "Form `publishId`" in its margin, so a returned paper form can be
+  /// matched to the publish it came from.
+  final String? publishId;
+
   /// Username of the admin who created it.
   final String? createdBy;
 
@@ -83,6 +91,7 @@ class ApplicationTemplate {
     ApplicationContent? content,
     ApplicationLayout? Function()? layout,
     List<int>? Function()? fittingCategories,
+    String? Function()? publishId,
     String? Function()? createdBy,
     DateTime? createdAtUtc,
     DateTime? updatedAtUtc,
@@ -95,6 +104,7 @@ class ApplicationTemplate {
       fittingCategories: fittingCategories != null
           ? fittingCategories()
           : this.fittingCategories,
+      publishId: publishId != null ? publishId() : this.publishId,
       createdBy: createdBy != null ? createdBy() : this.createdBy,
       createdAtUtc: createdAtUtc ?? this.createdAtUtc,
       updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
@@ -109,6 +119,7 @@ class ApplicationTemplate {
     'fittingCategories': fittingCategories == null
         ? null
         : [...fittingCategories!],
+    'publishId': publishId,
     'createdBy': createdBy,
     'createdAtUtc': createdAtUtc.millisecondsSinceEpoch,
     'updatedAtUtc': updatedAtUtc.millisecondsSinceEpoch,
@@ -119,7 +130,8 @@ class ApplicationTemplate {
   @override
   String toString() =>
       'ApplicationTemplate(id: $id, status: ${status.wireName}, '
-      'layout: $layout, fittingCategories: $fittingCategories)';
+      'layout: $layout, fittingCategories: $fittingCategories, '
+      'publishId: $publishId)';
 
   @override
   bool operator ==(Object other) =>
@@ -133,6 +145,7 @@ class ApplicationTemplate {
             other.fittingCategories,
             fittingCategories,
           ) &&
+          other.publishId == publishId &&
           other.createdBy == createdBy &&
           other.createdAtUtc == createdAtUtc &&
           other.updatedAtUtc == updatedAtUtc;
@@ -144,6 +157,7 @@ class ApplicationTemplate {
     content,
     layout,
     const ListEquality<int>().hash(fittingCategories),
+    publishId,
     createdBy,
     createdAtUtc,
     updatedAtUtc,
