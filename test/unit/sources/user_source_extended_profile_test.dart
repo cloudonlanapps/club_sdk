@@ -27,7 +27,10 @@ const Map<String, Object> optionsResponse = {
       'label': {'en': 'Forward', 'mr': 'फॉरवर्ड'},
     },
   ],
-  'languages': ['English', 'Marathi'],
+  'languages': [
+    {'code': 'en', 'name': 'English'},
+    {'code': 'mr', 'name': 'Marathi'},
+  ],
 };
 
 ({RemoteUserSource source, List<http.Request> requests}) harness({
@@ -182,7 +185,12 @@ void main() {
       );
       await expectLater(
         h.source.setProfileOptions(
-          const ProfileOptions(languages: ['English', 'English']),
+          const ProfileOptions(
+            languages: [
+              ProfileLanguage(code: 'en', name: 'English'),
+              ProfileLanguage(code: 'en', name: 'English'),
+            ],
+          ),
         ),
         throwsA(
           isA<ServerException>()

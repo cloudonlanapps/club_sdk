@@ -9,6 +9,7 @@ void main() {
 
   Map<String, dynamic> ruleJson() => <String, dynamic>{
     'id': 7,
+    'key': null,
     'kind': 'rule',
     'name': 'Match days',
     'heading': {'en': 'Matches', 'mr': 'सामने'},
@@ -44,6 +45,31 @@ void main() {
       expect(
         text.updatedAtUtc,
         DateTime.fromMillisecondsSinceEpoch(updated, isUtc: true),
+      );
+    });
+
+    test('Issue 96: a seeded text keeps the key of the built-in clause it '
+        'came from; one the club wrote, or an older answer, has none', () {
+      final seeded = ApplicationLibraryText.fromMap({
+        ...ruleJson(),
+        'key': 'rule.matches',
+        'createdBy': null,
+      });
+      expect(seeded.key, 'rule.matches');
+      expect(seeded.toMap()['key'], 'rule.matches');
+      expect(ApplicationLibraryText.fromMap(seeded.toMap()), seeded);
+      expect(seeded, isNot(ApplicationLibraryText.fromMap(ruleJson())));
+      expect(ApplicationLibraryText.fromMap(ruleJson()).key, isNull);
+      expect(
+        ApplicationLibraryText.fromMap({...ruleJson()}..remove('key')).key,
+        isNull,
+      );
+      expect(seeded.copyWith(key: () => null).key, isNull);
+      expect(
+        ApplicationLibraryText.fromMap(
+          ruleJson(),
+        ).copyWith(key: () => 'rule.fee').key,
+        'rule.fee',
       );
     });
 

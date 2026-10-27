@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 /// Issue 66: the club's profile options, the `profile_options` system
 /// preference (club_server#92): positions with a name per language, and
-/// languages by name.
+/// languages, each a code and a name (club_server#133, #96).
 void main() {
   const payload = {
     'positions': [
@@ -16,7 +16,10 @@ void main() {
         'label': {'en': 'Goalie'},
       },
     ],
-    'languages': ['English', 'Marathi'],
+    'languages': [
+      {'code': 'en', 'name': 'English'},
+      {'code': 'mr', 'name': 'Marathi'},
+    ],
   };
 
   group('ProfilePosition', () {
@@ -51,12 +54,58 @@ void main() {
     });
   });
 
+  group('ProfileLanguage', () {
+    test('Issue 96: reads and writes its code and name', () {
+      final l = ProfileLanguage.fromMap(const {
+        'code': 'mr',
+        'name': 'Marathi',
+      });
+      expect(l.code, 'mr');
+      expect(l.name, 'Marathi');
+      expect(l.toMap(), {'code': 'mr', 'name': 'Marathi'});
+      expect(ProfileLanguage.fromJson(l.toJson()), l);
+      expect(l.copyWith(name: 'मराठी').name, 'मराठी');
+      expect(l.copyWith(code: 'x-mar'), isNot(l));
+      expect(
+        l.hashCode,
+        const ProfileLanguage(code: 'mr', name: 'Marathi').hashCode,
+      );
+      expect(l.toString(), contains('Marathi'));
+    });
+  });
+
   group('ProfileOptions', () {
+    test('Issue 96: codes lists the language codes in order; language and '
+        'languageNamed look one up', () {
+      final o = ProfileOptions.fromMap(payload);
+      expect(o.codes, ['en', 'mr']);
+      expect(o.language('mr')?.name, 'Marathi');
+      expect(o.language('hi'), isNull);
+      // A member's preferredLanguages hold names: map one to its code.
+      expect(o.languageNamed('Marathi')?.code, 'mr');
+      expect(o.languageNamed('Hindi'), isNull);
+    });
+
+    test('Issue 96: a language entry of another shape is skipped', () {
+      final o = ProfileOptions.fromMap(const {
+        'languages': [
+          {'code': 'en', 'name': 'English'},
+          'Marathi',
+          {'code': 'hi'},
+          null,
+        ],
+      });
+      expect(o.codes, ['en']);
+    });
+
     test('Issue 66: fromMap reads a realistic server payload', () {
       final o = ProfileOptions.fromMap(payload);
       expect(o.positions.map((p) => p.value), ['Forward', 'Goalie']);
       expect(o.positions.first.label['mr'], 'फॉरवर्ड');
-      expect(o.languages, ['English', 'Marathi']);
+      expect(o.languages, const [
+        ProfileLanguage(code: 'en', name: 'English'),
+        ProfileLanguage(code: 'mr', name: 'Marathi'),
+      ]);
     });
 
     test('Issue 66: fromMap reads missing or null lists as empty', () {
@@ -78,8 +127,9 @@ void main() {
       expect(ProfileOptions.fromJson(o.toJson()), o);
       expect(o, ProfileOptions.fromMap(payload));
       expect(o.hashCode, ProfileOptions.fromMap(payload).hashCode);
-      expect(o.copyWith(languages: const ['Hindi']).languages, ['Hindi']);
-      expect(o.copyWith(languages: const ['Hindi']), isNot(o));
+      const hindi = [ProfileLanguage(code: 'hi', name: 'Hindi')];
+      expect(o.copyWith(languages: hindi).languages, hindi);
+      expect(o.copyWith(languages: hindi), isNot(o));
       expect(o.copyWith(positions: const []).positions, isEmpty);
     });
 

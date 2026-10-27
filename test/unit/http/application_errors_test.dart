@@ -66,6 +66,107 @@ void main() {
       ]);
     });
 
+    test("Issue 96: a club label lacking a print language is listed as "
+        "labels.<key>, and labelKey names it", () {
+      final exc = mapHttpError(422, const {
+        'detail': {
+          'code': 'APPLICATION_INCOMPLETE',
+          'message': 'Texts missing a print language: labels.field.full_name',
+          'details': {
+            'missing': [
+              {
+                'field': 'labels.field.full_name',
+                'languages': ['hi'],
+              },
+              {
+                'field': 'labelOverrides.field.dob',
+                'languages': ['hi'],
+              },
+              {
+                'field': 'title',
+                'languages': ['hi'],
+              },
+            ],
+          },
+        },
+      });
+      exc as ApplicationIncompleteException;
+      expect(
+        exc.missing.first,
+        const ApplicationMissingText(
+          field: 'labels.field.full_name',
+          languages: ['hi'],
+        ),
+      );
+      expect(exc.missing.map((m) => m.labelKey), [
+        'field.full_name',
+        null,
+        null,
+      ]);
+    });
+
+    test(
+      'Issue 96: 422 APPLICATION_LANGUAGE_NOT_OFFERED maps to '
+      'ApplicationLanguageNotOfferedException with the languages refused',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'APPLICATION_LANGUAGE_NOT_OFFERED',
+            'message': 'The club has no such language: hi',
+            'details': {
+              'languages': ['hi', 7, 'gu'],
+            },
+          },
+        });
+        expect(exc, isA<ApplicationLanguageNotOfferedException>());
+        exc as ApplicationLanguageNotOfferedException;
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.applicationLanguageNotOffered);
+        expect(exc.languages, ['hi', 'gu']);
+        expect(exc.message, 'The club has no such language: hi');
+        expect(exc.toString(), contains('hi'));
+      },
+    );
+
+    test('Issue 96: APPLICATION_LANGUAGE_NOT_OFFERED without details still '
+        'maps, with no languages', () {
+      final exc = mapHttpError(422, const {
+        'detail': {'code': 'APPLICATION_LANGUAGE_NOT_OFFERED', 'message': 'm'},
+      });
+      expect(
+        exc,
+        isA<ApplicationLanguageNotOfferedException>().having(
+          (e) => e.languages,
+          'languages',
+          isEmpty,
+        ),
+      );
+    });
+
+    test('Issue 96: an unknown label is a 404 ServerException '
+        'APPLICATION_LABEL_NOT_FOUND', () {
+      final exc = mapHttpError(404, const {
+        'detail': {
+          'code': 'APPLICATION_LABEL_NOT_FOUND',
+          'message': "Label 'field.nowhere' not found",
+        },
+      });
+      expect(exc, isA<ServerException>());
+      expect(exc.statusCode, 404);
+      expect(exc.code, SdkErrorCode.applicationLabelNotFound);
+    });
+
+    test('Issue 96: the codes have their server spelling', () {
+      expect(
+        SdkErrorCode.applicationLanguageNotOffered,
+        'APPLICATION_LANGUAGE_NOT_OFFERED',
+      );
+      expect(
+        SdkErrorCode.applicationLabelNotFound,
+        'APPLICATION_LABEL_NOT_FOUND',
+      );
+    });
+
     test('Issue 66: APPLICATION_INCOMPLETE without details still maps', () {
       final exc = mapHttpError(422, const {
         'detail': {'code': 'APPLICATION_INCOMPLETE', 'message': 'm'},

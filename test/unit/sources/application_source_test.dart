@@ -246,32 +246,34 @@ void main() {
       expect(labels.label('field.full_name', 'en'), 'Full name');
     });
 
-    test('Issue 92: getClauses GETs /applications/clauses and reads the '
-        'list of built-in clauses and club texts', () async {
+    test("Issue 96: getClauses GETs /applications/clauses and reads the "
+        "club's library texts, seeded clauses with their key", () async {
       final h = harness(
         body: {
-          'languages': ['en'],
+          'languages': ['en', 'mr'],
           'choices': <String, dynamic>{},
           'clauses': [
             {
-              'source': 'builtin',
+              'id': 1,
               'key': 'note.follow_rules',
-              'id': null,
               'kind': 'note',
-              'name': null,
-              'gaps': <String, dynamic>{},
+              'name': 'Note: follow rules',
               'heading': null,
               'text': {'en': 'Follow the rules.'},
+              'createdBy': null,
+              'createdAtUtc': 1798761600000,
+              'updatedAtUtc': 1798761600000,
             },
             {
-              'source': 'club',
-              'key': null,
               'id': 3,
+              'key': null,
               'kind': 'note',
               'name': 'Be on time',
-              'gaps': null,
               'heading': null,
               'text': {'en': 'Report by {report_time}.'},
+              'createdBy': 'test_admin',
+              'createdAtUtc': 1798761600000,
+              'updatedAtUtc': 1798761600000,
             },
           ],
         },
@@ -279,9 +281,93 @@ void main() {
       final library = await h.source.getClauses();
       expect(h.requests.single.method, 'GET');
       expect(h.requests.single.url.path, '/v1/applications/clauses');
+      expect(library.languages, ['en', 'mr']);
       expect(library.clauses.map((c) => c.key), ['note.follow_rules', null]);
-      expect(library.clauses.map((c) => c.id), [null, 3]);
-      expect(library.clubTexts.single.name, 'Be on time');
+      expect(library.clauses.map((c) => c.id), [1, 3]);
+      expect(library.clauseWithKey('note.follow_rules')?.id, 1);
+    });
+
+    test('Issue 96: updateLabel PATCHes the label with its text and reads '
+        'the label back', () async {
+      final h = harness(
+        body: {
+          'key': 'field.full_name',
+          'text': {'en': 'Name', 'mr': 'नाव'},
+        },
+      );
+      final label = await h.source.updateLabel(
+        'field.full_name',
+        const ApplicationText({'en': 'Name', 'mr': 'नाव'}),
+      );
+      final r = h.requests.single;
+      expect(r.method, 'PATCH');
+      expect(r.url.path, '/v1/applications/labels/field.full_name');
+      expect(bodyOf(r), {
+        'text': {'en': 'Name', 'mr': 'नाव'},
+      });
+      expect(
+        label,
+        const ApplicationLabel(
+          key: 'field.full_name',
+          text: ApplicationText({'en': 'Name', 'mr': 'नाव'}),
+        ),
+      );
+    });
+
+    test('Issue 96: updateLabel of an unknown key is 404 '
+        'APPLICATION_LABEL_NOT_FOUND', () async {
+      final h = harness(
+        status: 404,
+        body: {
+          'detail': {
+            'code': 'APPLICATION_LABEL_NOT_FOUND',
+            'message': "Label 'field.nowhere' not found",
+          },
+        },
+      );
+      await expectLater(
+        h.source.updateLabel(
+          'field.nowhere',
+          const ApplicationText({'en': 'x'}),
+        ),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'statusCode', 404)
+              .having(
+                (e) => e.code,
+                'code',
+                SdkErrorCode.applicationLabelNotFound,
+              ),
+        ),
+      );
+    });
+
+    test('Issue 96: a print language the club lacks is '
+        'ApplicationLanguageNotOfferedException', () async {
+      final h = harness(
+        status: 422,
+        body: {
+          'detail': {
+            'code': 'APPLICATION_LANGUAGE_NOT_OFFERED',
+            'message': 'The club has no such language: hi',
+            'details': {
+              'languages': ['hi'],
+            },
+          },
+        },
+      );
+      await expectLater(
+        h.source.createApplication(
+          ApplicationContent.fromMap(applicationContentJson()),
+        ),
+        throwsA(
+          isA<ApplicationLanguageNotOfferedException>().having(
+            (e) => e.languages,
+            'languages',
+            ['hi'],
+          ),
+        ),
+      );
     });
   });
 
@@ -289,6 +375,7 @@ void main() {
     Map<String, dynamic> textJson({int id = 5, String name = 'Match days'}) =>
         <String, dynamic>{
           'id': id,
+          'key': null,
           'kind': 'rule',
           'name': name,
           'heading': {'en': 'Matches'},
