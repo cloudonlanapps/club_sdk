@@ -29,7 +29,7 @@ class PdfStrings {
     final bytes = Uint8List.fromList(pdf);
     final raw = latin1.decode(bytes);
     final drawn = BytesBuilder(copy: false);
-    final maps = <Map<int, int>>[];
+    final maps = <Map<int, Set<int>>>[];
     var streams = 0;
     for (final m in _streamStart.allMatches(raw)) {
       final start = m.end;
@@ -74,36 +74,39 @@ class PdfStrings {
   /// Every string's bytes, in the order the content streams draw them.
   final Uint8List drawn;
 
-  /// Each font's ToUnicode map, code point → glyph code.
-  final List<Map<int, int>> fontMaps;
+  /// Each font's ToUnicode map, code point → its glyph codes (a font may
+  /// print one character with several glyphs).
+  final List<Map<int, Set<int>>> fontMaps;
 
   /// Whether [text] is among [drawn] in any font's encoding.
   bool shows(String text) {
+    final runes = text.runes.toList();
     for (final map in fontMaps) {
-      final needle = <int>[];
-      var encodable = true;
-      for (final rune in text.runes) {
-        final code = map[rune];
-        if (code == null) {
-          encodable = false;
-          break;
-        }
-        needle.addAll([code >> 8, code & 0xFF]);
+      final codes = [for (final rune in runes) map[rune]];
+      if (codes.every((c) => c != null) &&
+          _contains(drawn, [for (final c in codes) c!], 2)) {
+        return true;
       }
-      if (encodable && _contains(drawn, needle)) return true;
     }
-    if (text.runes.every((r) => r < 256)) {
-      return _contains(drawn, latin1.encode(text));
+    if (runes.every((r) => r < 256)) {
+      return _contains(drawn, [
+        for (final r in runes) {r},
+      ], 1);
     }
     return false;
   }
 
-  static bool _contains(Uint8List hay, List<int> needle) {
+  /// Whether [hay] holds a run of [width]-byte codes, the j-th of which is
+  /// one of [needle]'s j-th set.
+  static bool _contains(Uint8List hay, List<Set<int>> needle, int width) {
     if (needle.isEmpty) return true;
+    final span = needle.length * width;
     outer:
-    for (var i = 0; i + needle.length <= hay.length; i++) {
+    for (var i = 0; i + span <= hay.length; i++) {
       for (var j = 0; j < needle.length; j++) {
-        if (hay[i + j] != needle[j]) continue outer;
+        final at = i + j * width;
+        final code = width == 2 ? hay[at] << 8 | hay[at + 1] : hay[at];
+        if (!needle[j].contains(code)) continue outer;
       }
       return true;
     }
@@ -123,12 +126,12 @@ class PdfStrings {
     r'<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(<[0-9A-Fa-f]+>|\[[^\]]*\])',
   );
 
-  /// A ToUnicode CMap as code point → glyph code, single code points only.
-  static Map<int, int> _toUnicode(String cmap) {
-    final map = <int, int>{};
+  /// A ToUnicode CMap as code point → glyph codes, single code points only.
+  static Map<int, Set<int>> _toUnicode(String cmap) {
+    final map = <int, Set<int>>{};
     void put(int code, String dst) {
       if (dst.length != 4) return; // a ligature or a surrogate pair
-      map.putIfAbsent(int.parse(dst, radix: 16), () => code);
+      map.putIfAbsent(int.parse(dst, radix: 16), () => {}).add(code);
     }
 
     for (final block in _bfchar.allMatches(cmap)) {
