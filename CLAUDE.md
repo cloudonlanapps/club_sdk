@@ -125,15 +125,23 @@ test/
 just test                              # full suite
 just test-one s23_broadcasts_test.dart
 just test-one s23_broadcasts_test.dart keep=1   # leave the server up to debug
-just test-modules                      # stack with credits, evaluations, marketing on
+just test-modules                      # modules stack: credits, evaluations, event marketing, extended profile, applications on
 ```
 
 Each recipe spins up its **own** fresh isolated server (free ports, started in
 tmux via `background_server.sh`, which the recipe clones from
 `cloudonlanapps/native_deploy` into the gitignored `.native_deploy/` and pulls on
 every run) and tears it down on exit — no shared
-stack to reset or collide on. The stack is described by `sdk_test.conf` or
-`sdk_test_modules.conf`, whose `source` clones club_server's `main` afresh for
+stack to reset or collide on. The stack is described by one of two confs:
+
+- `sdk_test.conf` (`just test`, `just test-one`): applications on; credits,
+  evaluations, event marketing and the extended profile off.
+- `sdk_test_modules.conf` (`just test-modules`): credits, evaluations, event
+  marketing, the extended profile and applications on.
+
+Both leave identity verification on (`identity_verification_required`), which
+applications need: without it every `/applications` route answers 503. Each
+conf's `source` clones club_server's `main` afresh for
 each run from `https://github.com/cloudonlanapps/club_server.git` (public, over
 HTTPS — no credentials needed); to test against a local server checkout, point
 `source` at it or point `SDK_CONF` / `SDK_MODULES_CONF` at your own conf. The

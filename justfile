@@ -6,9 +6,13 @@
 # every run and run from there, so the stacks' run directories
 # (.native_deploy/deployed/) stay inside this checkout too. The stack is
 # described by a conf in this repo:
-# sdk_test.conf (optional modules off) or sdk_test_modules.conf (credits,
-# evaluations, event marketing on). Each conf clones the server's main branch
-# from git; override with SDK_CONF / SDK_MODULES_CONF.
+#   sdk_test.conf          applications on; credits, evaluations, event
+#                          marketing and the extended profile off
+#   sdk_test_modules.conf  credits, evaluations, event marketing, the extended
+#                          profile and applications on
+# Both keep identity verification on, which applications need. Each conf
+# clones the server's main branch from git; override with SDK_CONF /
+# SDK_MODULES_CONF.
 
 SDK_CONF         := env_var_or_default('SDK_CONF', 'sdk_test.conf')
 SDK_MODULES_CONF := env_var_or_default('SDK_MODULES_CONF', 'sdk_test_modules.conf')
@@ -96,8 +100,9 @@ test-one FILE keep="": (_run ("test/integration/" + FILE) keep)
 # many suites assert behaviour on both stacks (e.g. credit-gated enrolment),
 # so a modules run is a full second pass. The module suites themselves are
 # issue_14_credits, issue_15_capabilities, issue_15_evaluations,
-# issue_22_public_catalogue and issue_33_credit_rules; run one by name.
-# Run the whole integration suite (or FILE) with the optional modules on.
+# issue_22_public_catalogue, issue_33_credit_rules, issue_66_extended_profile
+# and issue_72_profile_on_form; run one by name.
+# Run the whole integration suite (or FILE) on sdk_test_modules.conf.
 [group('tests')]
 test-modules FILE="" keep="": (_run ("test/integration/" + FILE) keep SDK_MODULES_CONF)
 
