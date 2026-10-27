@@ -21,7 +21,7 @@ import '../utils/test_client.dart';
 /// `draft` gives each evaluation its own one-day period in the past.
 ///
 /// Runs against both stacks: `just test` (module off) asserts the 503,
-/// `just test-modules issue_15_evaluations_test.dart` the behaviour.
+/// `just test-server2 issue_15_evaluations_test.dart` the behaviour.
 void main() {
   group('Issue 15: evaluations', () {
     late SecureClient sudo;

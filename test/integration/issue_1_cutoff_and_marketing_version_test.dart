@@ -13,7 +13,7 @@ import '../utils/test_client.dart';
 /// [StaleVersionException] and writes nothing.
 ///
 /// The marketing cases need the Event Marketing module
-/// (`just test-modules`); where it is off they assert the 503.
+/// (`just test-server2`); where it is off they assert the 503.
 void main() {
   group('Issue 1: versions on the cutoff verbs and the marketing block', () {
     late SecureClient admin;

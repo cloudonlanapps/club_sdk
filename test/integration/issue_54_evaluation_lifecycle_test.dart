@@ -15,7 +15,7 @@ import '../utils/test_png.dart';
 /// answers (club_server#535), including media linked to an evaluation (#42).
 ///
 /// Needs the evaluations module: every test skips on the default stack.
-/// Run with `just test-modules issue_54_evaluation_lifecycle_test.dart`.
+/// Run with `just test-server2 issue_54_evaluation_lifecycle_test.dart`.
 void main() {
   group('Issue 54: evaluation lifecycle', () {
     late SecureClient sudo;

@@ -125,7 +125,7 @@ test/
 just test                              # full suite
 just test-one s23_broadcasts_test.dart
 just test-one s23_broadcasts_test.dart keep=1   # leave the server up to debug
-just test-modules                      # modules stack: credits, evaluations, event marketing on
+just test-server2                      # server2 stack: credits, evaluations, event marketing on
 ```
 
 Each recipe spins up its **own** fresh isolated server (free ports, started in
@@ -135,10 +135,10 @@ every run) and tears it down on exit — no shared
 stack to reset or collide on. The stack is described by one of two confs,
 the two stacks club_client tests on (#86):
 
-- `sdk_test.conf` (config 1; `just test`, `just test-one`): identity
+- `sdk_test_server1.conf` (config 1; `just test`, `just test-one`): identity
   verification, the extended profile and applications on; credits,
   evaluations and event marketing off.
-- `sdk_test_modules.conf` (config 2; `just test-modules`): credits,
+- `sdk_test_server2.conf` (config 2; `just test-server2`): credits,
   evaluations and event marketing on; identity verification, the extended
   profile and applications off.
 
@@ -152,7 +152,7 @@ is neither. Each
 conf's `source` clones club_server's `main` afresh for
 each run from `https://github.com/cloudonlanapps/club_server.git` (public, over
 HTTPS — no credentials needed); to test against a local server checkout, point
-`source` at it or point `SDK_CONF` / `SDK_MODULES_CONF` at your own conf. The
+`source` at it or point `SDK_SERVER1_CONF` / `SDK_SERVER2_CONF` at your own conf. The
 `port` and `db_port` in the confs are only defaults: the recipes start the stack
 with `--auto-ports`, which picks two free ports. The
 recipes inject `MYCLUB_API_BASE_URL` (the just-picked port),

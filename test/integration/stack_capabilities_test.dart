@@ -6,10 +6,10 @@ import '../utils/test_client.dart';
 /// The integration suite runs on two stacks, following club_client's
 /// (#86):
 ///
-/// - `sdk_test.conf` (`just test`, `just test-one`): identity
+/// - `sdk_test_server1.conf` (`just test`, `just test-one`): identity
 ///   verification, the extended profile and applications on; the credit
 ///   system, evaluations and event marketing off.
-/// - `sdk_test_modules.conf` (`just test-modules`): the credit system,
+/// - `sdk_test_server2.conf` (`just test-server2`): the credit system,
 ///   evaluations and event marketing on; identity verification, the
 ///   extended profile and applications off.
 ///
@@ -45,7 +45,7 @@ void main() {
       expect(
         flags,
         anyOf(equals(config1), equals(config2)),
-        reason: 'neither sdk_test.conf nor sdk_test_modules.conf',
+        reason: 'neither sdk_test_server1.conf nor sdk_test_server2.conf',
       );
     },
   );
