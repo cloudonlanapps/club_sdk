@@ -697,8 +697,8 @@ class UserPrivate extends UserInfo {
   final String? nationality;
 
   /// The member's languages, each one of the club's
-  /// (`ProfileOptions.languages`) by name, distinct; empty for none
-  /// (club_server#106, #75).
+  /// (`ProfileOptions.languages`) by its name (`ProfileLanguage.name`, not
+  /// its code), distinct; empty for none (club_server#106, #75, #133).
   final List<String> preferredLanguages;
 
   /// The member's parent or guardian, separate from [emergencyContact].

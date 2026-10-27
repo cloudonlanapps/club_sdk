@@ -40,7 +40,7 @@ void main() {
         ProfilePosition(value: 'Forward', label: {'en': 'Forward'}),
         ProfilePosition(value: 'Goalie', label: {'en': 'Goalie'}),
       ],
-      languages: ['English'],
+      languages: [ProfileLanguage(code: 'en', name: 'English')],
     );
     // Plain custom texts in English only: the least a template needs to
     // save (a declaration and a footer line), so the form's page 1 is
@@ -114,7 +114,8 @@ void main() {
       capabilities = await stackCapabilities(sudo);
       originalOptions = await sudo.users.getProfileOptions();
       if (capabilities.extendedProfile) {
-        await writeOptions(const ProfileOptions());
+        // No positions; English is always a language (club_server#133).
+        await writeOptions(ProfileOptions(languages: options.languages));
       }
 
       await register(adminName, DateTime.utc(1985, 2, 3));

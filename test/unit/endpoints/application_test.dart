@@ -35,6 +35,13 @@ void main() {
       expect(ep.clauses, '/applications/clauses');
     });
 
+    test('Issue 96: one label', () {
+      expect(
+        ep.label('field.full_name'),
+        '/applications/labels/field.full_name',
+      );
+    });
+
     test('Issue 92: the club library and one of its texts', () {
       expect(ep.library, '/applications/library');
       expect(ep.libraryText(5), '/applications/library/5');

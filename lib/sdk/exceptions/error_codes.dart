@@ -109,6 +109,9 @@ abstract final class SdkErrorCode {
   // (club_server#126, #92).
   static const applicationLibraryTextNotFound =
       'APPLICATION_LIBRARY_TEXT_NOT_FOUND';
+  // A label key that is not one of the catalogue's, on a label edit
+  // (club_server#133, #96).
+  static const applicationLabelNotFound = 'APPLICATION_LABEL_NOT_FOUND';
 
   // The batch public marketing read was given more than 50 public ids
   // (club_server#410, #22).
@@ -294,7 +297,8 @@ abstract final class SdkErrorCode {
   static const applicationCategoryNotFitting =
       'APPLICATION_CATEGORY_NOT_FITTING';
   // Save refused: texts the form needs are missing, or lack print
-  // languages; `details.missing` is `[{field, languages}]` (#101). Mapped
+  // languages; `details.missing` is `[{field, languages}]` (#101), a club
+  // label as `labels.<key>` (#96). Mapped
   // to `ApplicationIncompleteException`.
   static const applicationIncomplete = 'APPLICATION_INCOMPLETE';
   // Save refused: a `{gap}` in a printed text names no fact of the
@@ -308,6 +312,12 @@ abstract final class SdkErrorCode {
   // Save refused: the member's details alone overflow page 1; mapped to
   // `ApplicationDoesNotFitException`.
   static const applicationDoesNotFit = 'APPLICATION_DOES_NOT_FIT';
+  // A print language, or a text, in a language the club does not have
+  // (`ProfileOptions.languages`); `details.languages` names them
+  // (club_server#133, #96). Mapped to
+  // `ApplicationLanguageNotOfferedException`.
+  static const applicationLanguageNotOffered =
+      'APPLICATION_LANGUAGE_NOT_OFFERED';
 
   // Credit system (#14, club_server#294).
   // Opening an account against a camp or one-off: credit is for programmes.

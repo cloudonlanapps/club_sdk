@@ -19,6 +19,11 @@ import '../utils/test_client.dart';
 /// They need applications and the extended profile, both on in
 /// `sdk_test_server1.conf` (`just test-one`) and off in
 /// `sdk_test_server2.conf`, where every case skips.
+// English must be one of the club's languages (club_server#133); a
+// position is labelled only in the club's languages.
+const english = [ProfileLanguage(code: 'en', name: 'English')];
+const hindi = ProfileLanguage(code: 'hi', name: 'Hindi');
+
 void main() {
   group('Issue 80: frozen form, preview demo member, English position '
       'label', () {
@@ -77,7 +82,9 @@ void main() {
       capabilities = await stackCapabilities(sudo);
       originalOptions = await sudo.users.getProfileOptions();
       if (capabilities.extendedProfile) {
-        await sudo.users.setProfileOptions(const ProfileOptions());
+        await sudo.users.setProfileOptions(
+          const ProfileOptions(languages: english),
+        );
       }
 
       await registerAndApprove(
@@ -132,7 +139,7 @@ void main() {
           ),
       ];
       final written = await sudo.users.setProfileOptions(
-        ProfileOptions(positions: positions),
+        ProfileOptions(positions: positions, languages: english),
       );
       expect(written.positions, hasLength(positionCount));
 
@@ -177,6 +184,7 @@ void main() {
             positions: [
               ProfilePosition(value: 'Forward', label: {'hi': 'फॉरवर्ड'}),
             ],
+            languages: [...english, hindi],
           ),
         ),
         refused(422, SdkErrorCode.invalidPreferenceValue),
@@ -194,6 +202,7 @@ void main() {
             label: {'en': 'Forward', 'hi': 'फॉरवर्ड'},
           ),
         ],
+        languages: [...english, hindi],
       );
       expect(await sudo.users.setProfileOptions(options), options);
       expect(await member.users.getProfileOptions(), options);

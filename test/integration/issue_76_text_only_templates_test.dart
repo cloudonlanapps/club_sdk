@@ -53,8 +53,9 @@ void main() {
         'keeping its facts', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final library = await admin.applications.getClauses();
-      final rule = library.builtinClause('rule.matches')!;
-      final declaration = library.builtinClause('declaration.trial')!;
+      // Built-in clauses seeded into the club library (club_server#133).
+      final rule = library.clauseWithKey('rule.matches')!;
+      final declaration = library.clauseWithKey('declaration.trial')!;
       final content = ApplicationContent(
         facts: {'dates': matches, 'venue': venue},
         title: const ApplicationText({'en': 'Issue 76 — Trial'}),

@@ -89,6 +89,12 @@ ServerException mapHttpError(
   if (code == SdkErrorCode.applicationIncomplete) {
     return ApplicationIncompleteException.fromDetails(message, details);
   }
+  if (code == SdkErrorCode.applicationLanguageNotOffered) {
+    return ApplicationLanguageNotOfferedException.fromDetails(
+      message,
+      details,
+    );
+  }
   if (code == SdkErrorCode.applicationUnknownFact) {
     return ApplicationUnknownFactException.fromDetails(message, details);
   }

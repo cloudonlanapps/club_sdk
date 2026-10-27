@@ -278,7 +278,6 @@ void main() {
         text: ApplicationText({
           'en': 'Matches are played on {match_dates} at {venue}.',
           'mr': '{match_dates} रोजी {venue} येथे सामने.',
-          'hi': '{match_dates} को {venue} पर मैच।',
         }),
       );
       final created = await libraryText(input);
@@ -386,8 +385,9 @@ void main() {
       expect(await admin.applications.getLibraryText(note.id), note);
     });
 
-    test('Issue 92: a name over 100 characters, an empty text or an unknown '
-        'language is refused', () async {
+    test('Issue 92: a name over 100 characters, an empty text or a key that '
+        'is not a language code is refused; a language the club lacks is '
+        'refused as not offered (#96)', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final validation = refused(422, SdkErrorCode.validationError);
       for (final input in [
@@ -404,7 +404,7 @@ void main() {
         const ApplicationLibraryTextInput(
           kind: ApplicationClauseKind.note,
           name: 'test_i92 tamil',
-          text: ApplicationText({'ta': 'உரை'}),
+          text: ApplicationText({'Tamil': 'உரை'}),
         ),
       ]) {
         await expectLater(
@@ -413,6 +413,23 @@ void main() {
           reason: '$input',
         );
       }
+      // `ta` is a language code, but not one of the club's (club_server#133).
+      await expectLater(
+        admin.applications.createLibraryText(
+          const ApplicationLibraryTextInput(
+            kind: ApplicationClauseKind.note,
+            name: 'test_i92 tamil',
+            text: ApplicationText({'ta': 'உரை'}),
+          ),
+        ),
+        throwsA(
+          isA<ApplicationLanguageNotOfferedException>().having(
+            (e) => e.languages,
+            'languages',
+            ['ta'],
+          ),
+        ),
+      );
     });
 
     test('Issue 92: an unknown club text is 404 '
@@ -475,8 +492,8 @@ void main() {
 
     // ── The clauses list ────────────────────────────────────────────────
 
-    test('Issue 92: the clauses list holds the built-in clauses, then the '
-        'texts of the club, each marked with its source', () async {
+    test('Issue 96: the clauses list is the club library: the seeded '
+        'built-in clauses with their key, and the texts of the club', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final rule = await libraryText(
         const ApplicationLibraryTextInput(
@@ -487,28 +504,16 @@ void main() {
         ),
       );
       final library = await admin.applications.getClauses();
-      final sources = library.clauses.map((c) => c.source).toList();
-      expect(sources, contains(ApplicationClauseSource.builtin));
-      expect(
-        sources.indexOf(ApplicationClauseSource.club),
-        greaterThan(sources.lastIndexOf(ApplicationClauseSource.builtin)),
-      );
+      expect(library.clauses, await admin.applications.listLibraryTexts());
 
-      final matches = library.builtinClause('rule.matches')!;
-      expect(matches.source, ApplicationClauseSource.builtin);
-      expect(matches.id, isNull);
-      expect(matches.name, isNull);
+      final matches = library.clauseWithKey('rule.matches')!;
+      expect(matches.name, 'Matches');
+      expect(matches.createdBy, isNull);
       expect(matches.kind, ApplicationClauseKind.rule);
-      expect(matches.gaps, {
-        'dates': ApplicationFactType.dateRange,
-        'venue': ApplicationFactType.name,
-      });
       expect(matches.text.texts['en'], contains('{venue}'));
 
-      final listed = library.clubTexts.singleWhere((c) => c.id == rule.id);
-      expect(listed.source, ApplicationClauseSource.club);
+      final listed = library.clauses.singleWhere((c) => c.id == rule.id);
       expect(listed.key, isNull);
-      expect(listed.gaps, isNull);
       expect(listed.name, rule.name);
       expect(listed.kind, ApplicationClauseKind.rule);
       expect(listed.heading, rule.heading);

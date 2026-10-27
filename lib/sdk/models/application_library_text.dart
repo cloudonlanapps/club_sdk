@@ -4,9 +4,17 @@ import 'application_clause_kind.dart';
 import 'application_text.dart';
 
 /// A text of the club's library (`/applications/library`, club_server#126,
-/// R7a): club-wide, for an admin to paste into any template as written,
-/// as a built-in clause is. Its texts may hold `{gap}`s, filled from the
-/// template's facts when the PDF is drawn. Only a rule has a [heading].
+/// R7a): club-wide, for an admin to paste into any template as written.
+/// Its texts may hold `{gap}`s, filled from the template's facts when the
+/// PDF is drawn. Only a rule has a [heading].
+///
+/// The server's built-in clauses are seeded into the library on its first
+/// use (club_server#133, #96): each is then an ordinary library text,
+/// edited and deleted like any other, that keeps the built-in clause it
+/// came from in [key]. The clauses list (`ApplicationClauseLibrary`) holds
+/// these texts too.
+///
+/// Texts are shown in the club's languages (`ProfileOptions.languages`).
 @immutable
 class ApplicationLibraryText {
   const ApplicationLibraryText({
@@ -16,6 +24,7 @@ class ApplicationLibraryText {
     required this.text,
     required this.createdAtUtc,
     required this.updatedAtUtc,
+    this.key,
     this.heading,
     this.createdBy,
   });
@@ -23,6 +32,7 @@ class ApplicationLibraryText {
   factory ApplicationLibraryText.fromMap(Map<String, dynamic> map) =>
       ApplicationLibraryText(
         id: map['id'] as int,
+        key: map['key'] as String?,
         kind: ApplicationClauseKind.fromWire(map['kind'] as String),
         name: map['name'] as String,
         heading: ApplicationText.fromWire(map['heading']),
@@ -39,6 +49,10 @@ class ApplicationLibraryText {
       );
 
   final int id;
+
+  /// The built-in clause a seeded text came from (`rule.matches`); null
+  /// for a text the club wrote. Not writable.
+  final String? key;
 
   /// Where the text is used on the form.
   final ApplicationClauseKind kind;
@@ -60,6 +74,7 @@ class ApplicationLibraryText {
 
   ApplicationLibraryText copyWith({
     int? id,
+    String? Function()? key,
     ApplicationClauseKind? kind,
     String? name,
     ApplicationText? Function()? heading,
@@ -69,6 +84,7 @@ class ApplicationLibraryText {
     DateTime? updatedAtUtc,
   }) => ApplicationLibraryText(
     id: id ?? this.id,
+    key: key != null ? key() : this.key,
     kind: kind ?? this.kind,
     name: name ?? this.name,
     heading: heading != null ? heading() : this.heading,
@@ -80,6 +96,7 @@ class ApplicationLibraryText {
 
   Map<String, dynamic> toMap() => {
     'id': id,
+    'key': key,
     'kind': kind.wireName,
     'name': name,
     'heading': heading?.toMap(),
@@ -91,7 +108,7 @@ class ApplicationLibraryText {
 
   @override
   String toString() =>
-      'ApplicationLibraryText(id: $id, kind: ${kind.wireName}, '
+      'ApplicationLibraryText(id: $id, key: $key, kind: ${kind.wireName}, '
       'name: $name, heading: $heading, text: $text)';
 
   @override
@@ -99,6 +116,7 @@ class ApplicationLibraryText {
       identical(this, other) ||
       other is ApplicationLibraryText &&
           other.id == id &&
+          other.key == key &&
           other.kind == kind &&
           other.name == name &&
           other.heading == heading &&
@@ -110,6 +128,7 @@ class ApplicationLibraryText {
   @override
   int get hashCode => Object.hash(
     id,
+    key,
     kind,
     name,
     heading,
@@ -124,9 +143,11 @@ class ApplicationLibraryText {
 /// (club_server#126).
 ///
 /// [name] is 1–100 characters; [text] and [heading] hold at least one
-/// non-empty text, in the catalogue languages (`en`, `mr`, `hi`), gaps
-/// allowed. Only a [ApplicationClauseKind.rule] has a [heading]. The
-/// server checks all of it: a refusal is 422 `VALIDATION_ERROR`.
+/// non-empty text, gaps allowed. Only a [ApplicationClauseKind.rule] has a
+/// [heading]. The server checks all of it: a refusal is 422
+/// `VALIDATION_ERROR`, and a text in a language the club does not have
+/// (`ProfileOptions.languages`) is 422 `APPLICATION_LANGUAGE_NOT_OFFERED`
+/// (`ApplicationLanguageNotOfferedException`, club_server#133).
 @immutable
 class ApplicationLibraryTextInput {
   const ApplicationLibraryTextInput({
