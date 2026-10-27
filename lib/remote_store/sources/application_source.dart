@@ -1,9 +1,8 @@
 import '../../sdk/interfaces/application.dart';
 import '../../sdk/models/application_clause_library.dart';
 import '../../sdk/models/application_content.dart';
-import '../../sdk/models/application_fact.dart';
-import '../../sdk/models/application_filled_clause.dart';
 import '../../sdk/models/application_labels.dart';
+import '../../sdk/models/application_library_text.dart';
 import '../../sdk/models/application_patch.dart';
 import '../../sdk/models/application_status.dart';
 import '../../sdk/models/application_template.dart';
@@ -126,16 +125,37 @@ class RemoteApplicationSource implements ApplicationSource {
       );
 
   @override
-  Future<ApplicationFilledClause> fillClause(
-    String clause, {
-    Map<String, ApplicationFact> facts = const {},
-  }) async => ApplicationFilledClause.fromMap(
-    await _store.post(
-      endpoints.applications.fillClause,
-      body: {
-        'clause': clause,
-        'facts': {for (final e in facts.entries) e.key: e.value.toMap()},
-      },
+  Future<List<ApplicationLibraryText>> listLibraryTexts() async => [
+    for (final t in await _store.getList(endpoints.applications.library))
+      ApplicationLibraryText.fromMap(t as Map<String, dynamic>),
+  ];
+
+  @override
+  Future<ApplicationLibraryText> getLibraryText(int id) async =>
+      ApplicationLibraryText.fromMap(
+        await _store.get(endpoints.applications.libraryText(id)),
+      );
+
+  @override
+  Future<ApplicationLibraryText> createLibraryText(
+    ApplicationLibraryTextInput input,
+  ) async => ApplicationLibraryText.fromMap(
+    await _store.post(endpoints.applications.library, body: input.toMap()),
+  );
+
+  @override
+  Future<ApplicationLibraryText> updateLibraryText(
+    int id,
+    ApplicationLibraryTextPatch patch,
+  ) async => ApplicationLibraryText.fromMap(
+    await _store.patch(
+      endpoints.applications.libraryText(id),
+      body: patch.toMap(),
     ),
   );
+
+  @override
+  Future<void> deleteLibraryText(int id) async {
+    await _store.delete(endpoints.applications.libraryText(id));
+  }
 }

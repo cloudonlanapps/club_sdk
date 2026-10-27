@@ -9,6 +9,7 @@
 library;
 
 import '../models/application_missing_text.dart';
+import '../models/application_unknown_gap.dart';
 import '../models/conflict_report.dart';
 import 'error_codes.dart';
 
@@ -248,6 +249,50 @@ class ApplicationIncompleteException extends ServerException {
   @override
   String toString() =>
       'ApplicationIncompleteException(missing: $missing): $message';
+}
+
+/// 422 `APPLICATION_UNKNOWN_FACT`: saving an application template found
+/// `{gap}`s in its printed texts naming no fact of the template
+/// (club_server#126). The template stays a draft.
+///
+/// [gaps] come in print order, each with the text's place, its language
+/// and the gap's name; a gap repeated in one text is listed once.
+class ApplicationUnknownFactException extends ServerException {
+  const ApplicationUnknownFactException({
+    required super.message,
+    this.gaps = const [],
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationUnknownFact);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `gaps: [{place, language, gap}]`. An entry of another shape is
+  /// skipped.
+  factory ApplicationUnknownFactException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    final gaps = applicationErrorDetails(details)?['gaps'];
+    return ApplicationUnknownFactException(
+      message: message,
+      gaps: gaps is List
+          ? List<ApplicationUnknownGap>.unmodifiable([
+              for (final g in gaps)
+                if (g is Map<String, dynamic> &&
+                    g['place'] is String &&
+                    g['language'] is String &&
+                    g['gap'] is String)
+                  ApplicationUnknownGap.fromMap(g),
+            ])
+          : const [],
+      details: details,
+    );
+  }
+
+  /// Each gap naming no fact, where it is and in which language.
+  final List<ApplicationUnknownGap> gaps;
+
+  @override
+  String toString() => 'ApplicationUnknownFactException(gaps: $gaps): $message';
 }
 
 /// The `categories` of an application error's `details`: the indexes of

@@ -105,6 +105,10 @@ abstract final class SdkErrorCode {
   // offered to the caller: a member sees published templates only
   // (club_server#93, #66).
   static const applicationNotFound = 'APPLICATION_NOT_FOUND';
+  // A club library text of the application editor that does not exist
+  // (club_server#126, #92).
+  static const applicationLibraryTextNotFound =
+      'APPLICATION_LIBRARY_TEXT_NOT_FOUND';
 
   // The batch public marketing read was given more than 50 public ids
   // (club_server#410, #22).
@@ -290,9 +294,13 @@ abstract final class SdkErrorCode {
   // languages; `details.missing` is `[{field, languages}]` (#101). Mapped
   // to `ApplicationIncompleteException`.
   static const applicationIncomplete = 'APPLICATION_INCOMPLETE';
-  // A clause fill refused (#107): an unknown clause, a gap without a fact,
-  // a fact for no gap, a fact of the wrong type or an unknown choice. The
-  // message names it.
+  // Save refused: a `{gap}` in a printed text names no fact of the
+  // template; `details.gaps` is `[{place, language, gap}]` (club_server#126,
+  // #92). Mapped to `ApplicationUnknownFactException`.
+  static const applicationUnknownFact = 'APPLICATION_UNKNOWN_FACT';
+  // A template the PDF cannot draw: its languages are not `["en"]` or
+  // `["en", <one other>]`, a label lacks a print language, or a `choices`
+  // fact names a choice the library does not have. The message names it.
   static const applicationInvalidReference = 'APPLICATION_INVALID_REFERENCE';
   // Save refused: the member's details alone overflow page 1; mapped to
   // `ApplicationDoesNotFitException`.

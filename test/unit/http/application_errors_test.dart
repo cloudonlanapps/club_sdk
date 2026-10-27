@@ -219,6 +219,114 @@ void main() {
       });
     }
 
+    test(
+      'Issue 92: 422 APPLICATION_UNKNOWN_FACT maps to '
+      'ApplicationUnknownFactException with each gap naming no fact',
+      () {
+        final exc = mapHttpError(422, const {
+          'detail': {
+            'code': 'APPLICATION_UNKNOWN_FACT',
+            'message':
+                'Gaps naming no fact of the template: header[1][0] (en): '
+                'camp, selections[0] (mr): camp_dates',
+            'details': {
+              'gaps': [
+                {'place': 'header[1][0]', 'language': 'en', 'gap': 'camp'},
+                {
+                  'place': 'selections[0]',
+                  'language': 'mr',
+                  'gap': 'camp_dates',
+                },
+              ],
+            },
+          },
+        });
+        expect(exc, isA<ApplicationUnknownFactException>());
+        exc as ApplicationUnknownFactException;
+        expect(exc.statusCode, 422);
+        expect(exc.code, SdkErrorCode.applicationUnknownFact);
+        expect(exc.gaps, const [
+          ApplicationUnknownGap(
+            place: 'header[1][0]',
+            language: 'en',
+            gap: 'camp',
+          ),
+          ApplicationUnknownGap(
+            place: 'selections[0]',
+            language: 'mr',
+            gap: 'camp_dates',
+          ),
+        ]);
+        expect(exc.gaps[1].language, 'mr');
+        expect(exc.toString(), contains('camp_dates'));
+      },
+    );
+
+    test('Issue 92: an unknown-fact gap of the wrong shape is skipped, and '
+        'no details read as no gaps', () {
+      final exc = ApplicationUnknownFactException.fromDetails('m', const {
+        'details': {
+          'gaps': [
+            {'place': 'title', 'language': 'en', 'gap': 'venue'},
+            'title',
+            {'place': 'title', 'language': 'en'},
+            {'place': 'title', 'gap': 'venue'},
+          ],
+        },
+      });
+      expect(exc.gaps, const [
+        ApplicationUnknownGap(place: 'title', language: 'en', gap: 'venue'),
+      ]);
+      final bare = mapHttpError(422, const {
+        'detail': {'code': 'APPLICATION_UNKNOWN_FACT', 'message': 'm'},
+      });
+      expect(
+        bare,
+        isA<ApplicationUnknownFactException>().having(
+          (e) => e.gaps,
+          'gaps',
+          isEmpty,
+        ),
+      );
+    });
+
+    test('Issue 92: an unknown gap round-trips and compares by value', () {
+      const gap = ApplicationUnknownGap(
+        place: 'terms[0].body',
+        language: 'hi',
+        gap: 'fee',
+      );
+      expect(gap.toMap(), {
+        'place': 'terms[0].body',
+        'language': 'hi',
+        'gap': 'fee',
+      });
+      expect(ApplicationUnknownGap.fromMap(gap.toMap()), gap);
+      expect(ApplicationUnknownGap.fromMap(gap.toMap()).hashCode, gap.hashCode);
+      expect(gap.toString(), 'terms[0].body (hi): fee');
+    });
+
+    test('Issue 92: 404 APPLICATION_LIBRARY_TEXT_NOT_FOUND is a plain '
+        'ServerException', () {
+      final exc = mapHttpError(404, const {
+        'detail': {
+          'code': 'APPLICATION_LIBRARY_TEXT_NOT_FOUND',
+          'message': 'Library text 9 not found',
+        },
+      });
+      expect(exc.runtimeType, ServerException);
+      expect(exc.statusCode, 404);
+      expect(exc.code, SdkErrorCode.applicationLibraryTextNotFound);
+    });
+
+    test('Issue 92: the codes have their server spelling', () {
+      expect(SdkErrorCode.applicationUnknownFact, 'APPLICATION_UNKNOWN_FACT');
+      expect(
+        SdkErrorCode.applicationLibraryTextNotFound,
+        'APPLICATION_LIBRARY_TEXT_NOT_FOUND',
+      );
+    });
+
     test('Issue 66: the codes have their server spelling', () {
       expect(SdkErrorCode.applicationNotFound, 'APPLICATION_NOT_FOUND');
       expect(SdkErrorCode.applicationNotPublished, 'APPLICATION_NOT_PUBLISHED');

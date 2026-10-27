@@ -5,9 +5,10 @@ import 'package:meta/meta.dart';
 /// `{"en": "…", "mr": "…"}` (club_server#93, R6; #107).
 ///
 /// A template's printed texts are custom text only: the server refuses a
-/// `{"clause": …}` or `{"fact": …}` reference with 422. To print a library
-/// clause, fill it with `ApplicationSource.fillClause` and insert the
-/// result's [ApplicationText].
+/// `{"clause": …}` or `{"fact": …}` reference with 422. A text may hold
+/// `{name}` gaps (club_server#126), kept as written and filled from the
+/// template's fact of that name when the PDF is drawn; to print a library
+/// clause, paste its text (`ApplicationClause.text`).
 @immutable
 class ApplicationText {
   /// The text keyed by language code.
