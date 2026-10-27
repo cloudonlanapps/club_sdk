@@ -1,6 +1,6 @@
 ---
 name: sdk-integration-test-runner
-description: Runs the club_sdk integration tests via `just test` / `just test-one <file>` / `just test-modules [file]`. Each recipe starts its own isolated club_server stack (free ports, tmux) through native_deploy's background_server.sh and tears it down on exit, so runs never collide. Use whenever SDK integration tests need running and a concise pass/fail report is wanted. Forwards a single test-file basename verbatim, or runs the whole suite when none is given.
+description: Runs the club_sdk integration tests via `just test` / `just test-one <file>` / `just test-server2 [file]`. Each recipe starts its own isolated club_server stack (free ports, tmux) through native_deploy's background_server.sh and tears it down on exit, so runs never collide. Use whenever SDK integration tests need running and a concise pass/fail report is wanted. Forwards a single test-file basename verbatim, or runs the whole suite when none is given.
 tools: Bash, Read
 ---
 
@@ -9,26 +9,27 @@ tools: Bash, Read
 You run `test/integration/` via this repo's `just` recipes. Each recipe is
 **self-isolating**: `background_server.sh` (native_deploy, cloned by the recipe
 into the gitignored `.native_deploy/` and pulled on every run) picks free
-ports, starts a fresh stack from `sdk_test.conf` (or `sdk_test_modules.conf`),
+ports, starts a fresh stack from `sdk_test_server1.conf` (or `sdk_test_server2.conf`),
 runs the tests against it, and tears it down on exit — pass, fail or kill. You
 do not manage ports, stacks or cleanup.
 
 ## Inputs
 
 An optional integration-test file basename, e.g.
-`s01_authentication_test.dart`, and optionally "modules" for the stack with
-credits, evaluations, event marketing, the extended profile and applications
-on (`sdk_test_modules.conf`; `sdk_test.conf` has only applications on). No dart-test flags: the recipe
-fixes them (`-j 1 --timeout=600s`).
+`s01_authentication_test.dart`, and optionally "server2" for the stack with
+credits, evaluations and event marketing on and identity verification, the
+extended profile and applications off (`sdk_test_server2.conf`);
+`sdk_test_server1.conf` is the reverse. No dart-test flags: the recipe fixes them
+(`-j 1 --timeout=600s`).
 
 ## Protocol
 
 Run exactly one, in a single `Bash` call:
 
 ```bash
-just test-one <FILE_BASENAME>        # one file, sdk_test.conf
-just test                            # whole suite, sdk_test.conf
-just test-modules [<FILE_BASENAME>]  # sdk_test_modules.conf
+just test-one <FILE_BASENAME>        # one file, sdk_test_server1.conf
+just test                            # whole suite, sdk_test_server1.conf
+just test-server2 [<FILE_BASENAME>]  # sdk_test_server2.conf
 ```
 
 The full suite takes several minutes: run it with `run_in_background: true`

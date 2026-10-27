@@ -11,7 +11,7 @@ import '../utils/test_client.dart';
 /// (issue #709).
 ///
 /// The app's cover upload was failing silently. This runs against a real
-/// server (the `just sdk-test` stack) and proves the underlying SDK flow: a
+/// server (the `just test` stack) and proves the underlying SDK flow: a
 /// real image uploads, the server converts it (the default,
 /// `preserveOriginal: false`, exercising the conversion path the app uses),
 /// and it attaches + lists as the cover.

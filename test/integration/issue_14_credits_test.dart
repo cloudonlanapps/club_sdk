@@ -16,8 +16,8 @@ import '../utils/test_client.dart';
 /// credit is a new account and a correction is a reversal. These tests
 /// exercise that shape end to end.
 ///
-/// Runs against both stacks: `just sdk-test` (module off) asserts the 503,
-/// `just sdk-test-modules` the behaviour.
+/// Runs against both stacks: `just test` (module off) asserts the 503,
+/// `just test-server2` the behaviour.
 void main() {
   group('Issue 14: credit system', () {
     late SecureClient admin;

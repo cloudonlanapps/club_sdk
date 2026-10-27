@@ -15,8 +15,9 @@ import '../utils/test_client.dart';
 ///
 /// The profile fields are stored and returned on every stack; the profile
 /// options write needs `extended_profile_enabled` (on in
-/// `sdk_test_modules.conf`, off in `sdk_test.conf`), so the cases that
-/// write options run on the modules stack and the 503 on the plain one.
+/// `sdk_test_server1.conf`, off in `sdk_test_server2.conf`, #86), so the
+/// cases that write options run on `just test` and the 503 on
+/// `just test-server2`.
 /// Only the super admin writes them (club_server#98, #74).
 void main() {
   group('Issue 66: extended profile', () {

@@ -63,7 +63,7 @@ test/
 
 ## Integration tests
 
-- Run them with `just test`, `just test-one <file>` or `just test-modules`. Each
+- Run them with `just test`, `just test-one <file>` or `just test-server2`. Each
   run starts its own server and stops it afterwards. Never run them against a
   shared server.
 - Each file is self-contained and must pass on its own with `just test-one`.
@@ -80,8 +80,10 @@ test/
   side: the admin's list and the member's view.
 - Test each operation for every role that can reach it, covering both the
   allowed and the forbidden cases.
-- The optional modules (credits, evaluations, marketing) run against both
-  stacks. Use `module_gate.dart`: assert the 503 when a module is off and the
+- Every file runs against both stacks: `sdk_test_server1.conf` (identity
+  verification, extended profile, applications on) and
+  `sdk_test_server2.conf` (credits, evaluations, marketing on). Use
+  `module_gate.dart`: assert the 503 when a module is off and the
   behaviour when it is on.
 - Delete lifecycles follow `CLAUDE.md`: soft-delete before hard-delete, and
   check both the active and the deleted listings.

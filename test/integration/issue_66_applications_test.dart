@@ -11,8 +11,9 @@ import '../utils/test_client.dart';
 /// Issue 66: printable applications (club_server#93).
 ///
 /// Applications are available only where `applications_enabled` and
-/// identity verification are both on. Both test confs turn both on (#72),
-/// so the lifecycle runs on either stack; the 503 case skips on both.
+/// identity verification are both on. `sdk_test_server1.conf` turns both on, so
+/// the lifecycle runs on `just test`; `sdk_test_server2.conf` turns both
+/// off, so the 503 case runs on `just test-server2` (#86).
 void main() {
   group('Issue 66: applications', () {
     const password = 'password123';

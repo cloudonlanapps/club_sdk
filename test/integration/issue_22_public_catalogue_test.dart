@@ -16,8 +16,8 @@ import '../utils/test_client.dart';
 /// extended block is the deployment-gated Event Marketing module.
 ///
 /// Runs against both stacks: the marketing cases assert the 503 on the
-/// off stack (`just sdk-test`) and the behaviour on the on stack
-/// (`just sdk-test-modules`). The catalogue cases run on both.
+/// off stack (`just test`) and the behaviour on the on stack
+/// (`just test-server2`). The catalogue cases run on both.
 void main() {
   group('Issue 22: public catalogue and event marketing', () {
     late SecureClient admin;

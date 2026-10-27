@@ -34,8 +34,8 @@ This applies to bugs, features, refactors, docs, dependency bumps, test changes 
 just lint                         # dart analyze + format check
 just unit-test                    # unit tests, no server
 just test-one <file>              # one integration file, e.g. s23_broadcasts_test.dart
-just test                         # the whole integration suite
-just test-modules [<file>]        # the same with credits, evaluations and marketing on
+just test                         # the whole integration suite, sdk_test_server1.conf
+just test-server2 [<file>]        # the same on sdk_test_server2.conf (credits, evaluations, marketing on; verification off)
 ```
 
 Each integration recipe starts its own isolated club_server stack and tears it down on exit, so runs never collide. Pass `keep=1` to leave the server up for debugging. Details are in [`CLAUDE.md`](CLAUDE.md) ("Integration Test Guidelines").
@@ -133,7 +133,7 @@ Always branch **from `main`**. Do the work in a git worktree, not the main check
 - **Body:** must include `Fixes #N` (or `Closes #N` / `Refs #N`) so GitHub auto-links and auto-closes
 - **Target branch:** `main` (or the previous branch of a stack)
 - **One issue per PR** when possible. Bundling is OK only if issues are tightly related.
-- `just lint`, `just unit-test` and the integration files the change touches must pass before merge; run the full `just test` (and `just test-modules` when a module is involved) before the PR
+- `just lint`, `just unit-test` and the integration files the change touches must pass before merge; run the full `just test` (and `just test-server2` when a module or identity verification is involved) before the PR
 - At least one human review for non-trivial changes
 
 ## 6. Merging

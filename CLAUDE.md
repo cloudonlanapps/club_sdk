@@ -125,26 +125,34 @@ test/
 just test                              # full suite
 just test-one s23_broadcasts_test.dart
 just test-one s23_broadcasts_test.dart keep=1   # leave the server up to debug
-just test-modules                      # modules stack: credits, evaluations, event marketing, extended profile, applications on
+just test-server2                      # server2 stack: credits, evaluations, event marketing on
 ```
 
 Each recipe spins up its **own** fresh isolated server (free ports, started in
 tmux via `background_server.sh`, which the recipe clones from
 `cloudonlanapps/native_deploy` into the gitignored `.native_deploy/` and pulls on
 every run) and tears it down on exit — no shared
-stack to reset or collide on. The stack is described by one of two confs:
+stack to reset or collide on. The stack is described by one of two confs,
+the two stacks club_client tests on (#86):
 
-- `sdk_test.conf` (`just test`, `just test-one`): applications on; credits,
-  evaluations, event marketing and the extended profile off.
-- `sdk_test_modules.conf` (`just test-modules`): credits, evaluations, event
-  marketing, the extended profile and applications on.
+- `sdk_test_server1.conf` (config 1; `just test`, `just test-one`): identity
+  verification, the extended profile and applications on; credits,
+  evaluations and event marketing off.
+- `sdk_test_server2.conf` (config 2; `just test-server2`): credits,
+  evaluations and event marketing on; identity verification, the extended
+  profile and applications off.
 
-Both leave identity verification on (`identity_verification_required`), which
-applications need: without it every `/applications` route answers 503. Each
+Both confs state every one of these keys. Applications need identity
+verification: without it every `/applications` route answers 503. Every
+integration file runs on both stacks: a case that needs a feature reads
+`/v1/capabilities` and skips where it is off (`test/utils/module_gate.dart`),
+and the feature-off cases (a module's 503, a sign-up with verification off)
+run on the other stack. `stack_capabilities_test.dart` fails on a stack that
+is neither. Each
 conf's `source` clones club_server's `main` afresh for
 each run from `https://github.com/cloudonlanapps/club_server.git` (public, over
 HTTPS — no credentials needed); to test against a local server checkout, point
-`source` at it or point `SDK_CONF` / `SDK_MODULES_CONF` at your own conf. The
+`source` at it or point `SDK_SERVER1_CONF` / `SDK_SERVER2_CONF` at your own conf. The
 `port` and `db_port` in the confs are only defaults: the recipes start the stack
 with `--auto-ports`, which picks two free ports. The
 recipes inject `MYCLUB_API_BASE_URL` (the just-picked port),

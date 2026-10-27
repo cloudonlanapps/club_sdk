@@ -16,7 +16,7 @@ import '../utils/test_client.dart';
 /// compared ignoring case and surrounding spaces. A free name is kept.
 ///
 /// Runs against both stacks: `just test` (module off) asserts the 503,
-/// `just test-modules issue_57_restore_renames_test.dart` the behaviour.
+/// `just test-server2 issue_57_restore_renames_test.dart` the behaviour.
 void main() {
   group('Issue 57: restoring a template onto a taken name', () {
     late SecureClient sudo;

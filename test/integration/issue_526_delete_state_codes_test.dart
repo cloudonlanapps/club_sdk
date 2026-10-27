@@ -22,7 +22,7 @@ import '../utils/test_png.dart';
 ///
 /// Templates and evaluations need the evaluations module: those cases skip
 /// on the default stack. Run the whole file with
-/// `just test-modules issue_526_delete_state_codes_test.dart`.
+/// `just test-server2 issue_526_delete_state_codes_test.dart`.
 void main() {
   group('club_server#526: wrong-state delete codes', () {
     late SecureClient sudo;

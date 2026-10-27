@@ -5,7 +5,7 @@
 /// `credit_system_enabled`, `evaluations_enabled` and
 /// `event_marketing_enabled` are deployment settings, so the same suite
 /// meets both answers: `just test` runs against a stack with the
-/// modules off and `just test-modules` against one with them on. The
+/// modules off and `just test-server2` against one with them on. The
 /// routes stay registered either way — off, they answer 503 — so a suite
 /// asserts the 503 on the off stack and the behaviour on the on stack,
 /// and never silently passes because it ran against the wrong conf.

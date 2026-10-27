@@ -10,11 +10,9 @@ import '../utils/test_client.dart';
 /// Issue 2: identity-document verification is optional per deployment
 /// (club_server#428), and `Capabilities.identityVerification` says which.
 ///
-/// Both test confs leave it on (the default; `sdk_test_modules.conf` since
-/// #72, so applications are available there), so `just test` and
-/// `just test-modules` cover the first half of this file. The second half
-/// runs only against a stack with `identity_verification_required = false`
-/// (point `SDK_CONF` at one); each case skips itself on the other kind of
+/// `sdk_test_server1.conf` turns it on and `sdk_test_server2.conf` off
+/// (#86), so `just test` covers the first half of this file and
+/// `just test-server2` the second; each case skips itself on the other
 /// stack rather than passing without asserting.
 void main() {
   group('Issue 2: identity verification', () {

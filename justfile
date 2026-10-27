@@ -5,17 +5,21 @@
 # native_deploy is cloned from git into .native_deploy/ (gitignored), pulled on
 # every run and run from there, so the stacks' run directories
 # (.native_deploy/deployed/) stay inside this checkout too. The stack is
-# described by a conf in this repo:
-#   sdk_test.conf          applications on; credits, evaluations, event
-#                          marketing and the extended profile off
-#   sdk_test_modules.conf  credits, evaluations, event marketing, the extended
-#                          profile and applications on
-# Both keep identity verification on, which applications need. Each conf
-# clones the server's main branch from git; override with SDK_CONF /
-# SDK_MODULES_CONF.
+# described by a conf in this repo, one of the two stacks club_client tests on
+# (#86):
+#   sdk_test_server1.conf          identity verification, the extended profile and
+#                          applications on; credits, evaluations and event
+#                          marketing off
+#   sdk_test_server2.conf  credits, evaluations and event marketing on;
+#                          identity verification, the extended profile and
+#                          applications off
+# Every integration file runs on both: a case that needs a feature skips on
+# the stack without it, and the feature-off cases (503, verification off)
+# run there. Each conf clones the server's main branch from git; override
+# with SDK_SERVER1_CONF / SDK_SERVER2_CONF.
 
-SDK_CONF         := env_var_or_default('SDK_CONF', 'sdk_test.conf')
-SDK_MODULES_CONF := env_var_or_default('SDK_MODULES_CONF', 'sdk_test_modules.conf')
+SDK_SERVER1_CONF := env_var_or_default('SDK_SERVER1_CONF', 'sdk_test_server1.conf')
+SDK_SERVER2_CONF := env_var_or_default('SDK_SERVER2_CONF', 'sdk_test_server2.conf')
 SDK_TEST_TIMEOUT := "600"
 NATIVE_DEPLOY_URL := env_var_or_default('NATIVE_DEPLOY_URL', 'https://github.com/cloudonlanapps/native_deploy.git')
 NATIVE_DEPLOY_REF := env_var_or_default('NATIVE_DEPLOY_REF', 'main')
@@ -65,7 +69,7 @@ _native-deploy:
 
 # Internal: start a fresh stack from CONF, run `dart test <TARGET>` against
 # it, and clean up on exit (unless `keep` is non-empty).
-_run TARGET keep="" conf=SDK_CONF: _native-deploy
+_run TARGET keep="" conf=SDK_SERVER1_CONF: _native-deploy
     #!/usr/bin/env bash
     set -euo pipefail
     json=$("{{BACKGROUND_SERVER}}" {{conf}} start --auto-ports)
@@ -94,27 +98,29 @@ test keep="": (_run "test/integration/" keep)
 [group('tests')]
 test-one FILE keep="": (_run ("test/integration/" + FILE) keep)
 
-#   just test-modules                       # the WHOLE suite, modules on
-#   just test-modules issue_14_credits_test.dart
+#   just test-server2                       # the WHOLE suite on server2
+#   just test-server2 issue_14_credits_test.dart
 # With no FILE this runs every integration file, not only the module ones:
-# many suites assert behaviour on both stacks (e.g. credit-gated enrolment),
-# so a modules run is a full second pass. The module suites themselves are
-# issue_14_credits, issue_15_capabilities, issue_15_evaluations,
-# issue_22_public_catalogue, issue_33_credit_rules, issue_66_extended_profile
-# and issue_72_profile_on_form; run one by name.
-# Run the whole integration suite (or FILE) on sdk_test_modules.conf.
+# every suite runs on both stacks, each case on the one with its features
+# (e.g. credit-gated enrolment, sign-up with verification off), so a server2
+# run is a full second pass. The suites of its modules are issue_14_credits,
+# issue_15_evaluations, issue_22_public_catalogue, issue_33_credit_rules,
+# issue_54_evaluation_lifecycle and issue_57_restore_renames; the extended
+# profile and application suites (issue_66_*, issue_69, issue_72, issue_76,
+# issue_77, issue_81) belong to `just test`. Run one by name.
+# Run the whole integration suite (or FILE) on sdk_test_server2.conf.
 [group('tests')]
-test-modules FILE="" keep="": (_run ("test/integration/" + FILE) keep SDK_MODULES_CONF)
+test-server2 FILE="" keep="": (_run ("test/integration/" + FILE) keep SDK_SERVER2_CONF)
 
 # Prints one JSON line (name, base_url, server_port, db_port, run_dir,
 # tmux_session, server_log). Watch logs: tmux attach -t <tmux_session>
 # Start a fresh isolated test server (postgres + API) in a tmux session.
 [group('test server')]
-start-test-server CONF=SDK_CONF: _native-deploy
+start-test-server CONF=SDK_SERVER1_CONF: _native-deploy
     "{{BACKGROUND_SERVER}}" {{CONF}} start --auto-ports
 
 # Pass the server_port and db_port that `start-test-server` printed.
 # Stop an isolated test server and remove its run directory.
 [group('test server')]
-stop-test-server PORT DB_PORT CONF=SDK_CONF: _native-deploy
+stop-test-server PORT DB_PORT CONF=SDK_SERVER1_CONF: _native-deploy
     "{{BACKGROUND_SERVER}}" {{CONF}} cleanup port={{PORT}} db_port={{DB_PORT}}
