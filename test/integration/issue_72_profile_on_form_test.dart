@@ -119,7 +119,8 @@ void main() {
 
       await register(adminName, DateTime.utc(1985, 2, 3));
       await sudo.users.assignRole(adminName, 'admin');
-      // An adult, so the guardian block prints only once a guardian is set.
+      // An adult: the guardian block prints empty until a guardian is set
+      // (club_server#128).
       await register(memberName, DateTime.utc(1990, 6, 7));
 
       admin = await signIn(adminName);
@@ -149,8 +150,10 @@ void main() {
       }
     });
 
-    test('Issue 72: the saved layout leaves less spread with the guardian '
-        'block than without it', () async {
+    // The guardian block prints on every form since club_server#128, so
+    // the two spreads are the same (#94).
+    test('Issue 72: the saved layout has one spread, with or without a '
+        'guardian', () async {
       if (skipUnless(
         enabled: capabilities.applications,
         module: 'applications',
@@ -159,14 +162,11 @@ void main() {
       }
       final layout = published.layout!;
       expect(layout.spreadWithGuardian, greaterThan(0));
-      expect(
-        layout.spreadWithGuardian,
-        lessThan(layout.spreadWithoutGuardian),
-      );
+      expect(layout.spreadWithoutGuardian, layout.spreadWithGuardian);
     });
 
-    test("Issue 72: setting an adult's guardian prints the guardian block, "
-        'and clearing it takes it off', () async {
+    test("Issue 72: setting an adult's guardian fills the guardian block, "
+        'and clearing it empties it', () async {
       if (skipUnless(
         enabled: capabilities.applications,
         module: 'applications',

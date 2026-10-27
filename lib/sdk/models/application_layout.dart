@@ -6,8 +6,8 @@ import 'package:meta/meta.dart';
 /// [name] is the first layout whose page 1 fits: `one page`,
 /// `one page, tighter spacing` or `signing part on page 2`. The spreads are
 /// the spare height, in points, added to each gap of page 1 with and
-/// without the parent / guardian block — the one part that varies by
-/// member.
+/// without the parent / guardian block. Since club_server#128 the block
+/// prints on every form, so the server sends both with the same value.
 @immutable
 class ApplicationLayout {
   const ApplicationLayout({
