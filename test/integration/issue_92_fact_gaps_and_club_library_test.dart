@@ -385,8 +385,9 @@ void main() {
       expect(await admin.applications.getLibraryText(note.id), note);
     });
 
-    test('Issue 92: a name over 100 characters, an empty text or an unknown '
-        'language is refused', () async {
+    test('Issue 92: a name over 100 characters, an empty text or a key that '
+        'is not a language code is refused; a language the club lacks is '
+        'refused as not offered (#96)', () async {
       if (skipUnless(enabled: on, module: 'applications')) return;
       final validation = refused(422, SdkErrorCode.validationError);
       for (final input in [
@@ -403,7 +404,7 @@ void main() {
         const ApplicationLibraryTextInput(
           kind: ApplicationClauseKind.note,
           name: 'test_i92 tamil',
-          text: ApplicationText({'ta': 'உரை'}),
+          text: ApplicationText({'Tamil': 'உரை'}),
         ),
       ]) {
         await expectLater(
@@ -412,6 +413,23 @@ void main() {
           reason: '$input',
         );
       }
+      // `ta` is a language code, but not one of the club's (club_server#133).
+      await expectLater(
+        admin.applications.createLibraryText(
+          const ApplicationLibraryTextInput(
+            kind: ApplicationClauseKind.note,
+            name: 'test_i92 tamil',
+            text: ApplicationText({'ta': 'உரை'}),
+          ),
+        ),
+        throwsA(
+          isA<ApplicationLanguageNotOfferedException>().having(
+            (e) => e.languages,
+            'languages',
+            ['ta'],
+          ),
+        ),
+      );
     });
 
     test('Issue 92: an unknown club text is 404 '

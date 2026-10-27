@@ -27,7 +27,7 @@ against a fresh server (see `CLAUDE.md`).
 | | # | Module | Interface | Description |
 |---|---|--------|-----------|-------------|
 | [x] | 1 | Authentication | `AuthSource` | Login, register, password reset, bootstrap super admin, token refresh |
-| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles, the extended profile and the club's profile options |
+| [x] | 2 | User Management | `UserSource` | CRUD, role management, status transitions (pending/active/blocked/left), profiles, the extended profile and the club's profile options (positions, and languages as codes and names: the club's application languages) |
 | [ ] | 4 | Group Management | `GroupSource` | Create, update, delete groups and manage members |
 | [ ] | 5 | Guardian Management | `GuardianSource` | Guardian-dependent relationships, guardian limits |
 | [ ] | 6 | Venue Management | `VenueSource` | CRUD, capacity management, active venue listing |
@@ -39,4 +39,4 @@ against a fresh server (see `CLAUDE.md`).
 | [ ] | 12 | Notification Management | `NotificationSource` | Fetch/manage notifications, mark read, channel preferences (in-app, email, SMS) |
 | [x] | 14 | Public API | `PublicClient` | Unauthenticated read-only access - staff listings, public events, venues, landing/about/contact pages, health check |
 | [x] | 15 | Seeding | `SeedingService` | Bulk test data loading, handles entity dependency ordering, force-clean |
-| [x] | 16 | Applications | `ApplicationSource` | Printable application forms (optional module, needs identity verification): templates an admin writes, saves and publishes, the label catalogue, the clauses list and the club's library of texts (with `{fact}` gaps filled in the PDF), each member's form as a PDF, and an admin's blank form of a saved or published template, for filling in by hand |
+| [x] | 16 | Applications | `ApplicationSource` | Printable application forms (optional module, needs identity verification): templates an admin writes, saves and publishes, the club's labels (editable), the club's library of texts (the built-in clauses seeded into it, with `{fact}` gaps filled in the PDF) and the clauses list that holds them, all in the club's languages, each member's form as a PDF, and an admin's blank form of a saved or published template, for filling in by hand |
