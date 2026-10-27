@@ -212,7 +212,9 @@ Map<String, dynamic>? applicationErrorDetails(Map<String, dynamic>? details) {
 /// (club_server#93, R9; #101). The template stays a draft.
 ///
 /// [missing] names each text by its API path (`title`, `formFooter`,
-/// `terms[1].heading`, …) with the print languages it lacks.
+/// `terms[1].heading`, …) with the print languages it lacks; a club label
+/// the template does not override is `labels.<key>` (club_server#133,
+/// `ApplicationMissingText.labelKey`).
 class ApplicationIncompleteException extends ServerException {
   const ApplicationIncompleteException({
     required super.message,
@@ -249,6 +251,43 @@ class ApplicationIncompleteException extends ServerException {
   @override
   String toString() =>
       'ApplicationIncompleteException(missing: $missing): $message';
+}
+
+/// 422 `APPLICATION_LANGUAGE_NOT_OFFERED`: a template's print language,
+/// or a text, is in a language the club does not have
+/// (`ProfileOptions.languages`, club_server#133, #96). Creating or editing
+/// a template, a library text or a label is refused this way, and so is
+/// saving a template whose print language the club has since removed.
+class ApplicationLanguageNotOfferedException extends ServerException {
+  const ApplicationLanguageNotOfferedException({
+    required super.message,
+    this.languages = const [],
+    super.details,
+  }) : super(statusCode: 422, code: SdkErrorCode.applicationLanguageNotOffered);
+
+  /// Builds from the server's error object, whose `details` carry
+  /// `languages: [code]`. An entry that is not a string is skipped.
+  factory ApplicationLanguageNotOfferedException.fromDetails(
+    String message,
+    Map<String, dynamic>? details,
+  ) {
+    final languages = applicationErrorDetails(details)?['languages'];
+    return ApplicationLanguageNotOfferedException(
+      message: message,
+      languages: languages is List
+          ? List<String>.unmodifiable(languages.whereType<String>())
+          : const [],
+      details: details,
+    );
+  }
+
+  /// The language codes the club does not have.
+  final List<String> languages;
+
+  @override
+  String toString() =>
+      'ApplicationLanguageNotOfferedException(languages: $languages): '
+      '$message';
 }
 
 /// 422 `APPLICATION_UNKNOWN_FACT`: saving an application template found

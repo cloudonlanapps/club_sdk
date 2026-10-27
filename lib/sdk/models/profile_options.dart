@@ -3,19 +3,26 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import 'profile_language.dart';
 import 'profile_position.dart';
 
 const _positionsEquality = ListEquality<ProfilePosition>();
-const _languagesEquality = ListEquality<String>();
+const _languagesEquality = ListEquality<ProfileLanguage>();
 
 /// The club's profile options, the `profile_options` system preference
 /// (`/system/preferences/profile_options`, club_server#92, #66): the
 /// positions and languages a member chooses from for `preferredPositions`
 /// and `preferredLanguages`.
 ///
-/// Any signed-in user may read it; both lists are empty until the super
-/// admin writes it (`PATCH /admin/preferences/profile_options`,
-/// club_server#98, #74). The server checks a chosen value against these
+/// Any signed-in user may read it. Never written, it has no positions and
+/// the languages English and Marathi; the super admin writes it with
+/// `PATCH /admin/preferences/profile_options` (club_server#98, #74). The
+/// languages are also the club's application languages (club_server#133,
+/// #96): the ones a form's labels, library texts and templates are
+/// translated into and may print in. The server refuses a document
+/// without English (`en`), with a code or name listed twice, or with a
+/// position labelled in a language not in the list (422
+/// `INVALID_PREFERENCE_VALUE`). The server checks a chosen value against these
 /// lists when it is written (422 `INVALID_PROFILE_OPTION`); a stored value
 /// whose option is removed later stays as it is.
 @immutable
@@ -25,8 +32,9 @@ class ProfileOptions {
     this.languages = const [],
   });
 
-  /// Reads `{positions: [{value, label}], languages: [name]}`; a missing or
-  /// null list reads as empty.
+  /// Reads `{positions: [{value, label}], languages: [{code, name}]}`; a
+  /// missing or null list reads as empty, and a language entry that is not
+  /// `{code, name}` is skipped.
   factory ProfileOptions.fromMap(Map<String, dynamic> map) {
     final positions = map['positions'];
     final languages = map['languages'];
@@ -41,7 +49,11 @@ class ProfileOptions {
                 .toList(growable: false)
           : const [],
       languages: languages is List
-          ? languages.whereType<String>().toList(growable: false)
+          ? [
+              for (final e in languages)
+                if (e is Map && e['code'] is String && e['name'] is String)
+                  ProfileLanguage.fromMap(Map<String, dynamic>.from(e)),
+            ].toList(growable: false)
           : const [],
     );
   }
@@ -52,9 +64,22 @@ class ProfileOptions {
   /// The club's positions, in the order the admin set. Values are distinct.
   final List<ProfilePosition> positions;
 
-  /// The club's languages by name (`English`, `Marathi`, …), distinct. A
-  /// language here has no tie to the languages a position is labelled in.
-  final List<String> languages;
+  /// The club's languages, in the order the admin set; codes and names
+  /// distinct. A position's [ProfilePosition.label] is keyed by these
+  /// codes; a member's `preferredLanguages` hold these names.
+  final List<ProfileLanguage> languages;
+
+  /// The language codes, in order.
+  List<String> get codes => [for (final l in languages) l.code];
+
+  /// The language whose code is [code], or null when there is none.
+  ProfileLanguage? language(String code) =>
+      languages.firstWhereOrNull((l) => l.code == code);
+
+  /// The language named [name] (as `preferredLanguages` holds it), or null
+  /// when there is none.
+  ProfileLanguage? languageNamed(String name) =>
+      languages.firstWhereOrNull((l) => l.name == name);
 
   /// True when the club has set no position and no language.
   bool get isEmpty => positions.isEmpty && languages.isEmpty;
@@ -65,7 +90,7 @@ class ProfileOptions {
 
   ProfileOptions copyWith({
     List<ProfilePosition>? positions,
-    List<String>? languages,
+    List<ProfileLanguage>? languages,
   }) {
     return ProfileOptions(
       positions: positions ?? this.positions,
@@ -75,7 +100,7 @@ class ProfileOptions {
 
   Map<String, dynamic> toMap() => {
     'positions': [for (final p in positions) p.toMap()],
-    'languages': languages,
+    'languages': [for (final l in languages) l.toMap()],
   };
 
   String toJson() => json.encode(toMap());

@@ -5,6 +5,7 @@ import '../models/application_library_text.dart';
 import '../models/application_patch.dart';
 import '../models/application_status.dart';
 import '../models/application_template.dart';
+import '../models/application_text.dart';
 import '../models/pagination.dart';
 
 /// Printable application forms (`/applications`, club_server#93, #66).
@@ -21,8 +22,9 @@ import '../models/pagination.dart';
 ///
 /// Who may call what: writing, the moves, [duplicateApplication],
 /// [downloadPreview], [downloadBlankForm], [downloadMemberForm],
-/// [getLabels], [getClauses] and the club library ([listLibraryTexts] …
-/// [deleteLibraryText]) are an admin's (403 otherwise; 401 signed out).
+/// [getLabels], [updateLabel], [getClauses] and the club library
+/// ([listLibraryTexts] … [deleteLibraryText]) are an admin's (403
+/// otherwise; 401 signed out).
 /// [listApplications], [getApplication] and [downloadOwnForm] are any
 /// signed-in user's — `registered`, `pending` or approved. A member sees
 /// the published templates only, and only once they have uploaded an
@@ -32,6 +34,13 @@ import '../models/pagination.dart';
 ///
 /// A PDF is the form's bytes (`application/pdf`); the server names it
 /// `application-<id>-<username>.pdf`.
+///
+/// The club's languages (`ProfileOptions.languages`, club_server#133) are
+/// the application languages: every text read (templates, library texts,
+/// labels) is shown in them only, and a template may print only in them.
+/// Writing a print language, or a text, in a language the club does not
+/// have is 422 `APPLICATION_LANGUAGE_NOT_OFFERED`
+/// (`ApplicationLanguageNotOfferedException`, naming the languages).
 abstract interface class ApplicationSource {
   /// Create a draft from [content] (201). Every field may be left for
   /// later; nothing is checked for completeness until [saveApplication].
@@ -41,7 +50,9 @@ abstract interface class ApplicationSource {
   /// (club_server#126).
   /// A shape the server cannot store — among them a text that is not
   /// `{language: text}`, such as a `{"clause": …}` or `{"fact": …}`
-  /// reference — is 422 `VALIDATION_ERROR`.
+  /// reference — is 422 `VALIDATION_ERROR`. A print language or a text in
+  /// a language the club does not have is
+  /// `ApplicationLanguageNotOfferedException`.
   Future<ApplicationTemplate> createApplication(ApplicationContent content);
 
   /// List the templates the caller may see, newest first: an admin every
@@ -59,7 +70,9 @@ abstract interface class ApplicationSource {
   /// Change a draft: each field [patch] gives replaces the stored one,
   /// null clears it, a field left out keeps its value. Gaps are stored as
   /// written, even one naming no fact. A saved or
-  /// published template is 422 `INVALID_STATE`.
+  /// published template is 422 `INVALID_STATE`. A print language or a
+  /// text in a language the club does not have is
+  /// `ApplicationLanguageNotOfferedException`.
   Future<ApplicationTemplate> updateApplication(
     int id,
     ApplicationPatch patch,
@@ -70,11 +83,15 @@ abstract interface class ApplicationSource {
   Future<ApplicationTemplate> deleteApplication(int id);
 
   /// Draft → saved. Refused, staying a draft, when a text the form needs
-  /// is missing or lacks a print language (`ApplicationIncompleteException`),
-  /// a gap names no fact of the template
-  /// (`ApplicationUnknownFactException`, club_server#126), or the details
-  /// alone overflow page 1 (`ApplicationDoesNotFitException`). Otherwise
-  /// the layout is decided on the filled texts and stored on the template.
+  /// is missing or lacks a print language (`ApplicationIncompleteException`;
+  /// a club label the template does not override is listed as
+  /// `labels.<key>`, `ApplicationMissingText.labelKey`), a print language
+  /// is one the club has since removed
+  /// (`ApplicationLanguageNotOfferedException`), a gap names no fact of
+  /// the template (`ApplicationUnknownFactException`, club_server#126), or
+  /// the details alone overflow page 1 (`ApplicationDoesNotFitException`).
+  /// Otherwise the layout is decided on the filled texts and stored on the
+  /// template.
   Future<ApplicationTemplate> saveApplication(int id);
 
   /// Saved → published: members see it.
@@ -129,24 +146,37 @@ abstract interface class ApplicationSource {
     int? category,
   });
 
-  /// The label catalogue, to pre-fill the editor.
+  /// The club's labels in its languages, to pre-fill the editor
+  /// (club_server#133, R8).
   Future<ApplicationLabels> getLabels();
 
-  /// The clauses list, for the editor's pickers: the built-in clauses,
-  /// then the club's library texts, each marked with its source and given
-  /// as written, gaps included (club_server#126).
+  /// Change label [key]'s text (club_server#133, R8a): [text] replaces the
+  /// label's texts in the club's languages and must hold English; a club
+  /// language left out is left blank, and texts in languages the club has
+  /// removed are kept. A saved template keeps the labels it was saved
+  /// with. An unknown [key] is 404 `APPLICATION_LABEL_NOT_FOUND`; no
+  /// English, or a blank text, is 422 `VALIDATION_ERROR`; a language the
+  /// club does not have is `ApplicationLanguageNotOfferedException`.
+  Future<ApplicationLabel> updateLabel(String key, ApplicationText text);
+
+  /// The clauses list, for the editor's pickers: the club's library texts
+  /// (the same as [listLibraryTexts], the seeded built-in clauses among
+  /// them), each as written, gaps included (club_server#133).
   Future<ApplicationClauseLibrary> getClauses();
 
-  /// Every club library text, oldest first (club_server#126, R7a).
+  /// Every club library text, oldest first (club_server#126, R7a). The
+  /// server's built-in clauses are seeded into the library on its first
+  /// use, each keeping its built-in key (`ApplicationLibraryText.key`);
+  /// a seeded text that is deleted does not come back (club_server#133).
   Future<List<ApplicationLibraryText>> listLibraryTexts();
 
   /// One club library text (404 `APPLICATION_LIBRARY_TEXT_NOT_FOUND`).
   Future<ApplicationLibraryText> getLibraryText(int id);
 
   /// Add a club library text (201). A shape the server refuses — a name
-  /// not 1–100 characters, an empty text, a language outside the
-  /// catalogue, a heading on a kind that is not a rule — is 422
-  /// `VALIDATION_ERROR`.
+  /// not 1–100 characters, an empty text, a heading on a kind that is not
+  /// a rule — is 422 `VALIDATION_ERROR`; a text in a language the club
+  /// does not have is `ApplicationLanguageNotOfferedException`.
   Future<ApplicationLibraryText> createLibraryText(
     ApplicationLibraryTextInput input,
   );

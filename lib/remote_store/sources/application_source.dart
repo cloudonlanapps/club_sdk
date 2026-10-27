@@ -6,6 +6,7 @@ import '../../sdk/models/application_library_text.dart';
 import '../../sdk/models/application_patch.dart';
 import '../../sdk/models/application_status.dart';
 import '../../sdk/models/application_template.dart';
+import '../../sdk/models/application_text.dart';
 import '../../sdk/models/pagination.dart';
 import '../endpoints/endpoints.dart';
 import '../remote_store.dart';
@@ -120,6 +121,17 @@ class RemoteApplicationSource implements ApplicationSource {
   @override
   Future<ApplicationLabels> getLabels() async => ApplicationLabels.fromMap(
     await _store.get(endpoints.applications.labels),
+  );
+
+  @override
+  Future<ApplicationLabel> updateLabel(
+    String key,
+    ApplicationText text,
+  ) async => ApplicationLabel.fromMap(
+    await _store.patch(
+      endpoints.applications.label(key),
+      body: {'text': text.toMap()},
+    ),
   );
 
   @override

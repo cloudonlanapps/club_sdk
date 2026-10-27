@@ -8,6 +8,8 @@ class ApplicationEndpoints {
 
   String get list => '/applications';
   String get labels => '/applications/labels';
+  String label(String key) =>
+      '/applications/labels/${Uri.encodeComponent(key)}';
   String get clauses => '/applications/clauses';
   String get library => '/applications/library';
   String libraryText(int id) => '/applications/library/$id';

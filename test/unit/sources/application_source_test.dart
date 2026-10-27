@@ -246,7 +246,7 @@ void main() {
       expect(labels.label('field.full_name', 'en'), 'Full name');
     });
 
-    test("Issue 96: getClauses GETs /applications/clauses and reads the "
+    test('Issue 96: getClauses GETs /applications/clauses and reads the '
         "club's library texts, seeded clauses with their key", () async {
       final h = harness(
         body: {

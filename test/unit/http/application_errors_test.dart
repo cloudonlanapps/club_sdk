@@ -66,8 +66,8 @@ void main() {
       ]);
     });
 
-    test("Issue 96: a club label lacking a print language is listed as "
-        "labels.<key>, and labelKey names it", () {
+    test('Issue 96: a club label lacking a print language is listed as '
+        'labels.<key>, and labelKey names it', () {
       final exc = mapHttpError(422, const {
         'detail': {
           'code': 'APPLICATION_INCOMPLETE',

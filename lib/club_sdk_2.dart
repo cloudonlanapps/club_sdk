@@ -14,6 +14,7 @@ export 'sdk/exceptions/exceptions.dart'
         ApplicationCategoryRequiredException,
         ApplicationDoesNotFitException,
         ApplicationIncompleteException,
+        ApplicationLanguageNotOfferedException,
         ApplicationUnknownFactException,
         InvalidProfileOptionException,
         ModuleDisabledException,
@@ -67,15 +68,15 @@ export 'sdk/models/address.dart' show Address;
 export 'sdk/models/age.dart' show Age;
 export 'sdk/models/application_age_category.dart' show ApplicationAgeCategory;
 export 'sdk/models/application_clause.dart' show ApplicationClause;
-export 'sdk/models/application_clause_kind.dart'
-    show ApplicationClauseKind, ApplicationClauseSource;
+export 'sdk/models/application_clause_kind.dart' show ApplicationClauseKind;
 export 'sdk/models/application_clause_library.dart'
     show ApplicationClauseLibrary;
 export 'sdk/models/application_content.dart' show ApplicationContent;
 export 'sdk/models/application_fact.dart' show ApplicationFact;
 export 'sdk/models/application_fact_type.dart' show ApplicationFactType;
 export 'sdk/models/application_header_item.dart' show ApplicationHeaderItem;
-export 'sdk/models/application_labels.dart' show ApplicationLabels;
+export 'sdk/models/application_labels.dart'
+    show ApplicationLabel, ApplicationLabels;
 export 'sdk/models/application_layout.dart' show ApplicationLayout;
 export 'sdk/models/application_library_text.dart'
     show
@@ -200,6 +201,7 @@ export 'sdk/models/occurrence.dart' show Occurrence;
 export 'sdk/models/occurrence_override.dart' show OccurrenceOverride;
 export 'sdk/models/package_offer.dart' show PackageOffer;
 export 'sdk/models/pagination.dart' show PaginatedList;
+export 'sdk/models/profile_language.dart' show ProfileLanguage;
 export 'sdk/models/profile_options.dart' show ProfileOptions;
 export 'sdk/models/profile_position.dart' show ProfilePosition;
 export 'sdk/models/promotional_offer.dart' show PromotionalOffer;

@@ -1,5 +1,6 @@
 /// Where an application text is used on the form (club_server#93, R7;
-/// #126): the kind of a built-in clause and of a club library text.
+/// #126): the kind of a club library text, seeded built-in clauses
+/// included (#133).
 enum ApplicationClauseKind {
   /// A line under the title.
   header('header'),
@@ -28,28 +29,5 @@ enum ApplicationClauseKind {
       if (v.wireName == wire) return v;
     }
     throw FormatException('Unknown application clause kind', wire);
-  }
-}
-
-/// Where an entry of the clauses list comes from (club_server#126).
-enum ApplicationClauseSource {
-  /// A clause of the server's built-in library, named by its key.
-  builtin('builtin'),
-
-  /// A text of the club's own library, named by its id.
-  club('club');
-
-  const ApplicationClauseSource(this.wireName);
-
-  /// The value as the server sends it.
-  final String wireName;
-
-  /// Parse a wire value. The server knows no other source, so an unknown
-  /// one is a [FormatException].
-  static ApplicationClauseSource fromWire(String wire) {
-    for (final v in ApplicationClauseSource.values) {
-      if (v.wireName == wire) return v;
-    }
-    throw FormatException('Unknown application clause source', wire);
   }
 }
