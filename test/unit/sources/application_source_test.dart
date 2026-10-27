@@ -238,102 +238,178 @@ void main() {
       expect(labels.label('field.full_name', 'en'), 'Full name');
     });
 
-    test('Issue 66: getClauses GETs /applications/clauses', () async {
+    test('Issue 92: getClauses GETs /applications/clauses and reads the '
+        'list of built-in clauses and club texts', () async {
       final h = harness(
         body: {
           'languages': ['en'],
           'choices': <String, dynamic>{},
-          'clauses': {
-            'note.follow_rules': {
+          'clauses': [
+            {
+              'source': 'builtin',
+              'key': 'note.follow_rules',
+              'id': null,
               'kind': 'note',
+              'name': null,
               'gaps': <String, dynamic>{},
               'heading': null,
               'text': {'en': 'Follow the rules.'},
             },
-          },
+            {
+              'source': 'club',
+              'key': null,
+              'id': 3,
+              'kind': 'note',
+              'name': 'Be on time',
+              'gaps': null,
+              'heading': null,
+              'text': {'en': 'Report by {report_time}.'},
+            },
+          ],
         },
       );
       final library = await h.source.getClauses();
+      expect(h.requests.single.method, 'GET');
       expect(h.requests.single.url.path, '/v1/applications/clauses');
-      expect(library.clauses.keys, ['note.follow_rules']);
+      expect(library.clauses.map((c) => c.key), ['note.follow_rules', null]);
+      expect(library.clauses.map((c) => c.id), [null, 3]);
+      expect(library.clubTexts.single.name, 'Be on time');
+    });
+  });
+
+  group('RemoteApplicationSource club library', () {
+    Map<String, dynamic> textJson({int id = 5, String name = 'Match days'}) =>
+        <String, dynamic>{
+          'id': id,
+          'kind': 'rule',
+          'name': name,
+          'heading': {'en': 'Matches'},
+          'text': {'en': 'On {match_dates}.'},
+          'createdBy': 'test_admin',
+          'createdAtUtc': 1798761600000,
+          'updatedAtUtc': 1798761600000,
+        };
+
+    test('Issue 92: listLibraryTexts GETs /applications/library and reads '
+        'every text in order', () async {
+      final h = harness(
+        body: [
+          textJson(id: 1, name: 'First'),
+          textJson(id: 2, name: 'Second'),
+        ],
+      );
+      final texts = await h.source.listLibraryTexts();
+      final r = h.requests.single;
+      expect(r.method, 'GET');
+      expect(r.url.path, '/v1/applications/library');
+      expect(texts.map((t) => t.id), [1, 2]);
+      expect(texts.map((t) => t.name), ['First', 'Second']);
     });
 
-    test('Issue 76: fillClause POSTs the clause and a fact per gap and '
-        'reads the filled texts', () async {
-      final h = harness(
-        body: {
-          'clause': 'rule.fee',
-          'heading': {'en': 'Fee', 'mr': 'शुल्क', 'hi': 'शुल्क'},
-          'text': {
-            'en': 'A registration fee of ₹1,50,000 is payable.',
-            'mr': '₹1,50,000 नोंदणी शुल्क.',
-            'hi': '₹1,50,000 पंजीकरण शुल्क.',
-          },
-        },
-      );
-      final filled = await h.source.fillClause(
-        'rule.fee',
-        facts: {'amount': const ApplicationFact.amount(150000)},
+    test('Issue 92: getLibraryText GETs one text', () async {
+      final h = harness(body: textJson());
+      final text = await h.source.getLibraryText(5);
+      expect(h.requests.single.method, 'GET');
+      expect(h.requests.single.url.path, '/v1/applications/library/5');
+      expect(text, ApplicationLibraryText.fromMap(textJson()));
+    });
+
+    test('Issue 92: createLibraryText POSTs the new text', () async {
+      final h = harness(body: textJson(), status: 201);
+      final text = await h.source.createLibraryText(
+        const ApplicationLibraryTextInput(
+          kind: ApplicationClauseKind.rule,
+          name: 'Match days',
+          heading: ApplicationText({'en': 'Matches'}),
+          text: ApplicationText({'en': 'On {match_dates}.'}),
+        ),
       );
       final r = h.requests.single;
       expect(r.method, 'POST');
-      expect(r.url.path, '/v1/applications/clauses/fill');
+      expect(r.url.path, '/v1/applications/library');
       expect(bodyOf(r), {
-        'clause': 'rule.fee',
-        'facts': {
-          'amount': {'type': 'amount', 'value': 150000},
-        },
+        'kind': 'rule',
+        'name': 'Match days',
+        'heading': {'en': 'Matches'},
+        'text': {'en': 'On {match_dates}.'},
       });
-      expect(filled.clause, 'rule.fee');
-      expect(filled.heading?.texts['mr'], 'शुल्क');
-      expect(filled.text.texts.keys, ['en', 'mr', 'hi']);
-      expect(filled.text.texts['en'], contains('1,50,000'));
+      expect(text.id, 5);
     });
 
-    test('Issue 76: fillClause of a clause without gaps sends no facts and '
-        'reads a null heading', () async {
+    test('Issue 92: updateLibraryText PATCHes only the fields given', () async {
+      final h = harness(body: textJson(name: 'Renamed'));
+      final text = await h.source.updateLibraryText(
+        5,
+        ApplicationLibraryTextPatch(name: 'Renamed', heading: () => null),
+      );
+      final r = h.requests.single;
+      expect(r.method, 'PATCH');
+      expect(r.url.path, '/v1/applications/library/5');
+      expect(bodyOf(r), {'name': 'Renamed', 'heading': null});
+      expect(text.name, 'Renamed');
+    });
+
+    test('Issue 92: deleteLibraryText DELETEs the text (204)', () async {
+      final h = harness(body: '', status: 204);
+      await h.source.deleteLibraryText(5);
+      expect(h.requests.single.method, 'DELETE');
+      expect(h.requests.single.url.path, '/v1/applications/library/5');
+    });
+
+    test('Issue 92: an unknown text is 404 '
+        'APPLICATION_LIBRARY_TEXT_NOT_FOUND', () async {
       final h = harness(
+        status: 404,
         body: {
-          'clause': 'declaration.trial',
-          'heading': null,
-          'text': {'en': 'I agree.'},
+          'detail': {
+            'code': 'APPLICATION_LIBRARY_TEXT_NOT_FOUND',
+            'message': 'Library text 99 not found',
+          },
         },
       );
-      final filled = await h.source.fillClause('declaration.trial');
-      expect(bodyOf(h.requests.single), {
-        'clause': 'declaration.trial',
-        'facts': <String, dynamic>{},
-      });
-      expect(filled.heading, isNull);
-      expect(filled.text, const ApplicationText({'en': 'I agree.'}));
+      await expectLater(
+        h.source.getLibraryText(99),
+        throwsA(
+          isA<ServerException>()
+              .having((e) => e.statusCode, 'statusCode', 404)
+              .having(
+                (e) => e.code,
+                'code',
+                SdkErrorCode.applicationLibraryTextNotFound,
+              ),
+        ),
+      );
     });
 
-    test(
-      'Issue 76: a fill refused is 422 APPLICATION_INVALID_REFERENCE',
-      () async {
-        final h = harness(
-          status: 422,
-          body: {
-            'detail': {
-              'code': 'APPLICATION_INVALID_REFERENCE',
-              'message': "clause 'rule.fee' needs facts for amount",
+    test('Issue 92: saveApplication refused for a gap naming no fact is '
+        'ApplicationUnknownFactException', () async {
+      final h = harness(
+        status: 422,
+        body: {
+          'detail': {
+            'code': 'APPLICATION_UNKNOWN_FACT',
+            'message': 'Gaps naming no fact of the template: title (en): x',
+            'details': {
+              'gaps': [
+                {'place': 'title', 'language': 'en', 'gap': 'x'},
+              ],
             },
           },
-        );
-        await expectLater(
-          h.source.fillClause('rule.fee'),
-          throwsA(
-            isA<ServerException>()
-                .having((e) => e.statusCode, 'statusCode', 422)
-                .having(
-                  (e) => e.code,
-                  'code',
-                  SdkErrorCode.applicationInvalidReference,
-                ),
+        },
+      );
+      await expectLater(
+        h.source.saveApplication(7),
+        throwsA(
+          isA<ApplicationUnknownFactException>().having(
+            (e) => e.gaps,
+            'gaps',
+            const [
+              ApplicationUnknownGap(place: 'title', language: 'en', gap: 'x'),
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
 
     test('Issue 66: the module off is ModuleDisabledException', () async {
       final h = harness(

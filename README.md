@@ -39,4 +39,4 @@ against a fresh server (see `CLAUDE.md`).
 | [ ] | 12 | Notification Management | `NotificationSource` | Fetch/manage notifications, mark read, channel preferences (in-app, email, SMS) |
 | [x] | 14 | Public API | `PublicClient` | Unauthenticated read-only access - staff listings, public events, venues, landing/about/contact pages, health check |
 | [x] | 15 | Seeding | `SeedingService` | Bulk test data loading, handles entity dependency ordering, force-clean |
-| [x] | 16 | Applications | `ApplicationSource` | Printable application forms (optional module, needs identity verification): templates an admin writes, saves and publishes, the label catalogue and clause library, and each member's form as a PDF |
+| [x] | 16 | Applications | `ApplicationSource` | Printable application forms (optional module, needs identity verification): templates an admin writes, saves and publishes, the label catalogue, the clauses list and the club's library of texts (with `{fact}` gaps filled in the PDF), and each member's form as a PDF |

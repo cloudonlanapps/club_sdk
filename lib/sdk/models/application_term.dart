@@ -3,9 +3,9 @@ import 'package:meta/meta.dart';
 import 'application_text.dart';
 
 /// One rule printed on an application's page 2 (club_server#93, R6;
-/// #107): a [heading] and a [body], each custom text. A library rule is
-/// filled with `ApplicationSource.fillClause`, whose heading and text
-/// become these.
+/// #107): a [heading] and a [body], each custom text. A library rule's
+/// heading and text (`ApplicationClause`) are pasted as these, gaps
+/// included (club_server#126).
 @immutable
 class ApplicationTerm {
   const ApplicationTerm({required this.heading, required this.body});

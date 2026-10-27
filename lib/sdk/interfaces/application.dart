@@ -1,8 +1,7 @@
 import '../models/application_clause_library.dart';
 import '../models/application_content.dart';
-import '../models/application_fact.dart';
-import '../models/application_filled_clause.dart';
 import '../models/application_labels.dart';
+import '../models/application_library_text.dart';
 import '../models/application_patch.dart';
 import '../models/application_status.dart';
 import '../models/application_template.dart';
@@ -22,7 +21,8 @@ import '../models/pagination.dart';
 ///
 /// Who may call what: writing, the moves, [duplicateApplication],
 /// [downloadPreview], [downloadMemberForm], [getLabels], [getClauses] and
-/// [fillClause] are an admin's (403 otherwise). [listApplications],
+/// the club library ([listLibraryTexts] … [deleteLibraryText]) are an
+/// admin's (403 otherwise; 401 signed out). [listApplications],
 /// [getApplication] and [downloadOwnForm] are any signed-in user's —
 /// `registered`, `pending` or approved. A member sees the published
 /// templates only, and only once they have uploaded an identity document:
@@ -35,6 +35,10 @@ import '../models/pagination.dart';
 abstract interface class ApplicationSource {
   /// Create a draft from [content] (201). Every field may be left for
   /// later; nothing is checked for completeness until [saveApplication].
+  /// A printed text may hold `{name}` gaps (`name` matching
+  /// `[a-z][a-z0-9_]*`; other braces are literal), stored as written and
+  /// filled from the fact of that name when a PDF is drawn
+  /// (club_server#126).
   /// A shape the server cannot store — among them a text that is not
   /// `{language: text}`, such as a `{"clause": …}` or `{"fact": …}`
   /// reference — is 422 `VALIDATION_ERROR`.
@@ -53,7 +57,8 @@ abstract interface class ApplicationSource {
   Future<ApplicationTemplate> getApplication(int id);
 
   /// Change a draft: each field [patch] gives replaces the stored one,
-  /// null clears it, a field left out keeps its value. A saved or
+  /// null clears it, a field left out keeps its value. Gaps are stored as
+  /// written, even one naming no fact. A saved or
   /// published template is 422 `INVALID_STATE`.
   Future<ApplicationTemplate> updateApplication(
     int id,
@@ -66,9 +71,10 @@ abstract interface class ApplicationSource {
 
   /// Draft → saved. Refused, staying a draft, when a text the form needs
   /// is missing or lacks a print language (`ApplicationIncompleteException`),
-  /// or the details alone overflow page 1
-  /// (`ApplicationDoesNotFitException`). Otherwise the layout is decided and
-  /// stored on the template.
+  /// a gap names no fact of the template
+  /// (`ApplicationUnknownFactException`, club_server#126), or the details
+  /// alone overflow page 1 (`ApplicationDoesNotFitException`). Otherwise
+  /// the layout is decided on the filled texts and stored on the template.
   Future<ApplicationTemplate> saveApplication(int id);
 
   /// Saved → published: members see it.
@@ -115,16 +121,36 @@ abstract interface class ApplicationSource {
   /// The label catalogue, to pre-fill the editor.
   Future<ApplicationLabels> getLabels();
 
-  /// The clause library, for the editor's pickers.
+  /// The clauses list, for the editor's pickers: the built-in clauses,
+  /// then the club's library texts, each marked with its source and given
+  /// as written, gaps included (club_server#126).
   Future<ApplicationClauseLibrary> getClauses();
 
-  /// Library clause [clause] with each gap filled from [facts] (gap →
-  /// fact), in every library language, for the editor to insert as custom
-  /// text (club_server#107). No template is read or changed. An unknown
-  /// clause, a gap without a fact, a fact for no gap, a fact of the wrong
-  /// type or an unknown choice is 422 `APPLICATION_INVALID_REFERENCE`.
-  Future<ApplicationFilledClause> fillClause(
-    String clause, {
-    Map<String, ApplicationFact> facts = const {},
-  });
+  /// Every club library text, oldest first (club_server#126, R7a).
+  Future<List<ApplicationLibraryText>> listLibraryTexts();
+
+  /// One club library text (404 `APPLICATION_LIBRARY_TEXT_NOT_FOUND`).
+  Future<ApplicationLibraryText> getLibraryText(int id);
+
+  /// Add a club library text (201). A shape the server refuses — a name
+  /// not 1–100 characters, an empty text, a language outside the
+  /// catalogue, a heading on a kind that is not a rule — is 422
+  /// `VALIDATION_ERROR`.
+  Future<ApplicationLibraryText> createLibraryText(
+    ApplicationLibraryTextInput input,
+  );
+
+  /// Change club library text [id]: the fields [patch] gives replace the
+  /// stored ones, and a null heading clears it. A result that would be
+  /// refused as a new text is 422 `VALIDATION_ERROR` and changes nothing;
+  /// an unknown [id] is 404 `APPLICATION_LIBRARY_TEXT_NOT_FOUND`.
+  Future<ApplicationLibraryText> updateLibraryText(
+    int id,
+    ApplicationLibraryTextPatch patch,
+  );
+
+  /// Remove club library text [id] for good (204). No template changes:
+  /// a template holds the texts pasted into it. An unknown [id] is 404
+  /// `APPLICATION_LIBRARY_TEXT_NOT_FOUND`.
+  Future<void> deleteLibraryText(int id);
 }

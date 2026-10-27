@@ -274,15 +274,17 @@ void main() {
       final library = await admin.applications.getClauses();
       expect(library.languages, containsAll(['en', 'mr', 'hi']));
       expect(library.choices.keys, containsAll(['on_ice', 'inline']));
-      final matches = library.clauses['rule.matches']!;
-      expect(matches.kind, 'rule');
+      final matches = library.builtinClause('rule.matches')!;
+      expect(matches.kind, ApplicationClauseKind.rule);
       expect(matches.gaps, {
         'dates': ApplicationFactType.dateRange,
         'venue': ApplicationFactType.name,
       });
-      expect(matches.heading?.keys, containsAll(library.languages));
+      expect(matches.heading?.texts.keys, containsAll(library.languages));
       expect(
-        library.clausesOfKind('declaration'),
+        library
+            .clausesOfKind(ApplicationClauseKind.declaration)
+            .map((c) => c.key),
         contains('declaration.trial'),
       );
     });

@@ -16,14 +16,20 @@ void main() {
     },
   };
 
+  // The list shape of club_server#126: built-in clauses first, then the
+  // club's texts, each marked with its source.
   const clausesJson = <String, dynamic>{
     'languages': ['en', 'mr', 'hi'],
     'choices': {
       'on_ice': {'en': 'on-ice', 'mr': 'बर्फावर', 'hi': 'बर्फ पर'},
     },
-    'clauses': {
-      'rule.matches': {
+    'clauses': [
+      {
+        'source': 'builtin',
+        'key': 'rule.matches',
+        'id': null,
         'kind': 'rule',
+        'name': null,
         'gaps': {'dates': 'date_range', 'venue': 'name'},
         'heading': {'en': 'Matches', 'mr': 'सामने', 'hi': 'मैच'},
         'text': {
@@ -32,13 +38,30 @@ void main() {
           'hi': '…',
         },
       },
-      'declaration.trial': {
+      {
+        'source': 'builtin',
+        'key': 'declaration.trial',
+        'id': null,
         'kind': 'declaration',
+        'name': null,
         'gaps': <String, dynamic>{},
         'heading': null,
         'text': {'en': 'I declare …', 'mr': 'मी …', 'hi': 'मैं …'},
       },
-    },
+      {
+        'source': 'club',
+        'key': null,
+        'id': 7,
+        'kind': 'selection',
+        'name': 'Attend the matches',
+        'gaps': null,
+        'heading': null,
+        'text': {
+          'en': 'I will play the matches on {match_dates} at {venue}.',
+          'mr': 'मी {match_dates} रोजी {venue} येथे सामने खेळेन.',
+        },
+      },
+    ],
   };
 
   group('ApplicationLabels', () {
@@ -63,30 +86,98 @@ void main() {
   });
 
   group('ApplicationClauseLibrary', () {
-    test('Issue 66: reads each clause with its kind, gaps and texts', () {
+    test('Issue 92: reads the clauses as a list, built-in first, each with '
+        'its source', () {
       final library = ApplicationClauseLibrary.fromMap(clausesJson);
       expect(library.languages, ['en', 'mr', 'hi']);
       expect(library.choices['on_ice']?['mr'], 'बर्फावर');
-      final matches = library.clauses['rule.matches']!;
-      expect(matches.kind, 'rule');
-      expect(matches.gaps, {
-        'dates': ApplicationFactType.dateRange,
-        'venue': ApplicationFactType.name,
-      });
-      expect(matches.heading?['en'], 'Matches');
-      expect(matches.text['en'], contains('{venue}'));
-      final declaration = library.clauses['declaration.trial']!;
-      expect(declaration.heading, isNull);
-      expect(declaration.gaps, isEmpty);
+      expect(library.clauses.map((c) => c.source), [
+        ApplicationClauseSource.builtin,
+        ApplicationClauseSource.builtin,
+        ApplicationClauseSource.club,
+      ]);
     });
 
-    test('Issue 66: clausesOfKind lists one kind, in library order', () {
+    test(
+      'Issue 92: a built-in clause has its key and the fact type of each gap; '
+      'texts keep their gaps',
+      () {
+        final library = ApplicationClauseLibrary.fromMap(clausesJson);
+        final matches = library.clauses.first;
+        expect(matches.key, 'rule.matches');
+        expect(matches.id, isNull);
+        expect(matches.name, isNull);
+        expect(matches.kind, ApplicationClauseKind.rule);
+        expect(matches.gaps, {
+          'dates': ApplicationFactType.dateRange,
+          'venue': ApplicationFactType.name,
+        });
+        expect(matches.heading?.texts['en'], 'Matches');
+        expect(matches.text.texts['en'], contains('{venue}'));
+        final declaration = library.builtinClause('declaration.trial')!;
+        expect(declaration.heading, isNull);
+        expect(declaration.gaps, isEmpty);
+        expect(library.builtinClause('rule.nowhere'), isNull);
+      },
+    );
+
+    test('Issue 92: a club text has its id and name, no key and no gap '
+        'types', () {
       final library = ApplicationClauseLibrary.fromMap(clausesJson);
-      expect(library.clausesOfKind('rule').keys, ['rule.matches']);
-      expect(library.clausesOfKind('note'), isEmpty);
+      final club = library.clauses.last;
+      expect(club.source, ApplicationClauseSource.club);
+      expect(club.id, 7);
+      expect(club.name, 'Attend the matches');
+      expect(club.key, isNull);
+      expect(club.gaps, isNull);
+      expect(club.kind, ApplicationClauseKind.selection);
+      expect(
+        club.text,
+        const ApplicationText({
+          'en': 'I will play the matches on {match_dates} at {venue}.',
+          'mr': 'मी {match_dates} रोजी {venue} येथे सामने खेळेन.',
+        }),
+      );
+      expect(library.clubTexts, [club]);
+      expect(library.builtinClause('Attend the matches'), isNull);
     });
 
-    test('Issue 66: round-trips and compares by value', () {
+    test('Issue 92: clausesOfKind lists one kind, in library order', () {
+      final library = ApplicationClauseLibrary.fromMap(clausesJson);
+      expect(
+        library.clausesOfKind(ApplicationClauseKind.rule).map((c) => c.key),
+        ['rule.matches'],
+      );
+      expect(library.clausesOfKind(ApplicationClauseKind.note), isEmpty);
+    });
+
+    test('Issue 92: the kinds and sources have their server spelling', () {
+      expect(ApplicationClauseKind.values.map((k) => k.wireName), [
+        'header',
+        'selection',
+        'declaration',
+        'rule',
+        'note',
+      ]);
+      expect(ApplicationClauseSource.values.map((s) => s.wireName), [
+        'builtin',
+        'club',
+      ]);
+      expect(
+        ApplicationClauseKind.fromWire('note'),
+        ApplicationClauseKind.note,
+      );
+      expect(
+        () => ApplicationClauseKind.fromWire('footer'),
+        throwsFormatException,
+      );
+      expect(
+        () => ApplicationClauseSource.fromWire('shared'),
+        throwsFormatException,
+      );
+    });
+
+    test('Issue 92: round-trips and compares by value', () {
       final library = ApplicationClauseLibrary.fromMap(clausesJson);
       expect(library.toMap(), clausesJson);
       expect(ApplicationClauseLibrary.fromMap(library.toMap()), library);

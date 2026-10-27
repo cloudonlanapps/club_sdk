@@ -9,7 +9,8 @@ class ApplicationEndpoints {
   String get list => '/applications';
   String get labels => '/applications/labels';
   String get clauses => '/applications/clauses';
-  String get fillClause => '/applications/clauses/fill';
+  String get library => '/applications/library';
+  String libraryText(int id) => '/applications/library/$id';
   String byId(int id) => '/applications/$id';
   String save(int id) => '/applications/$id/save';
   String publish(int id) => '/applications/$id/publish';
