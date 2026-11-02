@@ -94,17 +94,66 @@ Future<void> waitForReminders(
   }
 }
 
-/// When the stack's first pending-mark scan will have run, or `null` when
-/// it is already behind us and the next one is an hour of ticks away.
+/// How far ahead [pendingMarkSession] starts its session: room to create
+/// the events and assign the member before it starts.
+const sessionLead = Duration(seconds: 30);
+
+/// How long a [pendingMarkSession] lasts.
+const sessionLength = Duration(minutes: 1);
+
+/// Room left between a [pendingMarkSession]'s end and the first scan.
+const sessionMargin = Duration(seconds: 10);
+
+/// A short session for a pending-mark test, and when the stack's first
+/// pending-mark scan will have reminded staff of it.
 ///
-/// The bootstrap creates `sudo` just before the server starts, so its
-/// `createdAtUtc` dates the stack. [sudoClient] must be signed in as sudo.
-/// Call it after creating the occurrences the scan must see.
-Future<DateTime?> firstPendingMarkScanDeadline(SecureClient sudoClient) async {
+/// The scan reminds staff only of a session some enrollment covered when it
+/// took place (club_server#148): the member must be enrolled at or before
+/// its start, and the API cannot backdate an enrollment. So the session is
+/// one ahead of now, [sessionLead] away and [sessionLength] long; the test
+/// assigns the member before `start` (check it with [assignedBefore]), and
+/// the session has ended by the first scan, five minutes after the server
+/// starts.
+///
+/// `scanDeadline` is when that scan will have run, or `null` when the
+/// session would not end before it: the stack has been up too long, and the
+/// next scan is an hour of ticks away. The bootstrap creates `sudo` just
+/// before the server starts, so its `createdAtUtc` dates the stack.
+/// [sudoClient] must be signed in as sudo.
+Future<({DateTime start, DateTime end, DateTime? scanDeadline})>
+pendingMarkSession(SecureClient sudoClient) async {
   final sudo = await sudoClient.auth.getCurrentUser();
   final firstTick = sudo.createdAtUtc.toUtc().add(schedulerTick);
-  if (!DateTime.now().toUtc().isBefore(firstTick)) return null;
-  return firstTick.add(firstScanAllowance);
+  final now = DateTime.now().toUtc().add(sessionLead);
+  // Whole seconds: the server expands occurrence slots on whole seconds.
+  final start = DateTime.utc(
+    now.year,
+    now.month,
+    now.day,
+    now.hour,
+    now.minute,
+    now.second,
+  );
+  final end = start.add(sessionLength);
+  final inTime = end.add(sessionMargin).isBefore(firstTick);
+  return (
+    start: start,
+    end: end,
+    scanDeadline: inTime ? firstTick.add(firstScanAllowance) : null,
+  );
+}
+
+/// Checks that the member's assignments, all made by now, came before the
+/// pending-mark session at [start], so their enrollments cover it.
+void assignedBefore(DateTime start) {
+  expect(
+    DateTime.now().toUtc().isBefore(start),
+    isTrue,
+    reason:
+        'The member must be assigned before the session at $start starts, '
+        'or no enrollment covers it and the scan sends no reminder; setting '
+        'up took longer than $sessionLead.',
+  );
 }
 
 /// Why a test that needs the pending-mark scan cannot run on this stack.

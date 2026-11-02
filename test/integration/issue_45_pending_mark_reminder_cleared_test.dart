@@ -3,7 +3,6 @@ import 'package:club_sdk_2/remote_store.dart';
 import 'package:test/test.dart';
 
 import '../utils/clear_test_artifacts.dart';
-import '../utils/event_time.dart';
 import '../utils/occurrence_reminders.dart';
 import '../utils/register_and_approve.dart';
 import '../utils/test_client.dart';
@@ -12,17 +11,19 @@ import '../utils/test_client.dart';
 /// `attendance.pending_mark_reminder` is gone from **every** staff inbox,
 /// not only the marker's (club_server#50, notifications R93b).
 ///
-/// A camp has two days that ended in the past, both unmarked, and one ahead.
-/// The scheduler's pending-mark scan reminds every admin and coach of both
-/// past days. Sudo then marks the first day. Sudo is the marker because a
-/// past day can be marked only by a super-admin here: an enrollment made
-/// now does not cover a day that has already happened (camps R85), and the
-/// API cannot backdate one.
+/// Two camps each open with a one-minute session, the member assigned to
+/// both before it starts, so an enrollment covers each session: the scan
+/// reminds staff only of such a session (club_server#148), and the API
+/// cannot backdate an enrollment. A camp's days are a day apart, so the two
+/// sessions are on two camps. Once both have ended, unmarked, the
+/// scheduler's pending-mark scan reminds every admin and coach of both.
+/// Sudo then marks one of them.
 ///
 /// The pending-mark scan runs on the scheduler's first tick, five minutes
 /// after the server starts, and then hourly; no API triggers it. On a fresh
-/// stack (`just test-one`) setUpAll waits for that first scan. On a stack
-/// that has been up longer, the tests are skipped with the reason.
+/// stack (`just test-one`) the sessions end before that first scan and
+/// setUpAll waits for it. On a stack that has been up longer, the tests are
+/// skipped with the reason.
 void main() {
   const testFile = 'issue_45_pending_mark_reminder_cleared_test.dart';
 
@@ -36,9 +37,11 @@ void main() {
     const memberName = 'test_i45_member';
     const password = 'password123';
 
-    late Event camp;
-    late DateTime markedDay;
-    late DateTime unmarkedDay;
+    late Event markedCamp;
+    late Event unmarkedCamp;
+
+    /// When both camps' first sessions start.
+    late DateTime session;
 
     /// Whether the scan reminded the staff; when not,
     /// [pendingMarkScanSkip] says why.
@@ -67,8 +70,8 @@ void main() {
 
     Future<List<AppNotification>> pendingMarkOf(
       SecureClient staff,
-      DateTime day,
-    ) => remindersFor(staff, pendingMarkReminder, camp.id, day);
+      Event camp,
+    ) => remindersFor(staff, pendingMarkReminder, camp.id, session);
 
     /// Marks the test skipped, and answers true, when the scan was missed.
     bool scanMissed() {
@@ -95,39 +98,45 @@ void main() {
       admin = await loggedIn(adminName);
       coach = await loggedIn(coachName);
 
-      // Days ended 45 and 21 hours ago, and one 3 hours ahead, so the camp
-      // is still running and the member can be assigned.
-      final ahead = nowUtcMinute().add(const Duration(hours: 3));
-      markedDay = ahead.subtract(const Duration(days: 2));
-      unmarkedDay = ahead.subtract(const Duration(days: 1));
-      final venueId = (await sudo.venues.createVenue(
-        name: 'test_Venue I45',
-      )).id;
-      camp = await sudo.events.createEvent(
-        title: 'test_I45 camp',
-        description: '',
-        type: EventType.camp,
-        visibility: Visibility.public,
-        venueId: venueId,
-        startTimeUtc: markedDay,
-        endTimeUtc: markedDay.add(const Duration(hours: 1)),
-        rrule: 'FREQ=DAILY;COUNT=3',
-      );
-      await sudo.enrollments.assign(camp.id, memberName);
-      expect(
-        await sudo.enrollments.getEnrollmentStatus(camp.id, memberName),
-        EnrollmentStatus.assigned,
-      );
+      // Each camp's first day is a short session that starts once the
+      // member is assigned and ends before the first scan; the second day
+      // is tomorrow. Sudo organizes both at the same time.
+      final pending = await pendingMarkSession(sudo);
+      session = pending.start;
+      Future<Event> camp(String name) async {
+        final venueId = (await sudo.venues.createVenue(
+          name: 'test_Venue I45 $name',
+        )).id;
+        final event = await sudo.events.createEvent(
+          title: 'test_I45 $name camp',
+          description: '',
+          type: EventType.camp,
+          visibility: Visibility.public,
+          venueId: venueId,
+          startTimeUtc: pending.start,
+          endTimeUtc: pending.end,
+          rrule: 'FREQ=DAILY;COUNT=2',
+          acceptConflicts: true,
+        );
+        await sudo.enrollments.assign(event.id, memberName);
+        expect(
+          await sudo.enrollments.getEnrollmentStatus(event.id, memberName),
+          EnrollmentStatus.assigned,
+        );
+        return event;
+      }
 
-      final firstScan = await firstPendingMarkScanDeadline(sudo);
+      markedCamp = await camp('marked');
+      unmarkedCamp = await camp('unmarked');
+      assignedBefore(session);
+
+      final firstScan = pending.scanDeadline;
       if (firstScan == null) return;
       for (final staff in [sudo, admin, coach]) {
-        await waitForReminders(
-          staff,
-          pendingMarkReminder,
-          [(camp.id, markedDay), (camp.id, unmarkedDay)],
-          deadline: firstScan,
-        );
+        await waitForReminders(staff, pendingMarkReminder, [
+          (markedCamp.id, session),
+          (unmarkedCamp.id, session),
+        ], deadline: firstScan);
       }
       pendingMarksSent = true;
     });
@@ -142,12 +151,12 @@ void main() {
       }
     });
 
-    group('after sudo marks the first day', () {
+    group('after sudo marks one session', () {
       setUpAll(() async {
         if (!pendingMarksSent) return;
         final report = await sudo.attendance.markAttendance(
-          camp.id,
-          markedDay,
+          markedCamp.id,
+          session,
           const [
             AttendanceMarkRecord(
               membername: memberName,
@@ -157,8 +166,8 @@ void main() {
         );
         expect(report.marked.map((m) => m.membername), [memberName]);
         final roster = await admin.attendance.getAttendanceForOccurrence(
-          camp.id,
-          markedDay,
+          markedCamp.id,
+          session,
         );
         expect(roster.map((r) => (r.membername, r.status)), [
           (memberName, AttendanceStatus.present),
@@ -167,27 +176,27 @@ void main() {
 
       test("Issue 45: its reminder is gone from the marker's inbox", () async {
         if (scanMissed()) return;
-        expect(await pendingMarkOf(sudo, markedDay), isEmpty);
+        expect(await pendingMarkOf(sudo, markedCamp), isEmpty);
       });
 
       test(
         "Issue 45: its reminder is gone from another admin's inbox",
         () async {
           if (scanMissed()) return;
-          expect(await pendingMarkOf(admin, markedDay), isEmpty);
+          expect(await pendingMarkOf(admin, markedCamp), isEmpty);
         },
       );
 
       test("Issue 45: its reminder is gone from a coach's inbox", () async {
         if (scanMissed()) return;
-        expect(await pendingMarkOf(coach, markedDay), isEmpty);
+        expect(await pendingMarkOf(coach, markedCamp), isEmpty);
       });
 
-      test('Issue 45: the reminder of the unmarked day stays with every staff '
-          'member', () async {
+      test('Issue 45: the reminder of the unmarked session stays with every '
+          'staff member', () async {
         if (scanMissed()) return;
         for (final staff in [sudo, admin, coach]) {
-          expect(await pendingMarkOf(staff, unmarkedDay), hasLength(1));
+          expect(await pendingMarkOf(staff, unmarkedCamp), hasLength(1));
         }
       });
     });
