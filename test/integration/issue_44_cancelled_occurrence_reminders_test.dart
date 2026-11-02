@@ -18,13 +18,17 @@ import '../utils/test_client.dart';
 /// series cancel or a programme termination removes those at or after the
 /// cutoff; deleting the event removes all of its own.
 ///
-/// Every event here has its next occurrence a few hours ahead, so the
-/// scheduler's next tick (at most five minutes away) reminds the member of
-/// it; setUpAll waits for those reminders before anything is cancelled. The
-/// camps and the programme also have an earlier occurrence that ended in the
-/// past, whose pending-mark reminder to staff must stay. That reminder is
-/// sent only by the first tick's scan, so those checks run only on a fresh
-/// stack (`just test-one`) and are skipped, with the reason, otherwise.
+/// Every event here has its next occurrence within the next day, so a
+/// scheduler tick (five minutes apart) reminds the member of it; setUpAll
+/// waits for those reminders before anything is cancelled. The camps and
+/// the programme also have an earlier occurrence, whose pending-mark
+/// reminder to staff must stay: a one-minute session that starts once the
+/// member is assigned, so their enrollment covers it (the scan reminds
+/// staff only of such a session, club_server#148), and that ends before the
+/// stack's first pending-mark scan. Their next occurrence is a day later.
+/// That reminder is sent only by the first tick's scan, so those checks run
+/// only on a fresh stack (`just test-one`) and are skipped, with the
+/// reason, otherwise.
 void main() {
   const testFile = 'issue_44_cancelled_occurrence_reminders_test.dart';
 
@@ -42,7 +46,7 @@ void main() {
     late Event oneOffDeleted;
     late Event untouched;
 
-    /// The occurrence of each event that is a few hours ahead.
+    /// The occurrence of each camp and of the programme that is a day ahead.
     late DateTime campOneNext;
     late DateTime campSeriesNext;
     late DateTime programmeNext;
@@ -58,7 +62,9 @@ void main() {
       required String title,
       required EventType type,
       required DateTime start,
+      Duration length = const Duration(hours: 1),
       String? rrule,
+      bool acceptConflicts = false,
     }) async {
       final event = await admin.events.createEvent(
         title: 'test_I44 $title',
@@ -67,8 +73,9 @@ void main() {
         visibility: Visibility.public,
         venueId: await venue(title),
         startTimeUtc: start,
-        endTimeUtc: start.add(const Duration(hours: 1)),
+        endTimeUtc: start.add(length),
         rrule: rrule,
+        acceptConflicts: acceptConflicts,
       );
       await admin.enrollments.assign(event.id, memberName);
       expect(
@@ -114,37 +121,50 @@ void main() {
       await member.auth.login(memberName, password);
       expect((await member.auth.getCurrentUser()).username, memberName);
 
-      // Every next occurrence is 3–9 hours ahead: inside the 24-hour lead,
-      // outside the 1-hour one, and far from every lead-time rule. Sudo
-      // organizes them all, so they are 90 minutes apart.
-      final base = nowUtcMinute().add(const Duration(hours: 3));
+      // The camps and the programme open with a short session that starts
+      // once the member is assigned and ends before the first scan, and
+      // run again a day later: inside the 24-hour lead from that session's
+      // start on, and far from every lead-time rule. Sudo organizes all
+      // three at the same times.
+      final pending = await pendingMarkSession(admin);
       const day = Duration(days: 1);
-      campOneNext = base;
+      final length = pending.end.difference(pending.start);
+      campOneNext = pending.start.add(day);
       campOne = await create(
         title: 'camp one occurrence',
         type: EventType.camp,
-        start: campOneNext.subtract(day),
+        start: pending.start,
+        length: length,
         rrule: 'FREQ=DAILY;COUNT=2',
+        acceptConflicts: true,
       );
-      campSeriesNext = base.add(const Duration(minutes: 90));
+      campSeriesNext = pending.start.add(day);
       campSeries = await create(
         title: 'camp series',
         type: EventType.camp,
-        start: campSeriesNext.subtract(day),
+        start: pending.start,
+        length: length,
         rrule: 'FREQ=DAILY;COUNT=2',
+        acceptConflicts: true,
       );
+      programmeNext = pending.start.add(day);
+      programme = await create(
+        title: 'programme',
+        type: EventType.programme,
+        start: pending.start,
+        length: length,
+        rrule: weeklyOnDays([pending.start, programmeNext]),
+        acceptConflicts: true,
+      );
+      assignedBefore(pending.start);
+
+      // The one-offs are 6–10.5 hours ahead: inside the 24-hour lead,
+      // outside the 1-hour one, and 90 minutes or more apart.
+      final base = nowUtcMinute().add(const Duration(hours: 3));
       oneOffDropped = await create(
         title: 'one-off dropped',
         type: EventType.oneOff,
         start: base.add(const Duration(hours: 3)),
-      );
-      programmeNext = base.add(const Duration(hours: 4, minutes: 30));
-      final programmeStart = programmeNext.subtract(const Duration(days: 7));
-      programme = await create(
-        title: 'programme',
-        type: EventType.programme,
-        start: programmeStart,
-        rrule: weeklyOn(programmeStart),
       );
       oneOffDeleted = await create(
         title: 'one-off deleted',
@@ -157,7 +177,7 @@ void main() {
         start: base.add(const Duration(hours: 7, minutes: 30)),
       );
 
-      final firstScan = await firstPendingMarkScanDeadline(admin);
+      final firstScan = pending.scanDeadline;
       await waitForReminders(
         member,
         upcomingReminder,
@@ -169,19 +189,16 @@ void main() {
           (oneOffDeleted.id, oneOffDeleted.startTimeUtc),
           (untouched.id, untouched.startTimeUtc),
         ],
-        deadline: DateTime.now().toUtc().add(tickWait),
+        // A day-ahead occurrence is inside the 24-hour lead only from the
+        // short session's start on.
+        deadline: pending.start.add(tickWait),
       );
       if (firstScan != null) {
-        await waitForReminders(
-          admin,
-          pendingMarkReminder,
-          [
-            (campOne.id, campOne.startTimeUtc),
-            (campSeries.id, campSeries.startTimeUtc),
-            (programme.id, programme.startTimeUtc),
-          ],
-          deadline: firstScan,
-        );
+        await waitForReminders(admin, pendingMarkReminder, [
+          (campOne.id, campOne.startTimeUtc),
+          (campSeries.id, campSeries.startTimeUtc),
+          (programme.id, programme.startTimeUtc),
+        ], deadline: firstScan);
         pendingMarksSent = true;
       }
     });
@@ -313,8 +330,8 @@ void main() {
         },
       );
 
-      test('Issue 44: keeps the pending-mark reminder of the week before the '
-          'cutoff', () async {
+      test('Issue 44: keeps the pending-mark reminder of the occurrence before '
+          'the cutoff', () async {
         if (!pendingMarksSent) {
           markTestSkipped(pendingMarkScanSkip(44, testFile));
           return;
