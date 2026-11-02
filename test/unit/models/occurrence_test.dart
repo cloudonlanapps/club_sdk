@@ -368,4 +368,71 @@ void main() {
       );
     });
   });
+
+  group('Issue 98: attendanceExpected and attendanceMarked', () {
+    final t = DateTime.utc(2027, 6, 1, 9);
+    Map<String, dynamic> payload({int? expected = 5, int? marked = 3}) => {
+      'eventId': 7,
+      'occurrenceTimeUtc': t.millisecondsSinceEpoch,
+      'startTimeUtc': t.millisecondsSinceEpoch,
+      'endTimeUtc': t.add(const Duration(hours: 1)).millisecondsSinceEpoch,
+      'venueId': 1,
+      'status': 'scheduled',
+      'version': 1,
+      'attendanceExpected': expected,
+      'attendanceMarked': marked,
+    };
+
+    test('Issue 98: fromMap reads both counts', () {
+      final occ = Occurrence.fromMap(payload());
+      expect(occ.attendanceExpected, 5);
+      expect(occ.attendanceMarked, 3);
+    });
+
+    test('Issue 98: fromMap reads absent or null counts as null', () {
+      final occ = Occurrence.fromMap(payload(expected: null, marked: null));
+      expect(occ.attendanceExpected, isNull);
+      expect(occ.attendanceMarked, isNull);
+      final bare = Occurrence.fromMap(
+        payload()
+          ..remove('attendanceExpected')
+          ..remove('attendanceMarked'),
+      );
+      expect(bare.attendanceExpected, isNull);
+      expect(bare.attendanceMarked, isNull);
+    });
+
+    test('Issue 98: toMap/fromMap round-trip preserves both counts', () {
+      final occ = Occurrence.fromMap(payload());
+      final map = occ.toMap();
+      expect(map['attendanceExpected'], 5);
+      expect(map['attendanceMarked'], 3);
+      expect(Occurrence.fromMap(map), occ);
+    });
+
+    test('Issue 98: the counts take part in equality and hashCode', () {
+      final a = Occurrence.fromMap(payload());
+      expect(a, Occurrence.fromMap(payload()));
+      expect(a.hashCode, Occurrence.fromMap(payload()).hashCode);
+      expect(a, isNot(Occurrence.fromMap(payload(expected: 6))));
+      expect(a, isNot(Occurrence.fromMap(payload(marked: 4))));
+    });
+
+    test('Issue 98: copyWith sets and clears the counts via ValueGetter', () {
+      final a = Occurrence.fromMap(payload());
+      final changed = a.copyWith(
+        attendanceExpected: () => 8,
+        attendanceMarked: () => 8,
+      );
+      expect(changed.attendanceExpected, 8);
+      expect(changed.attendanceMarked, 8);
+      final cleared = a.copyWith(
+        attendanceExpected: () => null,
+        attendanceMarked: () => null,
+      );
+      expect(cleared.attendanceExpected, isNull);
+      expect(cleared.attendanceMarked, isNull);
+      expect(a.copyWith().attendanceMarked, 3);
+    });
+  });
 }
