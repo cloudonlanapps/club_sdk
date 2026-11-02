@@ -24,6 +24,8 @@ class Occurrence {
     this.enrollmentStatus,
     this.attendanceStatus,
     this.attendanceCount,
+    this.attendanceExpected,
+    this.attendanceMarked,
     this.cancelReason,
     this.version = 1,
     this.updatedAtUtc,
@@ -69,6 +71,8 @@ class Occurrence {
           ? AttendanceStatus.values.byName(map['attendanceStatus'] as String)
           : null,
       attendanceCount: map['attendanceCount'] as int?,
+      attendanceExpected: map['attendanceExpected'] as int?,
+      attendanceMarked: map['attendanceMarked'] as int?,
       cancelReason: map['cancelReason'] as String?,
       version: (map['version'] as int?) ?? 1,
       updatedAtUtc: map['updatedAt'] is int
@@ -116,6 +120,17 @@ class Occurrence {
   // Statistics (populated in detail views)
   final int? attendanceCount;
 
+  /// The members whose enrollment covers this occurrence: the roster the
+  /// attendance screen shows (club_server#142). Set only in the staff
+  /// occurrence list (`listOccurrences`); null elsewhere.
+  final int? attendanceExpected;
+
+  /// How many of [attendanceExpected] have a recorded status: present,
+  /// absent, late or on leave. A pending leave request is not marked
+  /// (club_server#142). Set only in the staff occurrence list; null
+  /// elsewhere.
+  final int? attendanceMarked;
+
   /// Reason supplied when this occurrence was cancelled — either directly via
   /// the occurrence cancel API or implicitly because the parent series was
   /// cancelled. `null` for non-cancelled occurrences.
@@ -149,6 +164,8 @@ class Occurrence {
     EnrollmentStatus? Function()? enrollmentStatus,
     AttendanceStatus? Function()? attendanceStatus,
     int? Function()? attendanceCount,
+    int? Function()? attendanceExpected,
+    int? Function()? attendanceMarked,
     String? Function()? cancelReason,
     int? version,
     DateTime? Function()? updatedAtUtc,
@@ -178,6 +195,12 @@ class Occurrence {
       attendanceCount: attendanceCount != null
           ? attendanceCount()
           : this.attendanceCount,
+      attendanceExpected: attendanceExpected != null
+          ? attendanceExpected()
+          : this.attendanceExpected,
+      attendanceMarked: attendanceMarked != null
+          ? attendanceMarked()
+          : this.attendanceMarked,
       cancelReason: cancelReason != null ? cancelReason() : this.cancelReason,
       version: version ?? this.version,
       updatedAtUtc: updatedAtUtc != null ? updatedAtUtc() : this.updatedAtUtc,
@@ -200,6 +223,8 @@ class Occurrence {
       'enrollmentStatus': enrollmentStatus?.name,
       'attendanceStatus': attendanceStatus?.name,
       'attendanceCount': attendanceCount,
+      'attendanceExpected': attendanceExpected,
+      'attendanceMarked': attendanceMarked,
       'cancelReason': cancelReason,
       'version': version,
       'updatedAt': updatedAtUtc?.millisecondsSinceEpoch,
@@ -233,6 +258,8 @@ class Occurrence {
         other.enrollmentStatus == enrollmentStatus &&
         other.attendanceStatus == attendanceStatus &&
         other.attendanceCount == attendanceCount &&
+        other.attendanceExpected == attendanceExpected &&
+        other.attendanceMarked == attendanceMarked &&
         other.cancelReason == cancelReason &&
         other.version == version &&
         other.updatedAtUtc == updatedAtUtc &&
@@ -254,6 +281,8 @@ class Occurrence {
         enrollmentStatus.hashCode ^
         attendanceStatus.hashCode ^
         attendanceCount.hashCode ^
+        attendanceExpected.hashCode ^
+        attendanceMarked.hashCode ^
         cancelReason.hashCode ^
         version.hashCode ^
         updatedAtUtc.hashCode ^
