@@ -26,6 +26,9 @@ class Occurrence {
     this.attendanceCount,
     this.attendanceExpected,
     this.attendanceMarked,
+    this.leaveRequestsPending,
+    this.enrollmentRequestsPending,
+    this.withdrawalRequestsPending,
     this.cancelReason,
     this.version = 1,
     this.updatedAtUtc,
@@ -73,6 +76,9 @@ class Occurrence {
       attendanceCount: map['attendanceCount'] as int?,
       attendanceExpected: map['attendanceExpected'] as int?,
       attendanceMarked: map['attendanceMarked'] as int?,
+      leaveRequestsPending: map['leaveRequestsPending'] as int?,
+      enrollmentRequestsPending: map['enrollmentRequestsPending'] as int?,
+      withdrawalRequestsPending: map['withdrawalRequestsPending'] as int?,
       cancelReason: map['cancelReason'] as String?,
       version: (map['version'] as int?) ?? 1,
       updatedAtUtc: map['updatedAt'] is int
@@ -131,6 +137,18 @@ class Occurrence {
   /// elsewhere.
   final int? attendanceMarked;
 
+  /// This session's leave requests awaiting a decision (club_server#153).
+  /// Set only in the staff occurrence list; null elsewhere.
+  final int? leaveRequestsPending;
+
+  /// The event's enrollment requests awaiting a decision (club_server#153).
+  /// Set only in the staff occurrence list; null elsewhere.
+  final int? enrollmentRequestsPending;
+
+  /// The event's withdrawal requests awaiting a decision (club_server#153).
+  /// Set only in the staff occurrence list; null elsewhere.
+  final int? withdrawalRequestsPending;
+
   /// Reason supplied when this occurrence was cancelled — either directly via
   /// the occurrence cancel API or implicitly because the parent series was
   /// cancelled. `null` for non-cancelled occurrences.
@@ -166,6 +184,9 @@ class Occurrence {
     int? Function()? attendanceCount,
     int? Function()? attendanceExpected,
     int? Function()? attendanceMarked,
+    int? Function()? leaveRequestsPending,
+    int? Function()? enrollmentRequestsPending,
+    int? Function()? withdrawalRequestsPending,
     String? Function()? cancelReason,
     int? version,
     DateTime? Function()? updatedAtUtc,
@@ -201,6 +222,15 @@ class Occurrence {
       attendanceMarked: attendanceMarked != null
           ? attendanceMarked()
           : this.attendanceMarked,
+      leaveRequestsPending: leaveRequestsPending != null
+          ? leaveRequestsPending()
+          : this.leaveRequestsPending,
+      enrollmentRequestsPending: enrollmentRequestsPending != null
+          ? enrollmentRequestsPending()
+          : this.enrollmentRequestsPending,
+      withdrawalRequestsPending: withdrawalRequestsPending != null
+          ? withdrawalRequestsPending()
+          : this.withdrawalRequestsPending,
       cancelReason: cancelReason != null ? cancelReason() : this.cancelReason,
       version: version ?? this.version,
       updatedAtUtc: updatedAtUtc != null ? updatedAtUtc() : this.updatedAtUtc,
@@ -225,6 +255,9 @@ class Occurrence {
       'attendanceCount': attendanceCount,
       'attendanceExpected': attendanceExpected,
       'attendanceMarked': attendanceMarked,
+      'leaveRequestsPending': leaveRequestsPending,
+      'enrollmentRequestsPending': enrollmentRequestsPending,
+      'withdrawalRequestsPending': withdrawalRequestsPending,
       'cancelReason': cancelReason,
       'version': version,
       'updatedAt': updatedAtUtc?.millisecondsSinceEpoch,
@@ -260,6 +293,9 @@ class Occurrence {
         other.attendanceCount == attendanceCount &&
         other.attendanceExpected == attendanceExpected &&
         other.attendanceMarked == attendanceMarked &&
+        other.leaveRequestsPending == leaveRequestsPending &&
+        other.enrollmentRequestsPending == enrollmentRequestsPending &&
+        other.withdrawalRequestsPending == withdrawalRequestsPending &&
         other.cancelReason == cancelReason &&
         other.version == version &&
         other.updatedAtUtc == updatedAtUtc &&
@@ -283,6 +319,9 @@ class Occurrence {
         attendanceCount.hashCode ^
         attendanceExpected.hashCode ^
         attendanceMarked.hashCode ^
+        leaveRequestsPending.hashCode ^
+        enrollmentRequestsPending.hashCode ^
+        withdrawalRequestsPending.hashCode ^
         cancelReason.hashCode ^
         version.hashCode ^
         updatedAtUtc.hashCode ^

@@ -435,4 +435,67 @@ void main() {
       expect(a.copyWith().attendanceMarked, 3);
     });
   });
+
+  group('Issue 104: pending request counts', () {
+    final now = DateTime.utc(2026, 11, 10, 1, 30);
+    Map<String, dynamic> base() => Occurrence(
+      eventId: 11,
+      originalStartTimeUtc: now,
+      actualStartTimeUtc: now,
+      actualEndTimeUtc: now.add(const Duration(hours: 1)),
+      status: OccurrenceStatus.scheduled,
+      venueId: 1,
+    ).toMap();
+
+    test('fromMap reads the three counts', () {
+      final o = Occurrence.fromMap({
+        ...base(),
+        'leaveRequestsPending': 2,
+        'enrollmentRequestsPending': 1,
+        'withdrawalRequestsPending': 3,
+      });
+      expect(o.leaveRequestsPending, 2);
+      expect(o.enrollmentRequestsPending, 1);
+      expect(o.withdrawalRequestsPending, 3);
+    });
+
+    test('fromMap reads absent counts as null', () {
+      final o = Occurrence.fromMap(base());
+      expect(o.leaveRequestsPending, isNull);
+      expect(o.enrollmentRequestsPending, isNull);
+      expect(o.withdrawalRequestsPending, isNull);
+    });
+
+    test('toMap/fromMap round-trip preserves the counts', () {
+      final o = Occurrence.fromMap({
+        ...base(),
+        'leaveRequestsPending': 2,
+        'enrollmentRequestsPending': 1,
+        'withdrawalRequestsPending': 3,
+      });
+      expect(Occurrence.fromMap(o.toMap()), o);
+    });
+
+    test('the counts take part in equality', () {
+      final a = Occurrence.fromMap({...base(), 'leaveRequestsPending': 1});
+      final b = Occurrence.fromMap({...base(), 'leaveRequestsPending': 2});
+      final c = Occurrence.fromMap({...base(), 'withdrawalRequestsPending': 1});
+      expect(a, isNot(b));
+      expect(Occurrence.fromMap(base()), isNot(c));
+    });
+
+    test('copyWith sets and clears the counts via ValueGetter', () {
+      final a = Occurrence.fromMap(base()).copyWith(
+        leaveRequestsPending: () => 1,
+        enrollmentRequestsPending: () => 2,
+        withdrawalRequestsPending: () => 3,
+      );
+      expect(a.leaveRequestsPending, 1);
+      expect(a.enrollmentRequestsPending, 2);
+      expect(a.withdrawalRequestsPending, 3);
+      final cleared = a.copyWith(leaveRequestsPending: () => null);
+      expect(cleared.leaveRequestsPending, isNull);
+      expect(a.copyWith().withdrawalRequestsPending, 3);
+    });
+  });
 }
