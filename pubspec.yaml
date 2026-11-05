@@ -1,6 +1,6 @@
 name: club_sdk_2
 description: Dart client for the club_server API.
-version: 1.3.2
+version: 1.3.3
 publish_to: none
 repository: https://github.com/cloudonlanapps/club_sdk
 

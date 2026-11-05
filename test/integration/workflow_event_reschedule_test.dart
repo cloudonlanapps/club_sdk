@@ -11,8 +11,7 @@ import '../utils/test_client.dart';
 /// - `POST /events/{id}/undo-cancel` (server #111)
 /// - camp `cancel` effective-time validation (server #108)
 ///
-/// Camps are scheduled months ahead so the before-start guard
-/// (`EVENT_ALREADY_STARTED`) and the 30-minute cancel lead time are
+/// Camps are scheduled months ahead so the 30-minute cancel lead time is
 /// satisfied, and inside the 52-week horizon (`BEYOND_SCHEDULING_HORIZON`,
 /// #16).
 void main() {
