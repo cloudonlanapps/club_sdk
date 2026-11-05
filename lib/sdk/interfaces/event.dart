@@ -193,8 +193,10 @@ abstract interface class EventSource {
   /// timetable; omitting the getter leaves it untouched (re-validated against
   /// the new window).
   ///
-  /// Allowed only before the event starts — returns 422 `EVENT_ALREADY_STARTED`
-  /// once the first occurrence is past or any attendance exists. Returns 409
+  /// Allowed while no attendance is recorded — returns 422
+  /// `EVENT_ALREADY_STARTED` once any attendance (leave included) exists; a
+  /// first occurrence in the past alone does not block it (club_server#155).
+  /// Returns 409
   /// `OCCURRENCE_OVERRIDES_PRESENT` (with the offending `occurrenceTimeUtcs` in
   /// `ServerException.details`) when occurrence overrides exist, unless
   /// [resetOverrides] is `true` to clear them.
